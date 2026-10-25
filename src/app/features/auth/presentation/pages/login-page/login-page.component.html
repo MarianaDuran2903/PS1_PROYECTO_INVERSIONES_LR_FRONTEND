@@ -1,0 +1,17 @@
+<section class="login card" aria-labelledby="login-titulo">
+  <header class="login__encabezado">
+    <h1 id="login-titulo">Inicia sesión</h1>
+    <p>Accede con tu correo y tu contraseña.</p>
+  </header>
+
+  @if (facade.mensajeError(); as mensaje) {
+    <div class="alert alert--danger login__alerta" role="alert">{{ mensaje }}</div>
+  }
+
+  <app-login-form
+    [enviando]="facade.enviando()"
+    (iniciar)="facade.iniciarSesion($event, returnUrl())"
+  />
+
+  <p class="login__pie">¿Aún no tienes cuenta? <a routerLink="/auth/registro">Regístrate</a></p>
+</section>
