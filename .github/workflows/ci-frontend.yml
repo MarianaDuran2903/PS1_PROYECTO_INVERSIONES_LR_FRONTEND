@@ -1,4 +1,10 @@
-# Qué hace en cada Pull Request y en cada push a main:
+# Recorrido del código:  historia → feature → develop → main
+#   - Cada salto se hace con un Pull Request (historia → feature, feature → develop,
+#     develop → main) y el CI debe estar en verde antes de fusionar.
+#   - Pull Request: corre sin importar la rama destino, así que valida los tres saltos.
+#   - Push: corre al fusionar en develop y en main, para analizar esas ramas con Sonar.
+#
+# Qué hace en cada ejecución:
 #   1. Instala dependencias, revisa el estilo (ESLint y Prettier) y compila en modo producción.
 #   2. Ejecuta las pruebas de Jasmine/Karma con cobertura (Chrome sin interfaz).
 #   3. Envía el análisis a SonarQube Cloud y falla si el Quality Gate no pasa.
@@ -6,14 +12,15 @@
 # Requiere el secret SONAR_TOKEN (Settings > Secrets and variables > Actions) y los valores
 # reales de sonar.organization y sonar.projectKey en sonar-project.properties.
 # Importante: en SonarQube Cloud hay que desactivar "Automatic Analysis" para este proyecto,
-# porque el análisis lo hace este workflow.
+# porque el análisis lo hace este workflow, y marcar develop como rama de larga duración
+# (Administration > Branches and Pull Requests) para que se analice igual que main.
 
 name: CI Frontend
 
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [develop, main]
 
 permissions:
   contents: read

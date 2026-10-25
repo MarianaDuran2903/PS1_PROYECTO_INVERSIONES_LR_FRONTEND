@@ -1,3 +1,14 @@
+<!--
+  Recorrido: historia → feature → develop → main
+  Este PR debe apuntar al siguiente escalón, nunca saltarse uno:
+    rama de historia → rama feature | rama feature → develop | develop → main
+-->
+
+## Recorrido
+
+- [ ] Rama destino correcta (historia → feature, feature → develop o develop → main)
+- [ ] La rama origen está al día con la rama destino
+
 ## Historia o tarea de Jira
 
 <!-- Clave del elemento, por ejemplo MAR-43. También debe ir en el título del PR. -->
