@@ -1,0 +1,63 @@
+/* Los estilos de .form, .field y .form__fila son globales (styles.scss). */
+
+.form__nota {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+}
+
+.roles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+
+  legend {
+    padding: 0;
+    margin-bottom: var(--space-2);
+    font-weight: 600;
+    font-size: 0.9375rem;
+  }
+}
+
+.roles__opcion {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+
+  input {
+    margin-top: 4px;
+    accent-color: var(--color-primary);
+  }
+
+  &:has(input:checked) {
+    border-color: var(--color-primary);
+    background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+  }
+
+  &:has(input:focus-visible) {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+}
+
+.roles__texto {
+  display: flex;
+  flex-direction: column;
+}
+
+.roles__titulo {
+  font-weight: 600;
+}
+
+.roles__descripcion {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
