@@ -19,9 +19,10 @@ module.exports = function (config) {
       suppressAll: true,
     },
     coverageReporter: {
-      dir: require('path').join(__dirname, './coverage/inversiones-lr-frontend'),
+      // coverage/lcov.info es el archivo que lee Sonar (sonar.javascript.lcov.reportPaths).
+      dir: require('path').join(__dirname, './coverage'),
       subdir: '.',
-      reporters: [{ type: 'html' }, { type: 'text-summary' }],
+      reporters: [{ type: 'html' }, { type: 'text-summary' }, { type: 'lcovonly' }],
     },
     reporters: ['progress', 'kjhtml'],
     browsers: ['Chrome'],
