@@ -13,6 +13,10 @@ describe('RegistroFormComponent', () => {
     input.dispatchEvent(new Event('input'));
     input.dispatchEvent(new Event('blur'));
   };
+  const escribirYRevisar = (id: string, valor: string) => {
+    escribir(id, valor);
+    fixture.detectChanges();
+  };
   const enviar = () => {
     element.querySelector<HTMLButtonElement>('button[type="submit"]')!.click();
     fixture.detectChanges();
@@ -49,7 +53,7 @@ describe('RegistroFormComponent', () => {
     expect(textoError('primerNombre')).toContain('Solo se permiten letras');
     expect(textoError('correo')).toBe('Ingresa un correo electrónico válido.');
     expect(textoError('contrasena')).toContain('una mayúscula');
-    expect(textoError('confirmarContrasena')).toBe('Las contraseñas no coinciden.');
+    expect(textoError('confirmarContrasena')).toBe('La confirmación no coincide con la contraseña');
   });
 
   it('emite los datos cuando el formulario es válido', () => {
@@ -69,6 +73,7 @@ describe('RegistroFormComponent', () => {
         segundoApellido: '',
         correo: 'ana@correo.com',
         contrasena: 'Segura#2026',
+        confirmarContrasena: 'Segura#2026',
       },
     ]);
   });
@@ -106,6 +111,44 @@ describe('RegistroFormComponent', () => {
     fixture.detectChanges();
 
     expect(textoError('correo')).toBe('Este correo electrónico ya está registrado.');
+  });
+
+  it('rechaza nombres con separadores mal puestos y acepta los válidos', () => {
+    for (const invalido of ['-Ana', 'Ana--Lucía', 'Ana  María', 'Ana ']) {
+      escribirYRevisar('primerNombre', invalido);
+      // "Ana " se recorta antes de validar, así que es válido: solo los demás deben fallar.
+      if (invalido.trim() === 'Ana') {
+        expect(textoError('primerNombre')).toBeUndefined();
+      } else {
+        expect(textoError('primerNombre')).toBe(
+          'Solo se permiten letras, espacios, guion o apóstrofe',
+        );
+      }
+    }
+    for (const valido of ['María José', 'Ana-Lucía', "D'Angelo"]) {
+      escribirYRevisar('primerNombre', valido);
+      expect(textoError('primerNombre')).toBeUndefined();
+    }
+  });
+
+  it('usa el mensaje de largo del backend y exige los requisitos de la contraseña', () => {
+    escribirYRevisar('contrasena', 'Ab#1');
+    expect(textoError('contrasena')).toBe('La contraseña debe tener entre 8 y 64 caracteres');
+
+    escribirYRevisar('contrasena', 'Segura 123#');
+    expect(textoError('contrasena')).toBe(
+      'La contraseña debe tener al menos una mayúscula, una minúscula, un número y un carácter especial, sin espacios',
+    );
+
+    escribirYRevisar('contrasena', 'Segura#123');
+    expect(textoError('contrasena')).toBeUndefined();
+  });
+
+  it('el error del servidor queda en el control con la clave "servidor"', () => {
+    fixture.componentRef.setInput('erroresServidor', { primerNombre: 'Nombre no permitido' });
+    fixture.detectChanges();
+
+    expect(textoError('primerNombre')).toBe('Nombre no permitido');
   });
 
   it('deshabilita los campos mientras se envía', () => {

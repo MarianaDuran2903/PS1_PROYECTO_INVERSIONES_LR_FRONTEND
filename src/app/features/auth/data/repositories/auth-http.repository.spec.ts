@@ -5,27 +5,39 @@ import { APP_CONFIG } from '@core/config/app-config';
 import { ApiError } from '@core/http/api-error';
 import { httpErrorInterceptor } from '@core/http/interceptors/http-error.interceptor';
 import { environment } from '@env/environment';
+import { CredencialesInvalidasError } from '../../domain/errors/login.errors';
 import {
   CorreoYaRegistradoError,
   RegistroInvalidoError,
 } from '../../domain/errors/registro.errors';
-import {
-  CredencialesInvalidasError,
-  CuentaNoDisponibleError,
-} from '../../domain/errors/login.errors';
 import { RegistroUsuario } from '../../domain/models/registro-usuario';
-import { Sesion } from '../../domain/models/sesion';
+import { UsuarioResponseDto } from '../dtos/registro-usuario.dto';
 import { AuthHttpRepository } from './auth-http.repository';
 
 describe('AuthHttpRepository', () => {
-  const url = '/api-test/auth/registro';
+  const base = '/api-test/auth';
   const datos: RegistroUsuario = {
     rol: 'ANFITRION',
-    primerNombre: 'Ana',
+    primerNombre: ' Ana ',
     primerApellido: 'Ruiz',
-    correo: 'Ana@Correo.com',
+    correo: 'ana@correo.com',
     contrasena: 'Segura#2026',
+    confirmarContrasena: 'Segura#2026',
   };
+  const usuario: UsuarioResponseDto = {
+    idUsuario: 7,
+    primerNombre: 'Ana',
+    segundoNombre: null,
+    primerApellido: 'Ruiz',
+    segundoApellido: null,
+    correo: 'ana@correo.com',
+    rol: 'ANFITRION',
+    cuentaActiva: true,
+  };
+  const error = (estado: number, nombre: string, mensaje: string, errores?: object) => ({
+    body: { fecha: '2026-01-01T00:00:00Z', estado, error: nombre, mensaje, ruta: '/x', errores },
+    opts: { status: estado, statusText: nombre },
+  });
 
   let repository: AuthHttpRepository;
   let http: HttpTestingController;
@@ -48,134 +60,157 @@ describe('AuthHttpRepository', () => {
 
   afterEach(() => http.verify());
 
-  it('envía el DTO normalizado y mapea la respuesta 201', () => {
-    let idUsuario: number | undefined;
-    repository.registrarUsuario(datos).subscribe((usuario) => (idUsuario = usuario.idUsuario));
+  describe('registrarUsuario', () => {
+    it('Anfitrión llama a /auth/registro/anfitrion con el cuerpo sin rol', () => {
+      let idUsuario: number | undefined;
+      repository.registrarUsuario(datos).subscribe((u) => (idUsuario = u.idUsuario));
 
-    const req = http.expectOne(url);
-    expect(req.request.method).toBe('POST');
-    expect(req.request.body.rol).toBe('ANFITRION');
-    expect(req.request.body.correo).toBe('ana@correo.com');
-    expect(req.request.body.segundoNombre).toBeNull();
-    req.flush(
-      {
-        idUsuario: 15,
+      const req = http.expectOne(`${base}/registro/anfitrion`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({
         primerNombre: 'Ana',
         segundoNombre: null,
         primerApellido: 'Ruiz',
         segundoApellido: null,
         correo: 'ana@correo.com',
-        roles: ['HUESPED'],
-      },
-      { status: 201, statusText: 'Created' },
-    );
+        contrasena: 'Segura#2026',
+        confirmarContrasena: 'Segura#2026',
+      });
+      req.flush(usuario);
 
-    expect(idUsuario).toBe(15);
-  });
+      expect(idUsuario).toBe(7);
+    });
 
-  it('convierte 409 en CorreoYaRegistradoError', () => {
-    let error: unknown;
-    repository.registrarUsuario(datos).subscribe({ error: (e: unknown) => (error = e) });
+    it('Huésped llama a /auth/registro/huesped', () => {
+      repository.registrarUsuario({ ...datos, rol: 'HUESPED' }).subscribe();
 
-    http
-      .expectOne(url)
-      .flush(
-        { code: 'EMAIL_ALREADY_REGISTERED', message: 'Duplicado' },
-        { status: 409, statusText: 'Conflict' },
-      );
+      const req = http.expectOne(`${base}/registro/huesped`);
+      expect(req.request.method).toBe('POST');
+      req.flush({ ...usuario, rol: 'HUESPED' });
+    });
 
-    expect(error).toBeInstanceOf(CorreoYaRegistradoError);
-    expect((error as CorreoYaRegistradoError).correo).toBe('ana@correo.com');
-  });
+    it('409 se convierte en CorreoYaRegistradoError con el mensaje del backend', () => {
+      let fallo: unknown;
+      repository.registrarUsuario(datos).subscribe({ error: (e: unknown) => (fallo = e) });
+      const { body, opts } = error(409, 'Conflict', 'El correo ya está registrado');
 
-  it('convierte 400 con errores de campo en RegistroInvalidoError', () => {
-    let error: unknown;
-    repository.registrarUsuario(datos).subscribe({ error: (e: unknown) => (error = e) });
+      http.expectOne(`${base}/registro/anfitrion`).flush(body, opts);
 
-    http.expectOne(url).flush(
-      {
-        code: 'VALIDATION_ERROR',
-        message: 'Datos inválidos',
-        errors: [
-          { field: 'contrasena', message: 'Contraseña débil' },
-          { field: 'campoDesconocido', message: 'Ignorar' },
-        ],
-      },
-      { status: 400, statusText: 'Bad Request' },
-    );
+      expect(fallo).toBeInstanceOf(CorreoYaRegistradoError);
+      expect((fallo as Error).message).toBe('El correo ya está registrado');
+    });
 
-    expect(error).toBeInstanceOf(RegistroInvalidoError);
-    expect((error as RegistroInvalidoError).errores).toEqual({ contrasena: 'Contraseña débil' });
+    it('400 con errores se convierte en RegistroInvalidoError por campo', () => {
+      let fallo: unknown;
+      repository.registrarUsuario(datos).subscribe({ error: (e: unknown) => (fallo = e) });
+      const { body, opts } = error(400, 'Bad Request', 'Datos inválidos', {
+        primerNombre: 'Solo se permiten letras, espacios, guion o apóstrofe',
+        confirmarContrasena: 'La confirmación no coincide con la contraseña',
+        campoDesconocido: 'ignorado',
+      });
+
+      http.expectOne(`${base}/registro/anfitrion`).flush(body, opts);
+
+      expect(fallo).toBeInstanceOf(RegistroInvalidoError);
+      expect((fallo as RegistroInvalidoError).errores).toEqual({
+        primerNombre: 'Solo se permiten letras, espacios, guion o apóstrofe',
+        confirmarContrasena: 'La confirmación no coincide con la contraseña',
+      });
+    });
+
+    it('400 sin errores (JSON mal formado) llega como ApiError con el mensaje', () => {
+      let fallo: unknown;
+      repository.registrarUsuario(datos).subscribe({ error: (e: unknown) => (fallo = e) });
+      const { body, opts } = error(400, 'Bad Request', 'El cuerpo de la petición no es válido');
+
+      http.expectOne(`${base}/registro/anfitrion`).flush(body, opts);
+
+      expect(fallo).toBeInstanceOf(ApiError);
+      expect((fallo as ApiError).message).toBe('El cuerpo de la petición no es válido');
+    });
+
+    it('un 500 llega con mensaje genérico, sin detalles técnicos', () => {
+      let fallo: unknown;
+      repository.registrarUsuario(datos).subscribe({ error: (e: unknown) => (fallo = e) });
+      const { body, opts } = error(500, 'Internal Server Error', 'SQLException: tabla usuario');
+
+      http.expectOne(`${base}/registro/anfitrion`).flush(body, opts);
+
+      expect(fallo).toBeInstanceOf(ApiError);
+      expect((fallo as ApiError).message).not.toContain('SQL');
+    });
   });
 
   describe('iniciarSesion', () => {
-    const urlLogin = '/api-test/auth/login';
-    const credenciales = { correo: ' Ana@Correo.com ', contrasena: 'Segura#2026' };
-    const iniciar = () => {
-      const resultado: { sesion?: Sesion; error?: unknown } = {};
-      repository.iniciarSesion(credenciales).subscribe({
-        next: (s) => (resultado.sesion = s),
-        error: (e: unknown) => (resultado.error = e),
-      });
-      return resultado;
-    };
+    it('envía correo y contraseña, y calcula el vencimiento de la sesión', () => {
+      const antes = Date.now();
+      let expiraEn = 0;
+      let token = '';
+      repository
+        .iniciarSesion({ correo: ' ana@correo.com ', contrasena: 'Segura#2026' })
+        .subscribe((s) => {
+          expiraEn = s.expiraEn;
+          token = s.accessToken;
+        });
 
-    it('envía el correo normalizado y mapea la sesión', () => {
-      const resultado = iniciar();
-
-      const req = http.expectOne(urlLogin);
+      const req = http.expectOne(`${base}/login`);
       expect(req.request.method).toBe('POST');
       expect(req.request.body).toEqual({ correo: 'ana@correo.com', contrasena: 'Segura#2026' });
-      req.flush({
-        accessToken: 'jwt-abc',
-        usuario: {
-          idUsuario: 9,
-          primerNombre: 'Ana',
-          segundoNombre: null,
-          primerApellido: 'Ruiz',
-          segundoApellido: null,
-          correo: 'ana@correo.com',
-          roles: ['HUESPED', 'ANFITRION', 'DESCONOCIDO'],
-        },
+      req.flush({ token: 'jwt', tipo: 'Bearer', expiraEn: 3600, usuario });
+
+      expect(token).toBe('jwt');
+      expect(expiraEn).toBeGreaterThanOrEqual(antes + 3_600_000);
+    });
+
+    it('401 se convierte en CredencialesInvalidasError con el mensaje genérico del backend', () => {
+      let fallo: unknown;
+      repository
+        .iniciarSesion({ correo: 'ana@correo.com', contrasena: 'mala' })
+        .subscribe({ error: (e: unknown) => (fallo = e) });
+      const { body, opts } = error(401, 'Unauthorized', 'Correo o contraseña incorrectos');
+
+      http.expectOne(`${base}/login`).flush(body, opts);
+
+      expect(fallo).toBeInstanceOf(CredencialesInvalidasError);
+      expect((fallo as Error).message).toBe('Correo o contraseña incorrectos');
+    });
+
+    it('un 403 no revela el estado de la cuenta: llega como ApiError', () => {
+      let fallo: unknown;
+      repository
+        .iniciarSesion({ correo: 'ana@correo.com', contrasena: 'x' })
+        .subscribe({ error: (e: unknown) => (fallo = e) });
+      const { body, opts } = error(403, 'Forbidden', 'No tiene permisos para esta operación');
+
+      http.expectOne(`${base}/login`).flush(body, opts);
+
+      expect(fallo).toBeInstanceOf(ApiError);
+      expect(fallo).not.toBeInstanceOf(CredencialesInvalidasError);
+    });
+  });
+
+  describe('obtenerSesion', () => {
+    it('hace GET /auth/sesion e interpreta el vencimiento ISO', () => {
+      let resultado: { rol: string; expiraEn: number } | undefined;
+      repository.obtenerSesion().subscribe((s) => {
+        resultado = { rol: s.usuario.roles[0], expiraEn: s.expiraEn };
       });
 
-      expect(resultado.sesion?.accessToken).toBe('jwt-abc');
-      expect(resultado.sesion?.usuario.roles).toEqual(['HUESPED', 'ANFITRION']);
+      const req = http.expectOne(`${base}/sesion`);
+      expect(req.request.method).toBe('GET');
+      req.flush({ usuario, expiraEn: '2026-05-01T10:00:00Z' });
+
+      expect(resultado).toEqual({ rol: 'ANFITRION', expiraEn: Date.parse('2026-05-01T10:00:00Z') });
     });
 
-    it('convierte 401 en CredencialesInvalidasError', () => {
-      const resultado = iniciar();
+    it('401 llega como ApiError para que se limpie la sesión', () => {
+      let fallo: unknown;
+      repository.obtenerSesion().subscribe({ error: (e: unknown) => (fallo = e) });
+      const { body, opts } = error(401, 'Unauthorized', 'Token inválido');
 
-      http
-        .expectOne(urlLogin)
-        .flush(
-          { code: 'BAD_CREDENTIALS', message: 'x' },
-          { status: 401, statusText: 'Unauthorized' },
-        );
+      http.expectOne(`${base}/sesion`).flush(body, opts);
 
-      expect(resultado.error).toBeInstanceOf(CredencialesInvalidasError);
-    });
-
-    it('convierte 403 con código de cuenta en CuentaNoDisponibleError', () => {
-      const resultado = iniciar();
-
-      http
-        .expectOne(urlLogin)
-        .flush(
-          { code: 'ACCOUNT_RESTRICTED', message: 'x' },
-          { status: 403, statusText: 'Forbidden' },
-        );
-
-      expect(resultado.error).toBeInstanceOf(CuentaNoDisponibleError);
-      expect((resultado.error as CuentaNoDisponibleError).motivo).toBe('RESTRINGIDA');
-    });
-
-    it('deja pasar otros errores como ApiError', () => {
-      const resultado = iniciar();
-
-      http.expectOne(urlLogin).flush({}, { status: 500, statusText: 'Server Error' });
-
-      expect(resultado.error).toBeInstanceOf(ApiError);
+      expect((fallo as ApiError).status).toBe(401);
     });
   });
 });

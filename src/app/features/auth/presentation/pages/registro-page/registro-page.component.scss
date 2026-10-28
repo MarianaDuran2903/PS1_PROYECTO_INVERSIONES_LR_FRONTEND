@@ -26,12 +26,8 @@
   margin-bottom: var(--space-4);
 }
 
-.registro__exito {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-
-  p {
-    margin: 0;
-  }
+.registro__pie {
+  margin: var(--space-6) 0 0;
+  text-align: center;
+  color: var(--color-text-muted);
 }

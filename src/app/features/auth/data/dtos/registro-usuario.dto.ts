@@ -1,16 +1,17 @@
-/** Cuerpo de POST {apiUrl}/auth/registro. */
-export interface RegistrarUsuarioRequestDto {
-  /** HUESPED | ANFITRION. El administrador no se registra por este endpoint. */
-  rol: string;
+/** Cuerpo de POST {apiUrl}/auth/registro/huesped y /auth/registro/anfitrion (sin rol). */
+export interface RegistroUsuarioRequestDto {
   primerNombre: string;
   segundoNombre: string | null;
   primerApellido: string;
   segundoApellido: string | null;
   correo: string;
   contrasena: string;
+  confirmarContrasena: string;
 }
 
-/** Respuesta 201 Created del registro. */
+export type RolDto = 'HUESPED' | 'ANFITRION' | 'ADMINISTRADOR';
+
+/** Respuesta 201 del registro; también viaja dentro del login y de la sesión activa. */
 export interface UsuarioResponseDto {
   idUsuario: number;
   primerNombre: string;
@@ -18,5 +19,6 @@ export interface UsuarioResponseDto {
   primerApellido: string;
   segundoApellido: string | null;
   correo: string;
-  roles: string[];
+  rol: RolDto;
+  cuentaActiva: boolean;
 }

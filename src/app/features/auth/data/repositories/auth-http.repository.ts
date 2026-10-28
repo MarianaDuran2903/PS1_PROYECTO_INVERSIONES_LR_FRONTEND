@@ -3,6 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { APP_CONFIG } from '@core/config/app-config';
 import { ApiError } from '@core/http/api-error';
 import { catchError, map, Observable, throwError } from 'rxjs';
+import { CredencialesInvalidasError } from '../../domain/errors/login.errors';
 import {
   CorreoYaRegistradoError,
   RegistroInvalidoError,
@@ -13,26 +14,29 @@ import {
   RegistroUsuario,
   UsuarioRegistrado,
 } from '../../domain/models/registro-usuario';
-import {
-  CredencialesInvalidasError,
-  CuentaNoDisponibleError,
-} from '../../domain/errors/login.errors';
-import { Credenciales, Sesion } from '../../domain/models/sesion';
+import { RolRegistrable, RolUsuario } from '../../domain/models/rol-usuario';
+import { Credenciales, Sesion, SesionActiva } from '../../domain/models/sesion';
 import { AuthRepository } from '../../domain/repositories/auth.repository';
 import { UsuarioResponseDto } from '../dtos/registro-usuario.dto';
-import { LoginResponseDto } from '../dtos/sesion.dto';
+import { LoginResponseDto, SesionResponseDto } from '../dtos/sesion.dto';
 import { RegistroUsuarioMapper } from '../mappers/registro-usuario.mapper';
 import { SesionMapper } from '../mappers/sesion.mapper';
 
 const CAMPOS: readonly CampoRegistroUsuario[] = [
-  'rol',
   'primerNombre',
   'segundoNombre',
   'primerApellido',
   'segundoApellido',
   'correo',
   'contrasena',
+  'confirmarContrasena',
 ];
+
+/** Segmento final de la URL de registro según el rol elegido. */
+const ENDPOINT_REGISTRO: Record<RolRegistrable, string> = {
+  [RolUsuario.Huesped]: 'huesped',
+  [RolUsuario.Anfitrion]: 'anfitrion',
+};
 
 /** Implementación del puerto AuthRepository contra el API REST del backend. */
 @Injectable()
@@ -42,9 +46,10 @@ export class AuthHttpRepository extends AuthRepository {
 
   override registrarUsuario(datos: RegistroUsuario): Observable<UsuarioRegistrado> {
     const request = RegistroUsuarioMapper.toRequest(datos);
-    return this.http.post<UsuarioResponseDto>(`${this.baseUrl}/registro`, request).pipe(
+    const url = `${this.baseUrl}/registro/${ENDPOINT_REGISTRO[datos.rol]}`;
+    return this.http.post<UsuarioResponseDto>(url, request).pipe(
       map(RegistroUsuarioMapper.toDomain),
-      catchError((error: unknown) => throwError(() => this.toDomainError(error, request.correo))),
+      catchError((error: unknown) => throwError(() => this.toRegistroError(error, request.correo))),
     );
   }
 
@@ -52,36 +57,32 @@ export class AuthHttpRepository extends AuthRepository {
     return this.http
       .post<LoginResponseDto>(`${this.baseUrl}/login`, SesionMapper.toRequest(credenciales))
       .pipe(
-        map(SesionMapper.toDomain),
+        map((dto) => SesionMapper.toDomain(dto)),
         catchError((error: unknown) => throwError(() => this.toLoginError(error))),
       );
   }
 
-  /** 401 = credenciales; 403 con código = cuenta inactiva o restringida. */
-  private toLoginError(error: unknown): unknown {
-    if (!(error instanceof ApiError)) {
-      return error;
-    }
-    if (error.status === 401) {
-      return new CredencialesInvalidasError();
-    }
-    if (error.status === 403 && error.code === 'ACCOUNT_RESTRICTED') {
-      return new CuentaNoDisponibleError('RESTRINGIDA');
-    }
-    if (error.status === 403 && error.code === 'ACCOUNT_INACTIVE') {
-      return new CuentaNoDisponibleError('INACTIVA');
-    }
-    return error;
+  override obtenerSesion(): Observable<SesionActiva> {
+    return this.http
+      .get<SesionResponseDto>(`${this.baseUrl}/sesion`)
+      .pipe(map(SesionMapper.toSesionActiva));
   }
 
-  private toDomainError(error: unknown, correo: string): unknown {
+  /** 401 = credenciales: siempre el mensaje genérico que manda el backend. */
+  private toLoginError(error: unknown): unknown {
+    return error instanceof ApiError && error.status === 401
+      ? new CredencialesInvalidasError(error.message)
+      : error;
+  }
+
+  private toRegistroError(error: unknown, correo: string): unknown {
     if (!(error instanceof ApiError)) {
       return error;
     }
     if (error.status === 409) {
-      return new CorreoYaRegistradoError(correo);
+      return new CorreoYaRegistradoError(correo, error.message);
     }
-    if ((error.status === 400 || error.status === 422) && error.fieldErrors.length > 0) {
+    if (error.status === 400 && error.fieldErrors.length > 0) {
       const errores: ErroresRegistro = {};
       for (const { field, message } of error.fieldErrors) {
         if ((CAMPOS as readonly string[]).includes(field)) {

@@ -4,25 +4,35 @@ import { RolUsuario } from '../../domain/models/rol-usuario';
 import { rutaInicialPorRol } from '../rutas';
 import { SessionService } from '../session.service';
 
-/**
- * Exige sesión activa y, si la ruta declara `data: { roles: [...] }`, al menos uno de esos roles.
- * - Sin sesión → login, recordando a dónde quería ir (`returnUrl`).
- * - Con sesión pero sin rol → página de acceso denegado.
- */
-export const roleGuard: CanActivateFn = (route, state) => {
+/** Exige sesión activa. Sin sesión → login, recordando a dónde quería ir (`returnUrl`). */
+export const autenticadoGuard: CanActivateFn = (_route, state) => {
   const session = inject(SessionService);
   const router = inject(Router);
 
-  if (!session.autenticado()) {
-    return router.createUrlTree(['/auth/login'], { queryParams: { returnUrl: state.url } });
-  }
-
-  const roles = (route.data['roles'] ?? []) as readonly RolUsuario[];
-  return session.tieneAlgunRol(roles) ? true : router.createUrlTree(['/acceso-denegado']);
+  return session.autenticado()
+    ? true
+    : router.createUrlTree(['/login'], { queryParams: { returnUrl: state.url } });
 };
 
+/**
+ * Exige sesión y al menos uno de los roles indicados, p. ej. `rolGuard([RolUsuario.Anfitrion])`.
+ * - Sin sesión → login.
+ * - Con sesión pero sin el rol → página "Sin permisos". El backend igual responde 403.
+ */
+export function rolGuard(roles: readonly RolUsuario[]): CanActivateFn {
+  return (route, state) => {
+    const session = inject(SessionService);
+    const router = inject(Router);
+
+    if (!session.autenticado()) {
+      return router.createUrlTree(['/login'], { queryParams: { returnUrl: state.url } });
+    }
+    return session.tieneAlgunRol(roles) ? true : router.createUrlTree(['/acceso-denegado']);
+  };
+}
+
 /** Para login y registro: quien ya tiene sesión no necesita verlos. */
-export const guestGuard: CanActivateFn = () => {
+export const invitadoGuard: CanActivateFn = () => {
   const session = inject(SessionService);
   const router = inject(Router);
 

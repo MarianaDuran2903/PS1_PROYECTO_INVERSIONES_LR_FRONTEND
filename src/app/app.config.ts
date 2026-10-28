@@ -2,6 +2,7 @@ import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/
 import {
   ApplicationConfig,
   provideBrowserGlobalErrorListeners,
+  provideAppInitializer,
   provideZoneChangeDetection,
 } from '@angular/core';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
@@ -10,6 +11,9 @@ import { correlationIdInterceptor } from '@core/http/interceptors/correlation-id
 import { httpErrorInterceptor } from '@core/http/interceptors/http-error.interceptor';
 import { environment } from '@env/environment';
 import { authTokenInterceptor } from '@features/auth/application/interceptors/auth-token.interceptor';
+import { restaurarSesion } from '@features/auth/application/restaurar-sesion';
+import { AuthHttpRepository } from '@features/auth/data/repositories/auth-http.repository';
+import { AuthRepository } from '@features/auth/domain/repositories/auth.repository';
 import { routes } from './app.routes';
 
 export const appConfig: ApplicationConfig = {
@@ -24,5 +28,8 @@ export const appConfig: ApplicationConfig = {
       withInterceptors([correlationIdInterceptor, authTokenInterceptor, httpErrorInterceptor]),
     ),
     { provide: APP_CONFIG, useValue: environment },
+    { provide: AuthRepository, useClass: AuthHttpRepository },
+    // Al arrancar, recupera el usuario y el rol de una sesión guardada (GET /auth/sesion).
+    provideAppInitializer(restaurarSesion),
   ],
 };

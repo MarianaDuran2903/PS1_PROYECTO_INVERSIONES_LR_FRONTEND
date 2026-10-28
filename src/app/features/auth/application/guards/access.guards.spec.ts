@@ -10,21 +10,21 @@ import {
 import { RolUsuario } from '../../domain/models/rol-usuario';
 import { Sesion } from '../../domain/models/sesion';
 import { SESSION_STORAGE_KEY, SessionService } from '../session.service';
-import { guestGuard, roleGuard } from './access.guards';
+import { autenticadoGuard, invitadoGuard, rolGuard } from './access.guards';
 
 describe('access guards', () => {
   const sesionCon = (...roles: RolUsuario[]): Sesion => ({
     accessToken: 't',
+    expiraEn: Date.now() + 3_600_000,
     usuario: { idUsuario: 1, primerNombre: 'Ana', primerApellido: 'Ruiz', correo: 'a@b.co', roles },
   });
 
   let session: SessionService;
   let router: Router;
 
-  const ejecutar = (guard: CanActivateFn, roles?: RolUsuario[], url = '/marketplace') => {
-    const ruta = { data: roles ? { roles } : {} } as unknown as ActivatedRouteSnapshot;
+  const ejecutar = (guard: CanActivateFn, url = '/marketplace') => {
     const resultado = TestBed.runInInjectionContext(() =>
-      guard(ruta, { url } as RouterStateSnapshot),
+      guard({} as ActivatedRouteSnapshot, { url } as RouterStateSnapshot),
     );
     return resultado instanceof UrlTree ? router.serializeUrl(resultado) : resultado;
   };
@@ -35,51 +35,59 @@ describe('access guards', () => {
     session = TestBed.inject(SessionService);
     router = TestBed.inject(Router);
   });
-  afterEach(() => sessionStorage.removeItem(SESSION_STORAGE_KEY));
+  afterEach(() => {
+    session.cerrar();
+    sessionStorage.removeItem(SESSION_STORAGE_KEY);
+  });
 
-  describe('roleGuard', () => {
+  describe('autenticadoGuard', () => {
     it('sin sesión redirige al login recordando a dónde quería ir', () => {
-      expect(ejecutar(roleGuard, ['HUESPED'], '/marketplace')).toBe(
-        '/auth/login?returnUrl=%2Fmarketplace',
+      expect(ejecutar(autenticadoGuard, '/reservas')).toBe('/login?returnUrl=%2Freservas');
+    });
+
+    it('con sesión deja pasar, sea cual sea el rol', () => {
+      session.iniciar(sesionCon('HUESPED'));
+
+      expect(ejecutar(autenticadoGuard)).toBeTrue();
+    });
+  });
+
+  describe('rolGuard', () => {
+    it('sin sesión redirige al login recordando a dónde quería ir', () => {
+      expect(ejecutar(rolGuard(['HUESPED']), '/marketplace')).toBe(
+        '/login?returnUrl=%2Fmarketplace',
       );
     });
 
-    it('con sesión pero sin el rol redirige a acceso denegado', () => {
+    it('con sesión pero sin el rol redirige a la página de sin permisos', () => {
       session.iniciar(sesionCon('HUESPED'));
 
-      expect(ejecutar(roleGuard, ['ANFITRION'], '/anfitrion')).toBe('/acceso-denegado');
-      expect(ejecutar(roleGuard, ['ADMINISTRADOR'], '/admin')).toBe('/acceso-denegado');
+      expect(ejecutar(rolGuard(['ANFITRION']), '/anfitrion')).toBe('/acceso-denegado');
+      expect(ejecutar(rolGuard(['ADMINISTRADOR']), '/admin')).toBe('/acceso-denegado');
     });
 
     it('con el rol requerido deja pasar', () => {
       session.iniciar(sesionCon('ANFITRION'));
 
-      expect(ejecutar(roleGuard, ['ANFITRION'])).toBeTrue();
+      expect(ejecutar(rolGuard(['ANFITRION']))).toBeTrue();
     });
 
-    it('basta con uno de los roles cuando la persona tiene varios', () => {
-      session.iniciar(sesionCon('HUESPED', 'ANFITRION'));
+    it('basta con uno de los roles pedidos', () => {
+      session.iniciar(sesionCon('ANFITRION'));
 
-      expect(ejecutar(roleGuard, ['ADMINISTRADOR', 'ANFITRION'])).toBeTrue();
-    });
-
-    it('sin roles declarados en la ruta solo exige sesión', () => {
-      expect(ejecutar(roleGuard)).toBe('/auth/login?returnUrl=%2Fmarketplace');
-
-      session.iniciar(sesionCon('HUESPED'));
-      expect(ejecutar(roleGuard)).toBeTrue();
+      expect(ejecutar(rolGuard(['ADMINISTRADOR', 'ANFITRION']))).toBeTrue();
     });
   });
 
-  describe('guestGuard', () => {
+  describe('invitadoGuard', () => {
     it('deja ver login y registro a quien no tiene sesión', () => {
-      expect(ejecutar(guestGuard)).toBeTrue();
+      expect(ejecutar(invitadoGuard)).toBeTrue();
     });
 
     it('manda a su pantalla a quien ya tiene sesión', () => {
       session.iniciar(sesionCon('ANFITRION'));
 
-      expect(ejecutar(guestGuard)).toBe('/anfitrion');
+      expect(ejecutar(invitadoGuard)).toBe('/anfitrion');
     });
   });
 });

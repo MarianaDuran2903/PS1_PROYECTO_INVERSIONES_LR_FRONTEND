@@ -9,15 +9,17 @@ const DEFAULT_MESSAGES: ErrorMessages = {
   blank: 'Este campo no puede estar vacío.',
   email: 'Ingresa un correo electrónico válido.',
   pattern: 'El formato no es válido.',
+  personName: 'Solo se permiten letras, espacios, guion o apóstrofe',
   minlength: (error) =>
     `Debe tener al menos ${(error as { requiredLength: number }).requiredLength} caracteres.`,
   maxlength: (error) =>
     `Debe tener máximo ${(error as { requiredLength: number }).requiredLength} caracteres.`,
-  passwordStrength: (error) =>
-    `La contraseña debe incluir ${(error as { missing: string[] }).missing.join(', ')}.`,
-  fieldsMismatch: 'Los valores no coinciden.',
+  passwordStrength:
+    'La contraseña debe tener al menos una mayúscula, una minúscula, un número y un carácter especial, sin espacios',
+  passwordBytes: 'La contraseña no puede superar los 72 bytes',
+  fieldsMismatch: 'La confirmación no coincide con la contraseña',
   // Mensaje enviado por el servidor para ese campo.
-  server: (error) => String(error),
+  servidor: (error) => String(error),
 };
 
 /**

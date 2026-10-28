@@ -15,4 +15,8 @@ import { LoginFormComponent } from '../../components/login-form/login-form.compo
 export class LoginPageComponent {
   protected readonly facade = inject(LoginFacade);
   readonly returnUrl = input<string>();
+  /** `?registrado=true`: la cuenta se acaba de crear (el registro no abre sesión). */
+  readonly registrado = input<string>();
+  /** `?expirada=true`: la sesión venció o dejó de ser válida. */
+  readonly expirada = input<string>();
 }

@@ -1,30 +1,50 @@
 import { DOCUMENT } from '@angular/common';
-import { computed, inject, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, Injector, signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { RolUsuario } from '../domain/models/rol-usuario';
-import { Sesion } from '../domain/models/sesion';
+import { Sesion, SesionActiva } from '../domain/models/sesion';
 
 export const SESSION_STORAGE_KEY = 'ilr.sesion';
 
+/** setTimeout no admite esperas mayores a 2^31-1 ms (unos 24 días). */
+const ESPERA_MAXIMA_MS = 2_147_483_647;
+
 /**
- * Estado de la sesión del usuario. Se guarda en `sessionStorage`, así sobrevive a recargar
- * la página pero se pierde al cerrar la pestaña. Si el backend pasa a usar cookies
- * HttpOnly, solo cambia `leer`/`guardar` y el interceptor; el resto no se entera.
+ * Estado de la sesión del usuario. Se guarda en `sessionStorage` junto con su fecha de
+ * vencimiento, así sobrevive a recargar la página pero se pierde al cerrar la pestaña.
+ * Al vencer el token (no hay renovación) cierra la sesión sola y lleva al login.
  */
 @Injectable({ providedIn: 'root' })
 export class SessionService {
   private readonly storage = inject(DOCUMENT).defaultView?.sessionStorage;
+  private readonly injector = inject(Injector);
   private readonly state = signal<Sesion | null>(this.leer());
+  private temporizador: ReturnType<typeof setTimeout> | undefined;
 
   readonly usuario = computed(() => this.state()?.usuario ?? null);
   readonly token = computed(() => this.state()?.accessToken ?? null);
   readonly autenticado = computed(() => this.state() !== null);
 
+  constructor() {
+    this.programarCierre();
+  }
+
   iniciar(sesion: Sesion): void {
     this.state.set(sesion);
     this.guardar(sesion);
+    this.programarCierre();
+  }
+
+  /** Aplica lo que respondió `GET /auth/sesion`: usuario y rol vigentes, y vencimiento real. */
+  actualizar({ usuario, expiraEn }: SesionActiva): void {
+    const actual = this.state();
+    if (actual) {
+      this.iniciar({ ...actual, usuario, expiraEn });
+    }
   }
 
   cerrar(): void {
+    clearTimeout(this.temporizador);
     this.state.set(null);
     this.guardar(null);
   }
@@ -38,11 +58,31 @@ export class SessionService {
     return roles.length === 0 || roles.some((rol) => actuales.includes(rol));
   }
 
+  private programarCierre(): void {
+    clearTimeout(this.temporizador);
+    const sesion = this.state();
+    if (!sesion) {
+      return;
+    }
+    const espera = Math.min(Math.max(sesion.expiraEn - Date.now(), 0), ESPERA_MAXIMA_MS);
+    this.temporizador = setTimeout(() => this.alVencerElTemporizador(), espera);
+  }
+
+  private alVencerElTemporizador(): void {
+    const sesion = this.state();
+    if (sesion && Date.now() < sesion.expiraEn) {
+      this.programarCierre(); // la espera se recortó al máximo permitido: faltaba tiempo
+      return;
+    }
+    this.cerrar();
+    void this.injector.get(Router).navigate(['/login'], { queryParams: { expirada: 'true' } });
+  }
+
   private leer(): Sesion | null {
     try {
       const guardado = this.storage?.getItem(SESSION_STORAGE_KEY);
       const valor: unknown = guardado ? JSON.parse(guardado) : null;
-      return esSesion(valor) ? valor : null;
+      return esSesion(valor) && valor.expiraEn > Date.now() ? valor : null;
     } catch {
       return null;
     }
@@ -65,9 +105,10 @@ function esSesion(valor: unknown): valor is Sesion {
   if (typeof valor !== 'object' || valor === null) {
     return false;
   }
-  const { accessToken, usuario } = valor as Partial<Sesion>;
+  const { accessToken, expiraEn, usuario } = valor as Partial<Sesion>;
   return (
     typeof accessToken === 'string' &&
+    typeof expiraEn === 'number' &&
     typeof usuario === 'object' &&
     usuario !== null &&
     typeof usuario.idUsuario === 'number' &&
