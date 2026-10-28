@@ -17,5 +17,13 @@ export interface UsuarioSesion {
 
 export interface Sesion {
   accessToken: string;
+  /** Instante de vencimiento del token, en milisegundos desde epoch. */
+  expiraEn: number;
   usuario: UsuarioSesion;
+}
+
+/** Respuesta de `GET /auth/sesion`: quién es el usuario y hasta cuándo vale el token. */
+export interface SesionActiva {
+  usuario: UsuarioSesion;
+  expiraEn: number;
 }

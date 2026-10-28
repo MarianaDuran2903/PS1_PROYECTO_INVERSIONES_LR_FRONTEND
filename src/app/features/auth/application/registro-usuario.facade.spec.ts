@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { Router } from '@angular/router';
 import { ApiError } from '@core/http/api-error';
 import { ToastService } from '@core/notifications/toast.service';
 import { EventTrackerService } from '@core/tracking/event-tracker.service';
@@ -15,6 +16,7 @@ describe('RegistroUsuarioFacade', () => {
     primerApellido: 'Ruiz',
     correo: 'ana@correo.com',
     contrasena: 'Segura#2026',
+    confirmarContrasena: 'Segura#2026',
   };
   const usuario: UsuarioRegistrado = {
     idUsuario: 1,
@@ -28,6 +30,7 @@ describe('RegistroUsuarioFacade', () => {
   let repository: jasmine.SpyObj<AuthRepository>;
   let tracker: jasmine.SpyObj<EventTrackerService>;
   let toast: jasmine.SpyObj<ToastService>;
+  let router: jasmine.SpyObj<Router>;
   let facade: RegistroUsuarioFacade;
 
   beforeEach(() => {
@@ -36,6 +39,8 @@ describe('RegistroUsuarioFacade', () => {
     repository.registrarUsuario.and.returnValue(respuesta);
     tracker = jasmine.createSpyObj<EventTrackerService>('EventTrackerService', ['track']);
     toast = jasmine.createSpyObj<ToastService>('ToastService', ['success']);
+    router = jasmine.createSpyObj<Router>('Router', ['navigate']);
+    router.navigate.and.resolveTo(true);
 
     TestBed.configureTestingModule({
       providers: [
@@ -43,6 +48,7 @@ describe('RegistroUsuarioFacade', () => {
         { provide: AuthRepository, useValue: repository },
         { provide: EventTrackerService, useValue: tracker },
         { provide: ToastService, useValue: toast },
+        { provide: Router, useValue: router },
       ],
     });
     facade = TestBed.inject(RegistroUsuarioFacade);
@@ -60,6 +66,15 @@ describe('RegistroUsuarioFacade', () => {
     expect(tracker.track).toHaveBeenCalledOnceWith(EVENTO_USUARIO_REGISTRADO, {
       idUsuario: 1,
       roles: ['HUESPED'],
+    });
+  });
+
+  it('tras registrarse no abre sesión: lleva al login con el aviso de cuenta creada', () => {
+    facade.registrar(datos);
+    respuesta.next(usuario);
+
+    expect(router.navigate).toHaveBeenCalledOnceWith(['/login'], {
+      queryParams: { registrado: 'true' },
     });
   });
 
@@ -96,7 +111,9 @@ describe('RegistroUsuarioFacade', () => {
     respuesta.error(new CorreoYaRegistradoError(datos.correo));
 
     expect(facade.estado()).toBe('error');
-    expect(facade.erroresCampo().correo).toContain('ya está registrado');
+    expect(facade.erroresCampo().correo).toBe('El correo ya está registrado');
+    expect(facade.mensajeError()).toBeNull();
+    expect(router.navigate).not.toHaveBeenCalled();
     expect(facade.usuario()).toBeNull();
     expect(tracker.track).not.toHaveBeenCalled();
     expect(toast.success).not.toHaveBeenCalled();

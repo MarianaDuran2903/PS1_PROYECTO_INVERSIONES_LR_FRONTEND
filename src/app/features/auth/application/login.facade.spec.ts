@@ -4,7 +4,7 @@ import { ApiError } from '@core/http/api-error';
 import { ToastService } from '@core/notifications/toast.service';
 import { EventTrackerService } from '@core/tracking/event-tracker.service';
 import { Subject } from 'rxjs';
-import { CredencialesInvalidasError, CuentaNoDisponibleError } from '../domain/errors/login.errors';
+import { CredencialesInvalidasError } from '../domain/errors/login.errors';
 import { Credenciales, Sesion } from '../domain/models/sesion';
 import { AuthRepository } from '../domain/repositories/auth.repository';
 import { EVENTO_INICIO_SESION_FALLIDO, EVENTO_SESION_INICIADA, LoginFacade } from './login.facade';
@@ -14,6 +14,7 @@ describe('LoginFacade', () => {
   const credenciales: Credenciales = { correo: 'ana@correo.com', contrasena: 'Segura#2026' };
   const sesionCon = (...roles: Sesion['usuario']['roles']): Sesion => ({
     accessToken: 'token',
+    expiraEn: Date.now() + 3_600_000,
     usuario: {
       idUsuario: 7,
       primerNombre: 'Ana',
@@ -53,7 +54,10 @@ describe('LoginFacade', () => {
     session = TestBed.inject(SessionService);
     facade = TestBed.inject(LoginFacade);
   });
-  afterEach(() => sessionStorage.removeItem(SESSION_STORAGE_KEY));
+  afterEach(() => {
+    session.cerrar();
+    sessionStorage.removeItem(SESSION_STORAGE_KEY);
+  });
 
   it('abre la sesión, avisa y lleva a la pantalla del rol', () => {
     facade.iniciarSesion(credenciales);
@@ -89,23 +93,13 @@ describe('LoginFacade', () => {
     facade.iniciarSesion(credenciales);
     respuesta.error(new CredencialesInvalidasError());
 
-    expect(facade.mensajeError()).toBe('Correo o contraseña incorrectos.');
+    expect(facade.mensajeError()).toBe('Correo o contraseña incorrectos');
     expect(facade.enviando()).toBeFalse();
     expect(session.autenticado()).toBeFalse();
     expect(router.navigateByUrl).not.toHaveBeenCalled();
     expect(toast.success).not.toHaveBeenCalled();
     expect(tracker.track).toHaveBeenCalledOnceWith(EVENTO_INICIO_SESION_FALLIDO, {
       motivo: 'CREDENCIALES_INVALIDAS',
-    });
-  });
-
-  it('cuenta restringida: explica el motivo', () => {
-    facade.iniciarSesion(credenciales);
-    respuesta.error(new CuentaNoDisponibleError('RESTRINGIDA'));
-
-    expect(facade.mensajeError()).toBe('Tu cuenta fue restringida por un administrador.');
-    expect(tracker.track).toHaveBeenCalledWith(EVENTO_INICIO_SESION_FALLIDO, {
-      motivo: 'RESTRINGIDA',
     });
   });
 

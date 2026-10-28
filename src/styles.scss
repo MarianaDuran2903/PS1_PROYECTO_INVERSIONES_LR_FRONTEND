@@ -245,6 +245,12 @@ a {
   border-color: color-mix(in srgb, var(--color-success) 30%, transparent);
 }
 
+.alert--info {
+  color: var(--color-primary);
+  background: var(--color-primary-soft);
+  border-color: color-mix(in srgb, var(--color-primary) 30%, transparent);
+}
+
 /* Tarjeta */
 .card {
   background: var(--color-surface);

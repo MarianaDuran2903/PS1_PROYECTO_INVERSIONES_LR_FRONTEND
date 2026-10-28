@@ -7,12 +7,22 @@ export interface ApiFieldError {
   message: string;
 }
 
+/** Cuerpo de error que devuelven TODOS los endpoints del backend. */
+export interface ErrorResponse {
+  fecha: string;
+  estado: number;
+  error: string;
+  mensaje: string;
+  ruta: string;
+  /** Solo en 400 de validación: { campo: mensaje }. */
+  errores?: Record<string, string>;
+}
+
+const MENSAJE_GENERICO = 'Ocurrió un error inesperado. Inténtalo de nuevo más tarde.';
+
 /**
  * Error normalizado del API. Toda respuesta HTTP fallida se convierte a este tipo
  * en `httpErrorInterceptor`, de modo que el resto de la app no depende de HttpErrorResponse.
- *
- * Cuerpo de error esperado del backend:
- * `{ "code": "EMAIL_ALREADY_REGISTERED", "message": "...", "errors": [{ "field": "email", "message": "..." }] }`
  */
 export class ApiError extends Error {
   constructor(
@@ -25,12 +35,6 @@ export class ApiError extends Error {
     super(message);
     this.name = 'ApiError';
   }
-}
-
-interface ApiErrorBody {
-  code?: unknown;
-  message?: unknown;
-  errors?: unknown;
 }
 
 export function toApiError(error: HttpErrorResponse): ApiError {
@@ -46,25 +50,29 @@ export function toApiError(error: HttpErrorResponse): ApiError {
     );
   }
 
-  const body: ApiErrorBody =
-    typeof error.error === 'object' && error.error !== null ? (error.error as ApiErrorBody) : {};
+  const body: Partial<ErrorResponse> =
+    typeof error.error === 'object' && error.error !== null
+      ? (error.error as Partial<ErrorResponse>)
+      : {};
+
+  // Nunca se muestran detalles técnicos: en un 500 el mensaje es siempre genérico.
+  const mensaje =
+    error.status >= 500 || typeof body.mensaje !== 'string' ? MENSAJE_GENERICO : body.mensaje;
 
   return new ApiError(
     error.status,
-    typeof body.code === 'string' ? body.code : `HTTP_${error.status}`,
-    typeof body.message === 'string'
-      ? body.message
-      : 'Ocurrió un error inesperado. Inténtalo de nuevo más tarde.',
-    Array.isArray(body.errors) ? body.errors.filter(isApiFieldError) : [],
+    `HTTP_${error.status}`,
+    mensaje,
+    erroresPorCampo(body.errores),
     correlationId,
   );
 }
 
-function isApiFieldError(value: unknown): value is ApiFieldError {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    typeof (value as ApiFieldError).field === 'string' &&
-    typeof (value as ApiFieldError).message === 'string'
-  );
+function erroresPorCampo(errores: unknown): ApiFieldError[] {
+  if (typeof errores !== 'object' || errores === null) {
+    return [];
+  }
+  return Object.entries(errores)
+    .filter((entrada): entrada is [string, string] => typeof entrada[1] === 'string')
+    .map(([field, message]) => ({ field, message }));
 }

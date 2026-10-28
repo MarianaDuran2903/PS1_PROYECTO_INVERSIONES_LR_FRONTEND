@@ -1,6 +1,9 @@
 import { RolRegistrable, RolUsuario } from './rol-usuario';
 
-/** Datos que el visitante diligencia para crear su cuenta (Huésped o Anfitrión). */
+/**
+ * Datos que el visitante diligencia para crear su cuenta (Huésped o Anfitrión).
+ * `rol` decide a qué endpoint se llama; nunca viaja en el cuerpo.
+ */
 export interface RegistroUsuario {
   rol: RolRegistrable;
   primerNombre: string;
@@ -9,6 +12,7 @@ export interface RegistroUsuario {
   segundoApellido?: string;
   correo: string;
   contrasena: string;
+  confirmarContrasena: string;
 }
 
 export type CampoRegistroUsuario = keyof RegistroUsuario;

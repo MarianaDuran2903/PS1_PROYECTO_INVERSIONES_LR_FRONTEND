@@ -9,7 +9,6 @@ export const environment: AppEnvironment = {
   production: true,
   appName: 'Inversiones LR (QA)',
   apiUrl: '/api/v1',
-  useMockApi: false,
   logLevel: 'info',
   tracking: {
     enabled: true,

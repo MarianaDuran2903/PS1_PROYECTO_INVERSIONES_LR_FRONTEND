@@ -16,6 +16,11 @@ describe('authTokenInterceptor', () => {
   let router: Router;
   let toast: ToastService;
 
+  const errorDelBackend = (estado: number, error: string, mensaje: string) => ({
+    body: { fecha: '2026-01-01T00:00:00Z', estado, error, mensaje, ruta: '/api-test/x' },
+    opts: { status: estado, statusText: error },
+  });
+
   beforeEach(() => {
     sessionStorage.removeItem(SESSION_STORAGE_KEY);
     TestBed.configureTestingModule({
@@ -37,6 +42,7 @@ describe('authTokenInterceptor', () => {
     spyOn(router, 'navigate').and.resolveTo(true);
     session.iniciar({
       accessToken: 'abc',
+      expiraEn: Date.now() + 3_600_000,
       usuario: {
         idUsuario: 1,
         primerNombre: 'Ana',
@@ -49,6 +55,7 @@ describe('authTokenInterceptor', () => {
 
   afterEach(() => {
     controller.verify();
+    session.cerrar();
     sessionStorage.removeItem(SESSION_STORAGE_KEY);
   });
 
@@ -68,34 +75,71 @@ describe('authTokenInterceptor', () => {
     req.flush({});
   });
 
-  it('un 401 con sesión abierta la cierra, avisa y lleva al login', () => {
-    http.get('/api-test/reservas').subscribe({ error: () => undefined });
+  for (const ruta of ['/api-test/auth/login', '/api-test/auth/registro/huesped']) {
+    it(`no envía el token a ${ruta}`, () => {
+      http.post(ruta, {}).subscribe();
 
-    controller
-      .expectOne('/api-test/reservas')
-      .flush(
-        { code: 'TOKEN_EXPIRED', message: 'Expiró' },
-        { status: 401, statusText: 'Unauthorized' },
-      );
+      const req = controller.expectOne(ruta);
+      expect(req.request.headers.has('Authorization')).toBeFalse();
+      req.flush({});
+    });
+  }
+
+  it('un 401 en una ruta protegida cierra la sesión y lleva a /login?expirada=true', () => {
+    http.get('/api-test/reservas').subscribe({ error: () => undefined });
+    const { body, opts } = errorDelBackend(401, 'Unauthorized', 'Token inválido');
+
+    controller.expectOne('/api-test/reservas').flush(body, opts);
 
     expect(session.autenticado()).toBeFalse();
-    expect(toast.toasts().some((t) => t.title === 'Tu sesión expiró')).toBeTrue();
-    expect(router.navigate).toHaveBeenCalledWith(['/auth/login'], {
-      queryParams: { returnUrl: '/' },
+    expect(router.navigate).toHaveBeenCalledWith(['/login'], {
+      queryParams: { expirada: 'true' },
     });
   });
 
   it('el 401 del propio login (credenciales malas) no toca la sesión', () => {
     http.post('/api-test/auth/login', {}).subscribe({ error: () => undefined });
+    const { body, opts } = errorDelBackend(401, 'Unauthorized', 'Correo o contraseña incorrectos');
 
-    controller
-      .expectOne('/api-test/auth/login')
-      .flush(
-        { code: 'BAD_CREDENTIALS', message: 'Mal' },
-        { status: 401, statusText: 'Unauthorized' },
-      );
+    controller.expectOne('/api-test/auth/login').flush(body, opts);
 
     expect(session.autenticado()).toBeTrue();
     expect(router.navigate).not.toHaveBeenCalled();
+  });
+
+  it('un 403 avisa que no tiene permisos y NO cierra la sesión', () => {
+    http.get('/api-test/admin/usuarios').subscribe({ error: () => undefined });
+    const { body, opts } = errorDelBackend(
+      403,
+      'Forbidden',
+      'No tiene permisos para esta operación',
+    );
+
+    controller.expectOne('/api-test/admin/usuarios').flush(body, opts);
+
+    expect(session.autenticado()).toBeTrue();
+    expect(router.navigate).not.toHaveBeenCalled();
+    expect(
+      toast
+        .toasts()
+        .some(
+          (t) =>
+            t.title === 'Sin permisos' && t.message === 'No tiene permisos para esta operación',
+        ),
+    ).toBeTrue();
+  });
+
+  it('deja pasar el error a quien hizo la petición', () => {
+    let recibido: unknown;
+    http.get('/api-test/reservas').subscribe({ error: (e: unknown) => (recibido = e) });
+    const { body, opts } = errorDelBackend(
+      500,
+      'Internal Server Error',
+      'NullPointerException en X',
+    );
+
+    controller.expectOne('/api-test/reservas').flush(body, opts);
+
+    expect(recibido).toEqual(jasmine.objectContaining({ status: 500 }));
   });
 });

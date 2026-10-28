@@ -15,12 +15,14 @@ import {
   Validators,
 } from '@angular/forms';
 import {
+  EMAIL_MAX_LENGTH,
   EMAIL_PATTERN,
   matchFields,
   notBlank,
   PASSWORD_MAX_LENGTH,
   PASSWORD_MIN_LENGTH,
-  PERSON_NAME_PATTERN,
+  PERSON_NAME_MAX_LENGTH,
+  personName,
   strongPassword,
 } from '@shared/validators/form.validators';
 import { ErrorMessages, firstErrorMessage } from '@shared/validators/validation-messages';
@@ -46,13 +48,10 @@ const OPCIONES_ROL: readonly OpcionRol[] = [
   },
 ];
 
-const NOMBRE_MAX_LENGTH = 50;
-const CORREO_MAX_LENGTH = 150;
+const NOMBRE_MAX_LENGTH = PERSON_NAME_MAX_LENGTH;
+const CORREO_MAX_LENGTH = EMAIL_MAX_LENGTH;
 
-const nombreOpcional: ValidatorFn[] = [
-  Validators.maxLength(NOMBRE_MAX_LENGTH),
-  Validators.pattern(PERSON_NAME_PATTERN),
-];
+const nombreOpcional: ValidatorFn[] = [Validators.maxLength(NOMBRE_MAX_LENGTH), personName()];
 const nombreRequerido: ValidatorFn[] = [Validators.required, notBlank(), ...nombreOpcional];
 
 function crearFormulario(fb: NonNullableFormBuilder) {
@@ -90,16 +89,11 @@ function crearFormulario(fb: NonNullableFormBuilder) {
 type FormularioRegistro = ReturnType<typeof crearFormulario>;
 type CampoFormulario = keyof FormularioRegistro['controls'];
 
-const MENSAJE_NOMBRE: ErrorMessages = {
-  pattern: 'Solo se permiten letras, espacios, apóstrofos y guiones.',
-};
+const LARGO_CONTRASENA = `La contraseña debe tener entre ${PASSWORD_MIN_LENGTH} y ${PASSWORD_MAX_LENGTH} caracteres`;
 
 const MENSAJES: Partial<Record<CampoFormulario, ErrorMessages>> = {
-  primerNombre: MENSAJE_NOMBRE,
-  segundoNombre: MENSAJE_NOMBRE,
-  primerApellido: MENSAJE_NOMBRE,
-  segundoApellido: MENSAJE_NOMBRE,
   correo: { pattern: 'Ingresa un correo electrónico válido.' },
+  contrasena: { minlength: LARGO_CONTRASENA, maxlength: LARGO_CONTRASENA },
   confirmarContrasena: { required: 'Confirma tu contraseña.' },
 };
 
@@ -144,7 +138,7 @@ export class RegistroFormComponent {
       for (const [campo, mensaje] of Object.entries(this.erroresServidor())) {
         const control = this.form.get(campo);
         if (control && mensaje) {
-          control.setErrors({ ...control.errors, server: mensaje });
+          control.setErrors({ ...control.errors, servidor: mensaje });
           control.markAsTouched();
         }
       }
@@ -157,7 +151,7 @@ export class RegistroFormComponent {
       return null;
     }
     // El mensaje del servidor tiene prioridad sobre las validaciones locales.
-    const errorServidor: unknown = control.getError('server');
+    const errorServidor: unknown = control.getError('servidor');
     if (typeof errorServidor === 'string') {
       return errorServidor;
     }
@@ -166,7 +160,7 @@ export class RegistroFormComponent {
       !control.errors &&
       this.form.hasError('fieldsMismatch')
     ) {
-      return 'Las contraseñas no coinciden.';
+      return firstErrorMessage({ fieldsMismatch: true });
     }
     return firstErrorMessage(control.errors, MENSAJES[campo]);
   }
@@ -194,6 +188,7 @@ export class RegistroFormComponent {
       segundoApellido: valor.segundoApellido,
       correo: valor.correo,
       contrasena: valor.contrasena,
+      confirmarContrasena: valor.confirmarContrasena,
     });
   }
 

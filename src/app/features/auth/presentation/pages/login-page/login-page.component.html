@@ -4,6 +4,18 @@
     <p>Accede con tu correo y tu contraseña.</p>
   </header>
 
+  @if (registrado() === 'true') {
+    <div class="alert alert--success login__alerta" role="status">
+      Tu cuenta fue creada correctamente. Inicia sesión para continuar.
+    </div>
+  }
+
+  @if (expirada() === 'true') {
+    <div class="alert alert--info login__alerta" role="status">
+      Tu sesión expiró. Inicia sesión de nuevo para continuar.
+    </div>
+  }
+
   @if (facade.mensajeError(); as mensaje) {
     <div class="alert alert--danger login__alerta" role="alert">{{ mensaje }}</div>
   }
@@ -13,5 +25,5 @@
     (iniciar)="facade.iniciarSesion($event, returnUrl())"
   />
 
-  <p class="login__pie">¿Aún no tienes cuenta? <a routerLink="/auth/registro">Regístrate</a></p>
+  <p class="login__pie">¿Aún no tienes cuenta? <a routerLink="/registro">Regístrate</a></p>
 </section>

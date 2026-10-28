@@ -1,21 +1,20 @@
 import { RegistroUsuario, UsuarioRegistrado } from '../../domain/models/registro-usuario';
 import { RolUsuario } from '../../domain/models/rol-usuario';
-import { RegistrarUsuarioRequestDto, UsuarioResponseDto } from '../dtos/registro-usuario.dto';
-
-const ROLES_VALIDOS = new Set<string>(Object.values(RolUsuario));
+import { RegistroUsuarioRequestDto, UsuarioResponseDto } from '../dtos/registro-usuario.dto';
 
 /** Adapter entre el modelo de dominio y los DTO del API. */
 export const RegistroUsuarioMapper = {
-  toRequest(datos: RegistroUsuario): RegistrarUsuarioRequestDto {
+  /** El rol se descarta a propósito: lo decide el endpoint, no el cuerpo. */
+  toRequest(datos: RegistroUsuario): RegistroUsuarioRequestDto {
     return {
-      rol: datos.rol,
-      primerNombre: normalizarTexto(datos.primerNombre),
+      primerNombre: datos.primerNombre.trim(),
       segundoNombre: normalizarOpcional(datos.segundoNombre),
-      primerApellido: normalizarTexto(datos.primerApellido),
+      primerApellido: datos.primerApellido.trim(),
       segundoApellido: normalizarOpcional(datos.segundoApellido),
-      correo: datos.correo.trim().toLowerCase(),
-      // La contraseña se envía tal cual: el backend la convierte en hash.
+      correo: datos.correo.trim(),
+      // Las contraseñas se envían tal cual: el backend valida y convierte en hash.
       contrasena: datos.contrasena,
+      confirmarContrasena: datos.confirmarContrasena,
     };
   },
 
@@ -25,16 +24,12 @@ export const RegistroUsuarioMapper = {
       primerNombre: dto.primerNombre,
       primerApellido: dto.primerApellido,
       correo: dto.correo,
-      roles: dto.roles.filter((rol): rol is RolUsuario => ROLES_VALIDOS.has(rol)),
+      roles: [dto.rol as RolUsuario],
     };
   },
 };
 
-function normalizarTexto(valor: string): string {
-  return valor.trim().replace(/\s+/g, ' ');
-}
-
 function normalizarOpcional(valor: string | undefined): string | null {
-  const normalizado = normalizarTexto(valor ?? '');
+  const normalizado = (valor ?? '').trim();
   return normalizado.length > 0 ? normalizado : null;
 }

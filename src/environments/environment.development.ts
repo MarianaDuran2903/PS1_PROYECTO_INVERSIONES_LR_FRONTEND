@@ -1,19 +1,15 @@
 import { AppEnvironment } from './app-environment';
 
 /**
- * Entorno de DESARROLLO local (`npm start`).
- * Las peticiones a `/api` las redirige el dev-server al backend según `proxy.conf.js`
- * (por defecto http://localhost:8080), lo que evita problemas de CORS.
- *
- * Mientras el backend no exponga el endpoint de registro, `useMockApi: true`
- * permite trabajar con un repositorio en memoria. Cámbialo a `false` para usar el API real.
+ * Entorno de DESARROLLO local (`npm start` o el contenedor en el puerto 4200).
+ * El navegador llama directo al backend en http://localhost:8080; el backend solo acepta
+ * CORS desde http://localhost:4200, así que el frontend debe abrirse en ese puerto exacto.
  */
 export const environment: AppEnvironment = {
   name: 'development',
   production: false,
   appName: 'Inversiones LR (DEV)',
-  apiUrl: '/api/v1',
-  useMockApi: true,
+  apiUrl: 'http://localhost:8080/api/v1',
   logLevel: 'debug',
   tracking: {
     enabled: true,

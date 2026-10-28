@@ -25,8 +25,4 @@ export class RegistroPageComponent {
   protected readonly rolInicial = computed<RolRegistrable>(() =>
     this.rol()?.toLowerCase() === 'anfitrion' ? RolUsuario.Anfitrion : RolUsuario.Huesped,
   );
-
-  protected readonly tituloRol = computed(() =>
-    this.facade.usuario()?.roles.includes(RolUsuario.Anfitrion) ? 'Anfitrión' : 'Huésped',
-  );
 }

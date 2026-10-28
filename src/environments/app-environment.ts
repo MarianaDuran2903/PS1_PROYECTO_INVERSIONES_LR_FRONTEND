@@ -12,8 +12,6 @@ export interface AppEnvironment {
   appName: string;
   /** URL base del API REST del backend (sin "/" final). */
   apiUrl: string;
-  /** Usa repositorios en memoria en lugar del backend real. */
-  useMockApi: boolean;
   logLevel: LogLevel;
   tracking: {
     enabled: boolean;

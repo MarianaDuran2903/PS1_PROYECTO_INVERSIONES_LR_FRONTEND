@@ -18,7 +18,7 @@
     } @else if (!usuario()) {
       <a
         class="nav__link"
-        routerLink="/auth/registro"
+        routerLink="/registro"
         [queryParams]="paramsAnfitrion"
         routerLinkActive="nav__link--active"
         [routerLinkActiveOptions]="rutaYParametros"
@@ -38,7 +38,7 @@
     } @else {
       <a
         class="nav__link nav__link--cuenta"
-        routerLink="/auth/login"
+        routerLink="/login"
         routerLinkActive="nav__link--active"
       >
         <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
@@ -55,7 +55,7 @@
       </a>
       <a
         class="nav__link"
-        routerLink="/auth/registro"
+        routerLink="/registro"
         routerLinkActive="nav__link--active"
         [routerLinkActiveOptions]="rutaYParametros"
         >Crear cuenta</a

@@ -137,8 +137,8 @@
         </button>
       </div>
       <p class="field__ayuda" id="contrasena-ayuda">
-        Mínimo {{ contrasenaMinLength }} caracteres, con mayúscula, minúscula, número y carácter
-        especial.
+        Entre {{ contrasenaMinLength }} y {{ contrasenaMaxLength }} caracteres, con mayúscula,
+        minúscula, número y carácter especial, sin espacios.
       </p>
       @if (errorDe('contrasena'); as error) {
         <p class="field__error" id="contrasena-error">{{ error }}</p>

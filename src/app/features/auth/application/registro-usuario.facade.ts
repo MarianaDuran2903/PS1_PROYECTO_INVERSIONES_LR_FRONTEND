@@ -1,5 +1,6 @@
 import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Router } from '@angular/router';
 import { ApiError } from '@core/http/api-error';
 import { ToastService } from '@core/notifications/toast.service';
 import { EventTrackerService } from '@core/tracking/event-tracker.service';
@@ -38,6 +39,7 @@ export class RegistroUsuarioFacade {
   private readonly repository = inject(AuthRepository);
   private readonly tracker = inject(EventTrackerService);
   private readonly toast = inject(ToastService);
+  private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
 
   private readonly state = signal<RegistroState>(ESTADO_INICIAL);
@@ -69,6 +71,8 @@ export class RegistroUsuarioFacade {
             `¡Bienvenido, ${usuario.primerNombre}!`,
             'Tu cuenta fue creada correctamente.',
           );
+          // El registro no abre sesión: la persona entra por el login.
+          void this.router.navigate(['/login'], { queryParams: { registrado: 'true' } });
         },
         error: (error: unknown) =>
           this.state.set({ ...ESTADO_INICIAL, ...this.describirError(error) }),
@@ -81,9 +85,8 @@ export class RegistroUsuarioFacade {
 
   private describirError(error: unknown): Omit<RegistroState, 'usuario'> {
     if (error instanceof CorreoYaRegistradoError) {
-      const mensaje =
-        'Este correo electrónico ya está registrado. Inicia sesión o usa otro correo.';
-      return { estado: 'error', mensajeError: mensaje, erroresCampo: { correo: mensaje } };
+      // El mensaje del backend va junto al campo correo, sin repetirlo en el aviso general.
+      return { estado: 'error', mensajeError: null, erroresCampo: { correo: error.message } };
     }
     if (error instanceof RegistroInvalidoError) {
       return { estado: 'error', mensajeError: error.message, erroresCampo: error.errores };

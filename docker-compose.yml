@@ -2,16 +2,16 @@ name: inversiones-lr-frontend
 
 services:
   # Build optimizado servido por nginx.
-  #   docker compose up -d --build        -> http://localhost:4280
+  #   docker compose up -d --build        -> http://localhost:4200
   frontend:
     build:
       context: .
       target: runtime
       args:
-        BUILD_CONFIGURATION: ${BUILD_CONFIGURATION:-production}
-    image: inversiones-lr-frontend:${BUILD_CONFIGURATION:-production}
+        BUILD_CONFIGURATION: ${BUILD_CONFIGURATION:-development}
+    image: inversiones-lr-frontend:${BUILD_CONFIGURATION:-development}
     ports:
-      - '${FRONTEND_PORT:-4280}:80'
+      - '${FRONTEND_PORT:-4200}:80'
     environment:
       BACKEND_URL: ${BACKEND_URL:-http://host.docker.internal:8080}
     extra_hosts:

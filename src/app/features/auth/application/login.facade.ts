@@ -4,7 +4,7 @@ import { Router } from '@angular/router';
 import { ApiError } from '@core/http/api-error';
 import { ToastService } from '@core/notifications/toast.service';
 import { EventTrackerService } from '@core/tracking/event-tracker.service';
-import { CredencialesInvalidasError, CuentaNoDisponibleError } from '../domain/errors/login.errors';
+import { CredencialesInvalidasError } from '../domain/errors/login.errors';
 import { Credenciales, Sesion } from '../domain/models/sesion';
 import { AuthRepository } from '../domain/repositories/auth.repository';
 import { rutaInicialPorRol, urlInternaSegura } from './rutas';
@@ -67,9 +67,6 @@ export class LoginFacade {
 
     if (error instanceof CredencialesInvalidasError) {
       motivo = 'CREDENCIALES_INVALIDAS';
-      mensaje = error.message;
-    } else if (error instanceof CuentaNoDisponibleError) {
-      motivo = error.motivo;
       mensaje = error.message;
     } else if (error instanceof ApiError) {
       motivo = error.code;
