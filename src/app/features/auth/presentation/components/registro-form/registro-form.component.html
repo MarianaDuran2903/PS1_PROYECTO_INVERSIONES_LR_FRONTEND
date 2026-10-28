@@ -1,0 +1,173 @@
+<form [formGroup]="form" (ngSubmit)="enviar()" novalidate>
+  <fieldset class="form" [disabled]="enviando()">
+    <legend class="visually-hidden">Datos de la cuenta</legend>
+    <p class="form__nota">
+      Los campos marcados con <span aria-hidden="true">*</span> son obligatorios.
+    </p>
+
+    <fieldset class="roles">
+      <legend>Quiero registrarme como <span aria-hidden="true">*</span></legend>
+      @for (opcion of opcionesRol; track opcion.valor) {
+        <label class="roles__opcion">
+          <input
+            type="radio"
+            formControlName="rol"
+            [value]="opcion.valor"
+            [attr.value]="opcion.valor"
+          />
+          <span class="roles__texto">
+            <span class="roles__titulo">{{ opcion.titulo }}</span>
+            <span class="roles__descripcion">{{ opcion.descripcion }}</span>
+          </span>
+        </label>
+      }
+    </fieldset>
+
+    <div class="form__fila">
+      <div class="field">
+        <label for="primerNombre">Primer nombre <span aria-hidden="true">*</span></label>
+        <input
+          id="primerNombre"
+          type="text"
+          formControlName="primerNombre"
+          autocomplete="given-name"
+          [attr.maxlength]="nombreMaxLength"
+          [attr.aria-invalid]="errorDe('primerNombre') !== null"
+          [attr.aria-describedby]="errorDe('primerNombre') ? 'primerNombre-error' : null"
+          required
+        />
+        @if (errorDe('primerNombre'); as error) {
+          <p class="field__error" id="primerNombre-error">{{ error }}</p>
+        }
+      </div>
+
+      <div class="field">
+        <label for="segundoNombre">Segundo nombre</label>
+        <input
+          id="segundoNombre"
+          type="text"
+          formControlName="segundoNombre"
+          autocomplete="additional-name"
+          [attr.maxlength]="nombreMaxLength"
+          [attr.aria-invalid]="errorDe('segundoNombre') !== null"
+          [attr.aria-describedby]="errorDe('segundoNombre') ? 'segundoNombre-error' : null"
+        />
+        @if (errorDe('segundoNombre'); as error) {
+          <p class="field__error" id="segundoNombre-error">{{ error }}</p>
+        }
+      </div>
+    </div>
+
+    <div class="form__fila">
+      <div class="field">
+        <label for="primerApellido">Primer apellido <span aria-hidden="true">*</span></label>
+        <input
+          id="primerApellido"
+          type="text"
+          formControlName="primerApellido"
+          autocomplete="family-name"
+          [attr.maxlength]="nombreMaxLength"
+          [attr.aria-invalid]="errorDe('primerApellido') !== null"
+          [attr.aria-describedby]="errorDe('primerApellido') ? 'primerApellido-error' : null"
+          required
+        />
+        @if (errorDe('primerApellido'); as error) {
+          <p class="field__error" id="primerApellido-error">{{ error }}</p>
+        }
+      </div>
+
+      <div class="field">
+        <label for="segundoApellido">Segundo apellido</label>
+        <input
+          id="segundoApellido"
+          type="text"
+          formControlName="segundoApellido"
+          autocomplete="family-name"
+          [attr.maxlength]="nombreMaxLength"
+          [attr.aria-invalid]="errorDe('segundoApellido') !== null"
+          [attr.aria-describedby]="errorDe('segundoApellido') ? 'segundoApellido-error' : null"
+        />
+        @if (errorDe('segundoApellido'); as error) {
+          <p class="field__error" id="segundoApellido-error">{{ error }}</p>
+        }
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="correo">Correo electrónico <span aria-hidden="true">*</span></label>
+      <input
+        id="correo"
+        type="email"
+        formControlName="correo"
+        autocomplete="email"
+        inputmode="email"
+        [attr.maxlength]="correoMaxLength"
+        [attr.aria-invalid]="errorDe('correo') !== null"
+        [attr.aria-describedby]="errorDe('correo') ? 'correo-error' : null"
+        required
+      />
+      @if (errorDe('correo'); as error) {
+        <p class="field__error" id="correo-error">{{ error }}</p>
+      }
+    </div>
+
+    <div class="field">
+      <label for="contrasena">Contraseña <span aria-hidden="true">*</span></label>
+      <div class="field__password">
+        <input
+          id="contrasena"
+          [type]="mostrarContrasena() ? 'text' : 'password'"
+          formControlName="contrasena"
+          autocomplete="new-password"
+          [attr.maxlength]="contrasenaMaxLength"
+          [attr.aria-invalid]="errorDe('contrasena') !== null"
+          [attr.aria-describedby]="
+            errorDe('contrasena') ? 'contrasena-ayuda contrasena-error' : 'contrasena-ayuda'
+          "
+          required
+        />
+        <button
+          type="button"
+          class="field__toggle"
+          (click)="alternarContrasena()"
+          [attr.aria-pressed]="mostrarContrasena()"
+        >
+          {{ mostrarContrasena() ? 'Ocultar' : 'Mostrar' }}
+          <span class="visually-hidden">contraseña</span>
+        </button>
+      </div>
+      <p class="field__ayuda" id="contrasena-ayuda">
+        Entre {{ contrasenaMinLength }} y {{ contrasenaMaxLength }} caracteres, con mayúscula,
+        minúscula, número y carácter especial, sin espacios.
+      </p>
+      @if (errorDe('contrasena'); as error) {
+        <p class="field__error" id="contrasena-error">{{ error }}</p>
+      }
+    </div>
+
+    <div class="field">
+      <label for="confirmarContrasena"
+        >Confirmar contraseña <span aria-hidden="true">*</span></label
+      >
+      <input
+        id="confirmarContrasena"
+        [type]="mostrarContrasena() ? 'text' : 'password'"
+        formControlName="confirmarContrasena"
+        autocomplete="new-password"
+        [attr.maxlength]="contrasenaMaxLength"
+        [attr.aria-invalid]="errorDe('confirmarContrasena') !== null"
+        [attr.aria-describedby]="
+          errorDe('confirmarContrasena') ? 'confirmarContrasena-error' : null
+        "
+        required
+      />
+      @if (errorDe('confirmarContrasena'); as error) {
+        <p class="field__error" id="confirmarContrasena-error">{{ error }}</p>
+      }
+    </div>
+
+    <button type="submit" class="btn btn--primary btn--block" [attr.aria-busy]="enviando()">
+      {{ enviando() ? 'Creando cuenta…' : 'Crear cuenta' }}
+    </button>
+  </fieldset>
+</form>

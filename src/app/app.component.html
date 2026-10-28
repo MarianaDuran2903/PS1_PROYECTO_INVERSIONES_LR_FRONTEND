@@ -1,0 +1,71 @@
+<header class="app-header">
+  <a class="brand" routerLink="/" aria-label="{{ appName }}, ir al inicio">
+    <span class="brand__logo" aria-hidden="true">LR</span>
+    <span class="brand__name">{{ appName }}</span>
+  </a>
+
+  <nav class="nav" aria-label="Principal">
+    <a
+      class="nav__link"
+      routerLink="/"
+      routerLinkActive="nav__link--active"
+      [routerLinkActiveOptions]="soloRuta"
+      >Explorar</a
+    >
+
+    @if (esAnfitrion()) {
+      <a class="nav__link" routerLink="/anfitrion" routerLinkActive="nav__link--active">Mi panel</a>
+    } @else if (!usuario()) {
+      <a
+        class="nav__link"
+        routerLink="/registro"
+        [queryParams]="paramsAnfitrion"
+        routerLinkActive="nav__link--active"
+        [routerLinkActiveOptions]="rutaYParametros"
+        >Modo anfitrión</a
+      >
+    }
+
+    @if (esAdministrador()) {
+      <a class="nav__link" routerLink="/admin" routerLinkActive="nav__link--active"
+        >Administración</a
+      >
+    }
+
+    @if (usuario(); as u) {
+      <span class="nav__usuario">Hola, {{ u.primerNombre }}</span>
+      <button type="button" class="nav__salir" (click)="cerrarSesion()">Cerrar sesión</button>
+    } @else {
+      <a
+        class="nav__link nav__link--cuenta"
+        routerLink="/login"
+        routerLinkActive="nav__link--active"
+      >
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
+          <circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="1.6" />
+          <path
+            d="M4.5 20c.9-3.6 3.9-5.5 7.5-5.5s6.6 1.9 7.5 5.5"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.6"
+            stroke-linecap="round"
+          />
+        </svg>
+        Iniciar sesión
+      </a>
+      <a
+        class="nav__link"
+        routerLink="/registro"
+        routerLinkActive="nav__link--active"
+        [routerLinkActiveOptions]="rutaYParametros"
+        >Crear cuenta</a
+      >
+    }
+  </nav>
+</header>
+
+<main class="app-main">
+  <router-outlet />
+</main>
+
+<app-toast-container />

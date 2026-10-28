@@ -1,0 +1,53 @@
+<form [formGroup]="form" (ngSubmit)="enviar()" novalidate>
+  <fieldset class="form" [disabled]="enviando()">
+    <legend class="visually-hidden">Credenciales de acceso</legend>
+
+    <div class="field">
+      <label for="correo">Correo electrónico</label>
+      <input
+        id="correo"
+        type="email"
+        formControlName="correo"
+        autocomplete="username"
+        inputmode="email"
+        [attr.aria-invalid]="errorDe('correo') !== null"
+        [attr.aria-describedby]="errorDe('correo') ? 'correo-error' : null"
+        required
+      />
+      @if (errorDe('correo'); as error) {
+        <p class="field__error" id="correo-error">{{ error }}</p>
+      }
+    </div>
+
+    <div class="field">
+      <label for="contrasena">Contraseña</label>
+      <div class="field__password">
+        <input
+          id="contrasena"
+          [type]="mostrarContrasena() ? 'text' : 'password'"
+          formControlName="contrasena"
+          autocomplete="current-password"
+          [attr.aria-invalid]="errorDe('contrasena') !== null"
+          [attr.aria-describedby]="errorDe('contrasena') ? 'contrasena-error' : null"
+          required
+        />
+        <button
+          type="button"
+          class="field__toggle"
+          (click)="alternarContrasena()"
+          [attr.aria-pressed]="mostrarContrasena()"
+        >
+          {{ mostrarContrasena() ? 'Ocultar' : 'Mostrar' }}
+          <span class="visually-hidden">contraseña</span>
+        </button>
+      </div>
+      @if (errorDe('contrasena'); as error) {
+        <p class="field__error" id="contrasena-error">{{ error }}</p>
+      }
+    </div>
+
+    <button type="submit" class="btn btn--primary btn--block" [attr.aria-busy]="enviando()">
+      {{ enviando() ? 'Ingresando…' : 'Iniciar sesión' }}
+    </button>
+  </fieldset>
+</form>

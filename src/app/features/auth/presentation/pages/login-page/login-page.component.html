@@ -1,0 +1,29 @@
+<section class="login card" aria-labelledby="login-titulo">
+  <header class="login__encabezado">
+    <h1 id="login-titulo">Inicia sesión</h1>
+    <p>Accede con tu correo y tu contraseña.</p>
+  </header>
+
+  @if (registrado() === 'true') {
+    <div class="alert alert--success login__alerta" role="status">
+      Tu cuenta fue creada correctamente. Inicia sesión para continuar.
+    </div>
+  }
+
+  @if (expirada() === 'true') {
+    <div class="alert alert--info login__alerta" role="status">
+      Tu sesión expiró. Inicia sesión de nuevo para continuar.
+    </div>
+  }
+
+  @if (facade.mensajeError(); as mensaje) {
+    <div class="alert alert--danger login__alerta" role="alert">{{ mensaje }}</div>
+  }
+
+  <app-login-form
+    [enviando]="facade.enviando()"
+    (iniciar)="facade.iniciarSesion($event, returnUrl())"
+  />
+
+  <p class="login__pie">¿Aún no tienes cuenta? <a routerLink="/registro">Regístrate</a></p>
+</section>

@@ -1,0 +1,19 @@
+<section class="registro card" aria-labelledby="registro-titulo">
+  <header class="registro__encabezado">
+    <h1 id="registro-titulo">Crea tu cuenta</h1>
+    <p>Elige cómo quieres usar la plataforma y completa tus datos.</p>
+  </header>
+
+  @if (facade.mensajeError(); as mensaje) {
+    <div class="alert alert--danger registro__alerta" role="alert">{{ mensaje }}</div>
+  }
+
+  <app-registro-form
+    [enviando]="facade.enviando()"
+    [rolInicial]="rolInicial()"
+    [erroresServidor]="facade.erroresCampo()"
+    (registrar)="facade.registrar($event)"
+  />
+
+  <p class="registro__pie">¿Ya tienes cuenta? <a routerLink="/login">Inicia sesión</a></p>
+</section>
