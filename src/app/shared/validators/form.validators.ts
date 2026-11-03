@@ -102,6 +102,81 @@ export function strongPassword(): ValidatorFn {
   };
 }
 
+/** Mayor valor que cabe en un `int` de Java: el backend rechazaría un entero más grande. */
+const ENTERO_MAXIMO = 2_147_483_647;
+
+const esDigito = (caracter: string) => caracter >= '0' && caracter <= '9';
+
+/**
+ * Entero mayor que 0, escrito solo con dígitos (sin signo, decimales ni notación científica).
+ * Se recorre el texto carácter por carácter. Vacío es válido: la obligatoriedad la decide
+ * `Validators.required`.
+ */
+export function enteroPositivo(): ValidatorFn {
+  return (control: AbstractControl<unknown>): ValidationErrors | null => {
+    const value = control.value;
+    if (typeof value !== 'string') {
+      return null;
+    }
+    const texto = value.trim();
+    if (texto.length === 0) {
+      return null;
+    }
+    for (const caracter of texto) {
+      if (!esDigito(caracter)) {
+        return { enteroPositivo: true };
+      }
+    }
+    const numero = Number(texto);
+    return numero > 0 && numero <= ENTERO_MAXIMO ? null : { enteroPositivo: true };
+  };
+}
+
+/**
+ * Número mayor que 0 con punto decimal, de máximo `maxEnteros` dígitos enteros y `maxDecimales`
+ * decimales (por defecto 10 y 2, como el backend). Acepta solo dígitos y un punto con dígitos a
+ * ambos lados; no admite coma, signo ni notación científica. Vacío es válido.
+ */
+export function decimalPositivo(maxDecimales = 2, maxEnteros = 10): ValidatorFn {
+  return (control: AbstractControl<unknown>): ValidationErrors | null => {
+    const value = control.value;
+    if (typeof value !== 'string') {
+      return null;
+    }
+    const texto = value.trim();
+    if (texto.length === 0) {
+      return null;
+    }
+
+    let enteros = '';
+    let decimales = '';
+    let vistoPunto = false;
+    for (const caracter of texto) {
+      if (caracter === '.' && !vistoPunto) {
+        vistoPunto = true;
+      } else if (esDigito(caracter)) {
+        if (vistoPunto) {
+          decimales += caracter;
+        } else {
+          enteros += caracter;
+        }
+      } else {
+        return { decimalPositivo: true };
+      }
+    }
+
+    const formatoValido = enteros.length > 0 && (!vistoPunto || decimales.length > 0);
+    const enterosSignificativos = enteros.replace(/^0+/, '').length;
+    const hayValor = [...enteros, ...decimales].some((digito) => digito !== '0');
+    return formatoValido &&
+      hayValor &&
+      decimales.length <= maxDecimales &&
+      enterosSignificativos <= maxEnteros
+      ? null
+      : { decimalPositivo: true };
+  };
+}
+
 /** Validador de grupo: los dos campos deben tener el mismo valor. */
 export function matchFields(field: string, confirmationField: string): ValidatorFn {
   return (group: AbstractControl): ValidationErrors | null => {
