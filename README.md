@@ -38,6 +38,7 @@ El proyecto avanza funcionalidad por funcionalidad, según la matriz de requerim
 | RF-USR-004 a 007 | Recuperar contraseña, perfil y activar/desactivar cuenta | Pendiente |
 | RF-ALOJ (HU-008) | Crear una publicación de alojamiento (Anfitrión), guardada como borrador | Hecho (pendiente de probar contra el backend con los endpoints de publicaciones) |
 | RF-ALOJ (HU-009) | Editar una publicación propia (Anfitrión) en BORRADOR o PAUSADA | Hecho (pendiente de probar contra el backend con GET y PUT de publicaciones) |
+| RF-ALOJ (HU-010) | Consultar mis publicaciones (Anfitrión): listado paginado con el estado de cada una | Hecho |
 | RF-ALOJ (HU-011) | Editar una publicación con autorización administrativa (Administrador), con motivo registrado | Hecho |
 | RF-ALOJ (resto), RF-BUS, RF-COT, RF-RES, RF-PAG | Listado y edición de publicaciones, búsqueda, cotización, reservas y pago simulado | Pendiente |
 | RF-NOT, RF-RSC, RF-ADM, RF-DASH, RF-REP | Notificaciones, reseñas, administración, indicadores y reportes | Pendiente |
@@ -273,7 +274,9 @@ presentation  →  application  →  domain  ←  data
 | `/registro` (`?rol=anfitrion` preselecciona Anfitrión) | Solo quien no tiene sesión |
 | `/marketplace` | Huésped |
 | `/anfitrion` | Anfitrión |
+| `/anfitrion/publicaciones` | Anfitrión (Mis publicaciones: listado paginado de las suyas) |
 | `/anfitrion/publicaciones/nueva` | Anfitrión (formulario de nueva publicación) |
+| `/anfitrion/publicaciones/:id` | Anfitrión propietario (detalle de una publicación; se abre desde el listado) |
 | `/anfitrion/publicaciones/:id/editar` | Anfitrión propietario (editar una publicación; pide confirmación si hay cambios sin guardar) |
 | `/admin` | Administrador (panel con el buscador de publicaciones) |
 | `/admin/publicaciones/:id/editar` | Administrador (intervenir una publicación con un motivo; pide confirmación si hay cambios sin guardar) |
@@ -352,14 +355,29 @@ El estado decide si se puede editar: **BORRADOR y PAUSADA** sí; **ACTIVA**, **P
 
 | Respuesta | Qué hace el frontend |
 |---|---|
-| `200` | "Cambios guardados" y vuelve al panel |
+| `200` | "Cambios guardados" y vuelve al listado "Mis publicaciones" |
 | `400` con `errores` | Cada mensaje bajo su campo; no borra lo escrito (si no trae `errores`, el mensaje va arriba del formulario) |
-| `403` | "No puedes editar esta publicación" y vuelve al panel (sin el aviso global de "Sin permisos") |
-| `404` | "La publicación no existe" y vuelve al panel |
+| `403` | "No puedes editar esta publicación" y vuelve al listado (sin el aviso global de "Sin permisos") |
+| `404` | "La publicación no existe" y vuelve al listado |
 | `409` | Muestra el `mensaje` y pasa el formulario a solo lectura (el estado cambió mientras estaba abierto) |
 | `401` | Lo resuelve el interceptor (cierra sesión y lleva al login) |
 
-Cancelar o salir con cambios sin guardar pide confirmación. El botón "Editar" de la ficha solo está activo en BORRADOR o PAUSADA; en los demás estados explica el motivo con un tooltip. Mientras no exista el listado de publicaciones, la ficha que aparece al crear es el único punto de entrada desde la interfaz.
+Cancelar o salir con cambios sin guardar pide confirmación. El botón "Editar" de la ficha solo está activo en BORRADOR o PAUSADA; en los demás estados explica el motivo con un tooltip. Desde HU-010 el punto de entrada habitual es el listado "Mis publicaciones"; la ficha que aparece al crear también lleva a la edición.
+
+### Consultar mis publicaciones (HU-010)
+
+| Método y ruta | Acceso | Uso |
+|---|---|---|
+| `GET /publicaciones/mias?pagina=0&tamano=10` | Solo ANFITRION | Página de las publicaciones del Anfitrión autenticado |
+
+El frontend envía siempre `tamano=10`; `pagina` empieza en 0. La respuesta es `{ contenido: [{ idPublicacion, titulo, estado, ciudad, tipo, capacidad, precioNoche }], pagina, tamano, totalElementos, totalPaginas, mensaje }`. El backend ya devuelve **solo** las del Anfitrión de la sesión y las ordena de la más reciente a la más antigua, así que el frontend **no filtra ni reordena**.
+
+- Cada tarjeta muestra el título, el tipo (con su icono), la ciudad, la capacidad, el precio en pesos y la etiqueta de color del estado vigente (Borrador, Pendiente de revisión, Activa, Pausada o Bloqueada). No hay imágenes: el resumen no trae URL.
+- Cada tarjeta es un enlace al **detalle** (`/anfitrion/publicaciones/:id`, con `GET /publicaciones/{id}`): al tocar el título o cualquier parte de la tarjeta se abre la ficha de esa publicación, con un botón para volver al listado. Si la publicación es de otro Anfitrión (403) o no existe (404), avisa y vuelve al listado.
+- "Editar" solo está activo en BORRADOR y PAUSADA; en los demás estados queda deshabilitado con un tooltip que explica el motivo.
+- Sin publicaciones, el backend responde `contenido: []` y `mensaje: "No tiene publicaciones registradas"`; se muestra ese mensaje con un botón "Crear publicación", sin información de otros Anfitriones.
+- La paginación ("Anterior", "Página X de Y", "Siguiente") se oculta si `totalPaginas` es 1 o menos.
+- Un 400 (paginación inválida) o un fallo de red muestran un aviso con "Reintentar".
 
 ### Intervención administrativa de una publicación (HU-011)
 
@@ -393,7 +411,7 @@ El registro oficial de auditoría (tabla `evento_auditoria`) lo escribe el backe
 
 ## Pruebas y calidad
 
-- **Pruebas unitarias** con Karma y Jasmine: 481 pruebas en 41 archivos. Cada capa se prueba aislada: validadores y mappers (funciones puras), repositorio HTTP con `HttpTestingController`, facades con repositorios falsos, guards, interceptores y componentes sobre su DOM.
+- **Pruebas unitarias** con Karma y Jasmine: 599 pruebas en 51 archivos. Cada capa se prueba aislada: validadores y mappers (funciones puras), repositorio HTTP con `HttpTestingController`, facades con repositorios falsos, guards, interceptores y componentes sobre su DOM.
 - **Cobertura**: `npm run test:ci` genera `coverage/` con reporte HTML y `lcov.info` (que lee Sonar).
 - **Lint y formato**: `npm run lint` y `npm run format:check` deben quedar limpios antes de abrir un Pull Request.
 

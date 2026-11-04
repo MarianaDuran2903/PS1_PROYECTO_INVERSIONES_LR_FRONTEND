@@ -3,6 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { ApiError } from '@core/http/api-error';
 import { ToastService } from '@core/notifications/toast.service';
+import { leerIdPublicacion } from '@features/publicaciones/application/id-publicacion';
 import {
   PublicacionNoEditableError,
   PublicacionNoEncontradaError,
@@ -103,7 +104,7 @@ export class IntervenirPublicacionFacade {
 
   /** Carga la publicación y los catálogos en paralelo. Sirve también para "Reintentar". */
   cargar(idTexto: string | undefined): void {
-    const id = leerId(idTexto);
+    const id = leerIdPublicacion(idTexto);
     if (id === null) {
       this.noExiste();
       return;
@@ -199,13 +200,4 @@ export class IntervenirPublicacionFacade {
 /** 403: la cuenta no tiene rol Administrador. */
 function esSinPermisos(error: unknown): boolean {
   return error instanceof ApiError && error.status === 403;
-}
-
-/** Un id válido son solo dígitos y es mayor que 0: "12" sí; "abc", "1.5", "-3" o "0" no. */
-function leerId(texto: string | undefined): number | null {
-  if (texto === undefined || !/^\d+$/.test(texto)) {
-    return null;
-  }
-  const id = Number(texto);
-  return Number.isSafeInteger(id) && id > 0 ? id : null;
 }

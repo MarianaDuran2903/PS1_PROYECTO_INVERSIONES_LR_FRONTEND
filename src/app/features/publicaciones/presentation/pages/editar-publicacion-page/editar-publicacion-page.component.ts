@@ -50,8 +50,8 @@ export class EditarPublicacionPageComponent implements ConCambiosSinGuardar {
     this.facade.cargar(this.id());
   }
 
-  /** Vuelve al panel; si hay cambios sin guardar, el guard pide confirmación. */
+  /** Vuelve al listado; si hay cambios sin guardar, el guard pide confirmación. */
   protected cancelar(): void {
-    void this.router.navigate(['/anfitrion']);
+    void this.router.navigate(['/anfitrion', 'publicaciones']);
   }
 }

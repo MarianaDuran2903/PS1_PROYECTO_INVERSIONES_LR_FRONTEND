@@ -24,6 +24,17 @@ export const ANFITRION_ROUTES: Routes = [
       ),
   },
   {
+    path: 'publicaciones',
+    title: 'Mis publicaciones | Inversiones LR',
+    pathMatch: 'full',
+    canActivate: SOLO_ANFITRION,
+    providers: REPOSITORIO_DE_PUBLICACIONES,
+    loadComponent: () =>
+      import('@features/publicaciones/presentation/pages/mis-publicaciones-page/mis-publicaciones-page.component').then(
+        (m) => m.MisPublicacionesPageComponent,
+      ),
+  },
+  {
     path: 'publicaciones/nueva',
     title: 'Nueva publicación | Inversiones LR',
     canActivate: SOLO_ANFITRION,
@@ -43,6 +54,18 @@ export const ANFITRION_ROUTES: Routes = [
     loadComponent: () =>
       import('@features/publicaciones/presentation/pages/editar-publicacion-page/editar-publicacion-page.component').then(
         (m) => m.EditarPublicacionPageComponent,
+      ),
+  },
+  {
+    // Va después de "nueva" y de ":id/editar" para no confundirlas con un id.
+    path: 'publicaciones/:id',
+    title: 'Detalle de la publicación | Inversiones LR',
+    pathMatch: 'full',
+    canActivate: SOLO_ANFITRION,
+    providers: REPOSITORIO_DE_PUBLICACIONES,
+    loadComponent: () =>
+      import('@features/publicaciones/presentation/pages/detalle-publicacion-page/detalle-publicacion-page.component').then(
+        (m) => m.DetallePublicacionPageComponent,
       ),
   },
 ];

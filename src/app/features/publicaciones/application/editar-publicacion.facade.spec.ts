@@ -100,25 +100,25 @@ describe('EditarPublicacionFacade', () => {
     });
 
     for (const id of ['abc', '1.5', '-3', '0', '', undefined]) {
-      it(`el id ${JSON.stringify(id)} no es válido: avisa y vuelve al panel sin llamar al backend`, () => {
+      it(`el id ${JSON.stringify(id)} no es válido: avisa y vuelve al listado sin llamar al backend`, () => {
         facade.cargar(id);
 
         expect(repository.obtener).not.toHaveBeenCalled();
         expect(toast.toasts().some((t) => t.title === 'La publicación no existe')).toBeTrue();
-        expect(router.navigate).toHaveBeenCalledWith(['/anfitrion']);
+        expect(router.navigate).toHaveBeenCalledWith(['/anfitrion', 'publicaciones']);
       });
     }
 
-    it('404: avisa "La publicación no existe" y vuelve al panel', () => {
+    it('404: avisa "La publicación no existe" y vuelve al listado', () => {
       repository.obtener.and.returnValue(throwError(() => new PublicacionNoEncontradaError()));
 
       facade.cargar('9');
 
       expect(toast.toasts().some((t) => t.title === 'La publicación no existe')).toBeTrue();
-      expect(router.navigate).toHaveBeenCalledWith(['/anfitrion']);
+      expect(router.navigate).toHaveBeenCalledWith(['/anfitrion', 'publicaciones']);
     });
 
-    it('403: avisa "No puedes editar esta publicación" y vuelve al panel', () => {
+    it('403: avisa "No puedes editar esta publicación" y vuelve al listado', () => {
       repository.obtener.and.returnValue(throwError(() => new PublicacionAjenaError()));
 
       facade.cargar('9');
@@ -126,7 +126,7 @@ describe('EditarPublicacionFacade', () => {
       expect(
         toast.toasts().some((t) => t.title === 'No puedes editar esta publicación'),
       ).toBeTrue();
-      expect(router.navigate).toHaveBeenCalledWith(['/anfitrion']);
+      expect(router.navigate).toHaveBeenCalledWith(['/anfitrion', 'publicaciones']);
     });
 
     it('un error de red o 500 deja "error" para poder reintentar, sin redirigir', () => {
@@ -181,7 +181,7 @@ describe('EditarPublicacionFacade', () => {
   describe('guardar', () => {
     beforeEach(() => facade.cargar('9'));
 
-    it('con 200 guarda, avisa "Cambios guardados", actualiza la publicación y vuelve al panel', () => {
+    it('con 200 guarda, avisa "Cambios guardados", actualiza la publicación y vuelve al listado', () => {
       repository.actualizar.and.returnValue(of({ ...publicacion(), titulo: 'Casa nueva' }));
 
       facade.guardar(datos);
@@ -191,7 +191,7 @@ describe('EditarPublicacionFacade', () => {
       expect(facade.publicacion()?.titulo).toBe('Casa nueva');
       expect(facade.publicacion()?.estado).toBe('BORRADOR');
       expect(toast.toasts().some((t) => t.title === 'Cambios guardados')).toBeTrue();
-      expect(router.navigate).toHaveBeenCalledWith(['/anfitrion']);
+      expect(router.navigate).toHaveBeenCalledWith(['/anfitrion', 'publicaciones']);
     });
 
     it('ignora envíos repetidos mientras hay uno en curso', () => {
@@ -257,7 +257,7 @@ describe('EditarPublicacionFacade', () => {
       expect(repository.actualizar).toHaveBeenCalledTimes(1);
     });
 
-    it('403: avisa y vuelve al panel', () => {
+    it('403: avisa y vuelve al listado', () => {
       repository.actualizar.and.returnValue(throwError(() => new PublicacionAjenaError()));
 
       facade.guardar(datos);
@@ -265,16 +265,16 @@ describe('EditarPublicacionFacade', () => {
       expect(
         toast.toasts().some((t) => t.title === 'No puedes editar esta publicación'),
       ).toBeTrue();
-      expect(router.navigate).toHaveBeenCalledWith(['/anfitrion']);
+      expect(router.navigate).toHaveBeenCalledWith(['/anfitrion', 'publicaciones']);
     });
 
-    it('404: avisa y vuelve al panel', () => {
+    it('404: avisa y vuelve al listado', () => {
       repository.actualizar.and.returnValue(throwError(() => new PublicacionNoEncontradaError()));
 
       facade.guardar(datos);
 
       expect(toast.toasts().some((t) => t.title === 'La publicación no existe')).toBeTrue();
-      expect(router.navigate).toHaveBeenCalledWith(['/anfitrion']);
+      expect(router.navigate).toHaveBeenCalledWith(['/anfitrion', 'publicaciones']);
     });
 
     it('un error de red muestra su mensaje y conserva todo', () => {

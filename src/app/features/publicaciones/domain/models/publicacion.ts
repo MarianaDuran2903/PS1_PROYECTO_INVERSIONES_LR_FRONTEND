@@ -79,3 +79,25 @@ export type CampoIntervencion = CampoPublicacion | 'motivo';
 
 /** Errores por campo de una intervención; además de los de la publicación, el del motivo. */
 export type ErroresIntervencion = Partial<Record<CampoIntervencion, string>>;
+
+/** Publicación tal como aparece en un listado: solo lo necesario para mostrarla en una tarjeta. */
+export interface PublicacionResumen {
+  idPublicacion: number;
+  titulo: string;
+  estado: EstadoPublicacion;
+  ciudad: CatalogoItem;
+  tipo: CatalogoItem;
+  capacidad: number;
+  precioNoche: number;
+}
+
+/** Una página de publicaciones. `pagina` empieza en 0. */
+export interface PaginaPublicaciones {
+  contenido: PublicacionResumen[];
+  pagina: number;
+  tamano: number;
+  totalElementos: number;
+  totalPaginas: number;
+  /** Aviso del backend cuando no hay ninguna publicación; null en otro caso. */
+  mensaje: string | null;
+}
