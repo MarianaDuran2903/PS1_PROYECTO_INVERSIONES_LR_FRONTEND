@@ -33,6 +33,7 @@ describe('CrearPublicacionFacade', () => {
     capacidad: 4,
     precioNoche: 250000,
     tarifaLimpieza: 0,
+    reglas: null,
   };
 
   let repository: jasmine.SpyObj<PublicacionRepository>;

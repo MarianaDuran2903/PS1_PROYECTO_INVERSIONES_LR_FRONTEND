@@ -25,6 +25,7 @@ describe('CrearPublicacionPageComponent', () => {
     capacidad: 4,
     precioNoche: 250000,
     tarifaLimpieza: 0,
+    reglas: null,
   };
 
   let fixture: ComponentFixture<CrearPublicacionPageComponent>;
@@ -148,7 +149,7 @@ describe('CrearPublicacionPageComponent', () => {
       ).toBeTrue();
       expect(element.querySelector('form')).toBeNull();
       expect(element.querySelector('app-publicacion-confirmacion')).not.toBeNull();
-      expect(element.querySelector('.ficha__estado')!.textContent!.trim()).toBe('Borrador');
+      expect(element.querySelector('app-estado-publicacion')!.textContent!.trim()).toBe('Borrador');
       expect(element.textContent).toContain('Todavía no es visible en el Marketplace');
       expect(element.querySelector('h1')!.textContent).toContain('Apartamento luminoso');
     });

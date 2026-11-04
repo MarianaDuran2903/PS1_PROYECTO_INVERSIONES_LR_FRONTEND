@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { Publicacion } from '../../../domain/models/publicacion';
 import { PublicacionConfirmacionComponent } from './publicacion-confirmacion.component';
 
@@ -17,12 +18,14 @@ describe('PublicacionConfirmacionComponent', () => {
     capacidad: 4,
     precioNoche: 250000,
     tarifaLimpieza: 0,
+    reglas: null,
   };
 
   let fixture: ComponentFixture<PublicacionConfirmacionComponent>;
   let element: HTMLElement;
 
   const crear = (datos: Publicacion = publicacion) => {
+    TestBed.configureTestingModule({ providers: [provideRouter([])] });
     fixture = TestBed.createComponent(PublicacionConfirmacionComponent);
     element = fixture.nativeElement;
     fixture.componentRef.setInput('publicacion', datos);
@@ -40,7 +43,7 @@ describe('PublicacionConfirmacionComponent', () => {
   it('muestra el estado BORRADOR', () => {
     crear();
 
-    expect(element.querySelector('.ficha__estado')!.textContent!.trim()).toBe('Borrador');
+    expect(element.querySelector('app-estado-publicacion')!.textContent!.trim()).toBe('Borrador');
   });
 
   it('muestra la ruta, el título, la dirección y la descripción', () => {
@@ -90,6 +93,43 @@ describe('PublicacionConfirmacionComponent', () => {
     expect(element.querySelector('.ficha__galeria svg')!.getAttribute('data-icono')).toBe('cabana');
   });
 
+  describe('botón Editar', () => {
+    const botonEditar = () =>
+      Array.from(
+        element.querySelectorAll<HTMLElement>('.ficha__resumen a, .ficha__resumen button'),
+      ).find((e) => e.textContent?.includes('Editar publicación'))!;
+
+    for (const estado of ['BORRADOR', 'PAUSADA'] as const) {
+      it(`en ${estado} es un enlace activo a la pantalla de edición`, () => {
+        crear({ ...publicacion, estado });
+
+        const boton = botonEditar();
+        expect(boton.tagName).toBe('A');
+        expect(boton.getAttribute('href')).toBe('/anfitrion/publicaciones/9/editar');
+        expect(boton.getAttribute('aria-disabled')).toBeNull();
+      });
+    }
+
+    const motivos = {
+      ACTIVA:
+        'Esta publicación está activa. Para editarla, solicita al Administrador que la pause.',
+      PENDIENTE_REVISION: 'La publicación está en revisión del Administrador.',
+      BLOQUEADA: 'La publicación está bloqueada.',
+    } as const;
+
+    for (const [estado, motivo] of Object.entries(motivos)) {
+      it(`en ${estado} está inactivo y el tooltip explica el motivo`, () => {
+        crear({ ...publicacion, estado: estado as keyof typeof motivos });
+
+        const boton = botonEditar();
+        expect(boton.tagName).toBe('BUTTON');
+        expect(boton.getAttribute('aria-disabled')).toBe('true');
+        expect(boton.getAttribute('title')).toBe(motivo);
+        expect(boton.getAttribute('href')).toBeNull();
+      });
+    }
+  });
+
   it('emite crearOtra al pulsar el botón', () => {
     crear();
     let veces = 0;
@@ -103,7 +143,7 @@ describe('PublicacionConfirmacionComponent', () => {
   it('no dice que es un borrador si el estado es otro', () => {
     crear({ ...publicacion, estado: 'ACTIVA' });
 
-    expect(element.querySelector('.ficha__estado')!.textContent!.trim()).toBe('Activa');
+    expect(element.querySelector('app-estado-publicacion')!.textContent!.trim()).toBe('Activa');
     expect(element.querySelector('.ficha__nota')).toBeNull();
   });
 });

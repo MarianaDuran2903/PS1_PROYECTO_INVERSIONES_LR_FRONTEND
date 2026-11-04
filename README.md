@@ -37,6 +37,7 @@ El proyecto avanza funcionalidad por funcionalidad, según la matriz de requerim
 | RNF-MAN-001 / 002 | Quality Gate de SonarQube Cloud y revisión de cambios | Configurado (CI y plantilla de PR) |
 | RF-USR-004 a 007 | Recuperar contraseña, perfil y activar/desactivar cuenta | Pendiente |
 | RF-ALOJ (HU-008) | Crear una publicación de alojamiento (Anfitrión), guardada como borrador | Hecho (pendiente de probar contra el backend con los endpoints de publicaciones) |
+| RF-ALOJ (HU-009) | Editar una publicación propia (Anfitrión) en BORRADOR o PAUSADA | Hecho (pendiente de probar contra el backend con GET y PUT de publicaciones) |
 | RF-ALOJ (resto), RF-BUS, RF-COT, RF-RES, RF-PAG | Listado y edición de publicaciones, búsqueda, cotización, reservas y pago simulado | Pendiente |
 | RF-NOT, RF-RSC, RF-ADM, RF-DASH, RF-REP | Notificaciones, reseñas, administración, indicadores y reportes | Pendiente |
 
@@ -272,6 +273,7 @@ presentation  →  application  →  domain  ←  data
 | `/marketplace` | Huésped |
 | `/anfitrion` | Anfitrión |
 | `/anfitrion/publicaciones/nueva` | Anfitrión (formulario de nueva publicación) |
+| `/anfitrion/publicaciones/:id/editar` | Anfitrión propietario (editar una publicación; pide confirmación si hay cambios sin guardar) |
 | `/admin` | Administrador |
 | `/acceso-denegado` ("Sin permisos") | Se muestra cuando hay sesión pero el rol no alcanza |
 
@@ -335,6 +337,28 @@ Cuerpo del POST: `titulo`, `descripcion`, `direccionTextual`, `idCiudad`, `barri
 
 Límites del formulario (iguales a los del backend): título 150, descripción 1000 (con contador), dirección 250 y barrio o zona 120 caracteres; capacidad entera mayor que 0; precio mayor que 0, con punto decimal (no coma), máximo 2 decimales y 10 enteros.
 
+### Editar una publicación (HU-009)
+
+| Método y ruta | Acceso | Uso |
+|---|---|---|
+| `GET /publicaciones/{id}` | Solo ANFITRION propietario | Cargar la publicación para precargar el formulario |
+| `PUT /publicaciones/{id}` | Solo ANFITRION propietario | Guardar los cambios (reemplaza todos los campos editables) |
+
+El cuerpo del PUT lleva **todos** los campos aunque no hayan cambiado: los de crear más `tarifaLimpieza` (obligatoria, mayor o igual a 0, máximo 2 decimales) y `reglas` (opcional, máximo 2000 caracteres). Se envían como números JSON con punto decimal, nunca `idAnfitrion`, `estado` ni `politica`. `barrioZona` y `reglas` vacíos viajan como `null`.
+
+El estado decide si se puede editar: **BORRADOR y PAUSADA** sí; **ACTIVA**, **PENDIENTE_REVISION** y **BLOQUEADA** abren el formulario en solo lectura con su aviso.
+
+| Respuesta | Qué hace el frontend |
+|---|---|
+| `200` | "Cambios guardados" y vuelve al panel |
+| `400` con `errores` | Cada mensaje bajo su campo; no borra lo escrito (si no trae `errores`, el mensaje va arriba del formulario) |
+| `403` | "No puedes editar esta publicación" y vuelve al panel (sin el aviso global de "Sin permisos") |
+| `404` | "La publicación no existe" y vuelve al panel |
+| `409` | Muestra el `mensaje` y pasa el formulario a solo lectura (el estado cambió mientras estaba abierto) |
+| `401` | Lo resuelve el interceptor (cierra sesión y lleva al login) |
+
+Cancelar o salir con cambios sin guardar pide confirmación. El botón "Editar" de la ficha solo está activo en BORRADOR o PAUSADA; en los demás estados explica el motivo con un tooltip. Mientras no exista el listado de publicaciones, la ficha que aparece al crear es el único punto de entrada desde la interfaz.
+
 ### Errores y sesión
 
 Todos los endpoints devuelven `{ fecha, estado, error, mensaje, ruta, errores? }`. `401` en una ruta protegida: cierra la sesión y lleva a `/login?expirada=true`. `403`: aviso "Sin permisos" con el `mensaje`, sin cerrar la sesión. Un temporizador cierra la sesión sola al vencer el token (60 minutos, sin renovación).
@@ -345,7 +369,7 @@ El registro oficial de auditoría (tabla `evento_auditoria`) lo escribe el backe
 
 ## Pruebas y calidad
 
-- **Pruebas unitarias** con Karma y Jasmine: 120 pruebas en 16 archivos. Cada capa se prueba aislada: validadores y mappers (funciones puras), repositorio HTTP con `HttpTestingController`, facades con repositorios falsos, guards, interceptores y componentes sobre su DOM.
+- **Pruebas unitarias** con Karma y Jasmine: 370 pruebas en 33 archivos. Cada capa se prueba aislada: validadores y mappers (funciones puras), repositorio HTTP con `HttpTestingController`, facades con repositorios falsos, guards, interceptores y componentes sobre su DOM.
 - **Cobertura**: `npm run test:ci` genera `coverage/` con reporte HTML y `lcov.info` (que lee Sonar).
 - **Lint y formato**: `npm run lint` y `npm run format:check` deben quedar limpios antes de abrir un Pull Request.
 

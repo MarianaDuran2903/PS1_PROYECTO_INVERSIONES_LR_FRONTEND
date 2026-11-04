@@ -24,9 +24,7 @@
       <header class="ficha__encabezado">
         <h1 id="ficha-titulo">{{ publicacion().titulo }}</h1>
         <p class="ficha__meta">
-          <span class="ficha__estado" [class.ficha__estado--borrador]="esBorrador()">{{
-            estado()
-          }}</span>
+          <app-estado-publicacion [estado]="publicacion().estado" />
           <span>{{ publicacion().tipo.nombre }}</span>
           <span aria-hidden="true">·</span>
           <span>{{ textoCapacidad() }}</span>
@@ -107,6 +105,20 @@
         <p class="ficha__nota">
           Es un borrador: los huéspedes todavía no pueden verla ni reservarla.
         </p>
+      }
+      @if (editable()) {
+        <a class="btn btn--primary btn--block" [routerLink]="rutaEditar()">Editar publicación</a>
+      } @else {
+        <!-- aria-disabled (y no disabled) para que el tooltip con el motivo se siga mostrando -->
+        <button
+          type="button"
+          class="btn btn--primary btn--block ficha__editar--inactivo"
+          aria-disabled="true"
+          [title]="motivoNoEditable() ?? ''"
+          (click)="$event.preventDefault()"
+        >
+          Editar publicación
+        </button>
       }
       <button type="button" class="btn btn--outline btn--block" (click)="crearOtra.emit()">
         Crear otra publicación
