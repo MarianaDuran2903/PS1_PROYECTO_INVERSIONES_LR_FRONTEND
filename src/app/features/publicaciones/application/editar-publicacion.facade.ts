@@ -19,6 +19,7 @@ import {
   puedeEditar,
 } from '../domain/models/publicacion';
 import { PublicacionRepository } from '../domain/repositories/publicacion.repository';
+import { leerIdPublicacion } from './id-publicacion';
 
 export type EstadoCarga = 'cargando' | 'listo' | 'error';
 export type EstadoGuardadoEdicion = 'inactivo' | 'enviando' | 'exitoso' | 'error';
@@ -47,21 +48,12 @@ const ESTADO_INICIAL: EditarPublicacionState = {
 };
 
 const MENSAJE_GENERICO = 'No fue posible guardar los cambios. Inténtalo de nuevo más tarde.';
-const RUTA_PANEL = ['/anfitrion'];
-
-/** Un id válido son solo dígitos: "12" sí; "abc", "1.5" o "-3" no. */
-function leerId(texto: string | undefined): number | null {
-  if (texto === undefined || !/^\d+$/.test(texto)) {
-    return null;
-  }
-  const id = Number(texto);
-  return Number.isSafeInteger(id) && id > 0 ? id : null;
-}
+const RUTA_LISTADO = ['/anfitrion', 'publicaciones'];
 
 /**
  * Facade / caso de uso "Editar publicación propia" (Anfitrión). Carga la publicación y los
  * catálogos, decide según el estado si se puede editar y guarda los cambios.
- * - 403 y 404: avisa y vuelve al panel.
+ * - 403 y 404: avisa y vuelve al listado "Mis publicaciones".
  * - 409: el estado ya no permite editar; deja el formulario en solo lectura con el mensaje.
  * - 400: deja los errores por campo y NO toca lo que la persona escribió.
  * - 401: lo resuelve el interceptor (cierra sesión y lleva al login).
@@ -103,7 +95,7 @@ export class EditarPublicacionFacade {
 
   /** Carga la publicación y los catálogos en paralelo. Sirve también para "Reintentar". */
   cargar(idTexto: string | undefined): void {
-    const id = leerId(idTexto);
+    const id = leerIdPublicacion(idTexto);
     if (id === null) {
       this.noExiste();
       return;
@@ -150,7 +142,7 @@ export class EditarPublicacionFacade {
         next: (publicacion) => {
           this.state.update((actual) => ({ ...actual, guardado: 'exitoso', publicacion }));
           this.toast.success('Cambios guardados');
-          void this.router.navigate(RUTA_PANEL);
+          void this.router.navigate(RUTA_LISTADO);
         },
         error: (error: unknown) => this.alFallarElGuardado(error),
       });
@@ -192,11 +184,11 @@ export class EditarPublicacionFacade {
 
   private noExiste(): void {
     this.toast.error('La publicación no existe');
-    void this.router.navigate(RUTA_PANEL);
+    void this.router.navigate(RUTA_LISTADO);
   }
 
   private ajena(): void {
     this.toast.error('No puedes editar esta publicación');
-    void this.router.navigate(RUTA_PANEL);
+    void this.router.navigate(RUTA_LISTADO);
   }
 }

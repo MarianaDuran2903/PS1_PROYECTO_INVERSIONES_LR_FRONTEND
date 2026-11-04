@@ -1,8 +1,10 @@
 <article class="ficha" aria-labelledby="ficha-titulo">
-  <div class="alert alert--success ficha__aviso" role="status">
-    <strong>Publicación guardada como borrador.</strong>
-    Todavía no es visible en el Marketplace.
-  </div>
+  @if (!esDetalle()) {
+    <div class="alert alert--success ficha__aviso" role="status">
+      <strong>Publicación guardada como borrador.</strong>
+      Todavía no es visible en el Marketplace.
+    </div>
+  }
 
   <nav class="ficha__ruta" aria-label="Ruta de la publicación">
     <ol>
@@ -106,23 +108,21 @@
           Es un borrador: los huéspedes todavía no pueden verla ni reservarla.
         </p>
       }
-      @if (editable()) {
-        <a class="btn btn--primary btn--block" [routerLink]="rutaEditar()">Editar publicación</a>
-      } @else {
-        <!-- aria-disabled (y no disabled) para que el tooltip con el motivo se siga mostrando -->
-        <button
-          type="button"
-          class="btn btn--primary btn--block ficha__editar--inactivo"
-          aria-disabled="true"
-          [title]="motivoNoEditable() ?? ''"
-          (click)="$event.preventDefault()"
+      <app-boton-editar-publicacion
+        [idPublicacion]="publicacion().idPublicacion"
+        [estado]="publicacion().estado"
+        variante="primary"
+        [bloque]="true"
+      />
+      @if (esDetalle()) {
+        <a class="btn btn--outline btn--block" routerLink="/anfitrion/publicaciones"
+          >Volver a mis publicaciones</a
         >
-          Editar publicación
+      } @else {
+        <button type="button" class="btn btn--outline btn--block" (click)="crearOtra.emit()">
+          Crear otra publicación
         </button>
       }
-      <button type="button" class="btn btn--outline btn--block" (click)="crearOtra.emit()">
-        Crear otra publicación
-      </button>
     </aside>
   </div>
 </article>

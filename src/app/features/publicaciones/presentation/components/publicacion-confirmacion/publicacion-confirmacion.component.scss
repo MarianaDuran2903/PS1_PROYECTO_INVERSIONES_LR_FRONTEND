@@ -204,9 +204,3 @@
   width: 56px;
   height: 56px;
 }
-
-/* Botón "Editar" cuando el estado no lo permite: se ve apagado, pero conserva el tooltip. */
-.ficha__editar--inactivo {
-  opacity: 0.55;
-  cursor: not-allowed;
-}

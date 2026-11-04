@@ -1,0 +1,21 @@
+<section class="pagina" aria-label="Detalle de la publicación">
+  @switch (facade.estado()) {
+    @case ('cargando') {
+      <p class="pagina__estado" role="status">
+        <span class="pagina__spinner" aria-hidden="true"></span>
+        Cargando la publicación…
+      </p>
+    }
+    @case ('error') {
+      <div class="alert alert--danger pagina__error" role="alert">
+        <span>No fue posible cargar la publicación.</span>
+        <button type="button" class="btn btn--outline" (click)="reintentar()">Reintentar</button>
+      </div>
+    }
+    @default {
+      @if (facade.publicacion(); as publicacion) {
+        <app-publicacion-confirmacion [publicacion]="publicacion" modo="detalle" />
+      }
+    }
+  }
+</section>

@@ -2,13 +2,17 @@ import {
   ActualizarPublicacion,
   CatalogoItem,
   NuevaPublicacion,
+  PaginaPublicaciones,
   Publicacion,
+  PublicacionResumen,
 } from '../../domain/models/publicacion';
 import {
   ActualizarPublicacionRequestDto,
   CatalogoItemDto,
   CrearPublicacionRequestDto,
+  PaginaPublicacionesResponseDto,
   PublicacionResponseDto,
+  PublicacionResumenResponseDto,
 } from '../dtos/publicacion.dto';
 
 /** Recorta un texto opcional y lo envía como null si queda vacío. */
@@ -44,6 +48,30 @@ export const PublicacionMapper = {
 
   toCatalogo(dto: CatalogoItemDto): CatalogoItem {
     return { id: dto.id, nombre: dto.nombre };
+  },
+
+  toResumen(dto: PublicacionResumenResponseDto): PublicacionResumen {
+    return {
+      idPublicacion: dto.idPublicacion,
+      titulo: dto.titulo,
+      estado: dto.estado,
+      ciudad: PublicacionMapper.toCatalogo(dto.ciudad),
+      tipo: PublicacionMapper.toCatalogo(dto.tipo),
+      capacidad: dto.capacidad,
+      precioNoche: dto.precioNoche,
+    };
+  },
+
+  /** Convierte la página tal cual llega: no se reordena (el backend ya la entrega ordenada). */
+  toPagina(dto: PaginaPublicacionesResponseDto): PaginaPublicaciones {
+    return {
+      contenido: dto.contenido.map(PublicacionMapper.toResumen),
+      pagina: dto.pagina,
+      tamano: dto.tamano,
+      totalElementos: dto.totalElementos,
+      totalPaginas: dto.totalPaginas,
+      mensaje: dto.mensaje ?? null,
+    };
   },
 
   toDomain(dto: PublicacionResponseDto): Publicacion {

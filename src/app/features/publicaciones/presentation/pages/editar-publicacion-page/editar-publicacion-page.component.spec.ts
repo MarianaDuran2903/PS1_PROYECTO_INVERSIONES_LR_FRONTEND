@@ -115,16 +115,16 @@ describe('EditarPublicacionPageComponent', () => {
       expect(element.querySelector('form')).not.toBeNull();
     });
 
-    it('404 avisa y vuelve al panel', () => {
+    it('404 avisa y vuelve al listado', () => {
       repository.obtener.and.returnValue(throwError(() => new PublicacionNoEncontradaError()));
 
       crearPagina();
 
       expect(toast.toasts().some((t) => t.title === 'La publicación no existe')).toBeTrue();
-      expect(router.navigate).toHaveBeenCalledWith(['/anfitrion']);
+      expect(router.navigate).toHaveBeenCalledWith(['/anfitrion', 'publicaciones']);
     });
 
-    it('403 (publicación de otro Anfitrión) avisa y vuelve al panel', () => {
+    it('403 (publicación de otro Anfitrión) avisa y vuelve al listado', () => {
       repository.obtener.and.returnValue(throwError(() => new PublicacionAjenaError()));
 
       crearPagina();
@@ -132,7 +132,7 @@ describe('EditarPublicacionPageComponent', () => {
       expect(
         toast.toasts().some((t) => t.title === 'No puedes editar esta publicación'),
       ).toBeTrue();
-      expect(router.navigate).toHaveBeenCalledWith(['/anfitrion']);
+      expect(router.navigate).toHaveBeenCalledWith(['/anfitrion', 'publicaciones']);
     });
   });
 
@@ -198,7 +198,7 @@ describe('EditarPublicacionPageComponent', () => {
   describe('guardar', () => {
     beforeEach(() => crearPagina());
 
-    it('con 200 avisa "Cambios guardados" y vuelve al panel', () => {
+    it('con 200 avisa "Cambios guardados" y vuelve al listado', () => {
       repository.actualizar.and.returnValue(of({ ...publicacion(), titulo: 'Nuevo título' }));
       escribir('titulo', 'Nuevo título');
 
@@ -217,7 +217,7 @@ describe('EditarPublicacionPageComponent', () => {
         }),
       );
       expect(toast.toasts().some((t) => t.title === 'Cambios guardados')).toBeTrue();
-      expect(router.navigate).toHaveBeenCalledWith(['/anfitrion']);
+      expect(router.navigate).toHaveBeenCalledWith(['/anfitrion', 'publicaciones']);
     });
 
     it('el botón queda deshabilitado mientras se envía', () => {
@@ -287,7 +287,7 @@ describe('EditarPublicacionPageComponent', () => {
       expect(campo('titulo').value).toBe('Título nuevo');
     });
 
-    it('403: avisa y vuelve al panel', () => {
+    it('403: avisa y vuelve al listado', () => {
       repository.actualizar.and.returnValue(throwError(() => new PublicacionAjenaError()));
 
       guardar();
@@ -295,16 +295,16 @@ describe('EditarPublicacionPageComponent', () => {
       expect(
         toast.toasts().some((t) => t.title === 'No puedes editar esta publicación'),
       ).toBeTrue();
-      expect(router.navigate).toHaveBeenCalledWith(['/anfitrion']);
+      expect(router.navigate).toHaveBeenCalledWith(['/anfitrion', 'publicaciones']);
     });
 
-    it('404: avisa y vuelve al panel', () => {
+    it('404: avisa y vuelve al listado', () => {
       repository.actualizar.and.returnValue(throwError(() => new PublicacionNoEncontradaError()));
 
       guardar();
 
       expect(toast.toasts().some((t) => t.title === 'La publicación no existe')).toBeTrue();
-      expect(router.navigate).toHaveBeenCalledWith(['/anfitrion']);
+      expect(router.navigate).toHaveBeenCalledWith(['/anfitrion', 'publicaciones']);
     });
 
     it('error de red o 500: mensaje y conserva el formulario', () => {
@@ -352,12 +352,12 @@ describe('EditarPublicacionPageComponent', () => {
       expect(fixture.componentInstance.hayCambiosSinGuardar()).toBeFalse();
     });
 
-    it('Cancelar vuelve al panel', () => {
+    it('Cancelar vuelve al listado', () => {
       Array.from(element.querySelectorAll('button'))
         .find((b) => b.textContent?.includes('Cancelar'))!
         .click();
 
-      expect(router.navigate).toHaveBeenCalledWith(['/anfitrion']);
+      expect(router.navigate).toHaveBeenCalledWith(['/anfitrion', 'publicaciones']);
     });
   });
 });

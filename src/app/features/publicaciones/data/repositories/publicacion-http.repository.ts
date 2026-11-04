@@ -1,4 +1,4 @@
-import { HttpClient, HttpContext } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { APP_CONFIG } from '@core/config/app-config';
 import { ApiError } from '@core/http/api-error';
@@ -16,10 +16,15 @@ import {
   CatalogoItem,
   ErroresPublicacion,
   NuevaPublicacion,
+  PaginaPublicaciones,
   Publicacion,
 } from '../../domain/models/publicacion';
 import { PublicacionRepository } from '../../domain/repositories/publicacion.repository';
-import { CatalogoItemDto, PublicacionResponseDto } from '../dtos/publicacion.dto';
+import {
+  CatalogoItemDto,
+  PaginaPublicacionesResponseDto,
+  PublicacionResponseDto,
+} from '../dtos/publicacion.dto';
 import { PublicacionMapper } from '../mappers/publicacion.mapper';
 
 const CAMPOS: readonly CampoPublicacion[] = [
@@ -90,6 +95,13 @@ export class PublicacionHttpRepository extends PublicacionRepository {
         map(PublicacionMapper.toDomain),
         catchError((error: unknown) => throwError(() => this.errorDeEdicion(error))),
       );
+  }
+
+  override listarPropias(pagina: number, tamano: number): Observable<PaginaPublicaciones> {
+    const params = new HttpParams().set('pagina', pagina).set('tamano', tamano);
+    return this.http
+      .get<PaginaPublicacionesResponseDto>(`${this.apiUrl}/publicaciones/mias`, { params })
+      .pipe(map(PublicacionMapper.toPagina));
   }
 
   /** 400 con `errores` → errores por campo; el resto (401, 403, 500...) pasa como ApiError. */
