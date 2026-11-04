@@ -22,12 +22,18 @@ export interface NuevaPublicacion {
   precioNoche: number;
 }
 
-export type CampoPublicacion = keyof NuevaPublicacion;
+/** Datos para editar: reemplazan todos los campos editables, incluidos los dos de la edición. */
+export interface ActualizarPublicacion extends NuevaPublicacion {
+  tarifaLimpieza: number;
+  reglas?: string;
+}
+
+export type CampoPublicacion = keyof ActualizarPublicacion;
 
 /** Errores de validación por campo devueltos por el servidor. */
 export type ErroresPublicacion = Partial<Record<CampoPublicacion, string>>;
 
-/** Publicación tal como la devuelve el servidor tras crearla. */
+/** Publicación tal como la devuelve el servidor. */
 export interface Publicacion {
   idPublicacion: number;
   idAnfitrion: number;
@@ -42,4 +48,23 @@ export interface Publicacion {
   capacidad: number;
   precioNoche: number;
   tarifaLimpieza: number;
+  reglas: string | null;
+}
+
+/** Solo una publicación en borrador o pausada se puede editar. */
+const ESTADOS_EDITABLES: readonly EstadoPublicacion[] = ['BORRADOR', 'PAUSADA'];
+
+const MOTIVO_NO_EDITABLE: Partial<Record<EstadoPublicacion, string>> = {
+  ACTIVA: 'Esta publicación está activa. Para editarla, solicita al Administrador que la pause.',
+  PENDIENTE_REVISION: 'La publicación está en revisión del Administrador.',
+  BLOQUEADA: 'La publicación está bloqueada.',
+};
+
+export function puedeEditar(estado: EstadoPublicacion): boolean {
+  return ESTADOS_EDITABLES.includes(estado);
+}
+
+/** Por qué no se puede editar en ese estado; null si sí se puede. */
+export function motivoNoEditable(estado: EstadoPublicacion): string | null {
+  return MOTIVO_NO_EDITABLE[estado] ?? null;
 }

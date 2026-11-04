@@ -10,6 +10,15 @@ export interface CrearPublicacionRequestDto {
   precioNoche: number;
 }
 
+/**
+ * Cuerpo de PUT {apiUrl}/publicaciones/{id}. Reemplaza todos los campos editables, así que se
+ * envían todos aunque no hayan cambiado. Tampoco lleva idAnfitrion, estado ni politica.
+ */
+export interface ActualizarPublicacionRequestDto extends CrearPublicacionRequestDto {
+  tarifaLimpieza: number;
+  reglas: string | null;
+}
+
 /** Elemento de GET {apiUrl}/ciudades y GET {apiUrl}/tipos-alojamiento. */
 export interface CatalogoItemDto {
   id: number;
@@ -19,7 +28,7 @@ export interface CatalogoItemDto {
 export type EstadoPublicacionDto =
   'BORRADOR' | 'PENDIENTE_REVISION' | 'ACTIVA' | 'PAUSADA' | 'BLOQUEADA';
 
-/** Respuesta 201 de POST {apiUrl}/publicaciones. */
+/** Respuesta de POST (201), GET y PUT de {apiUrl}/publicaciones. */
 export interface PublicacionResponseDto {
   idPublicacion: number;
   idAnfitrion: number;
@@ -34,4 +43,6 @@ export interface PublicacionResponseDto {
   capacidad: number;
   precioNoche: number;
   tarifaLimpieza: number;
+  /** Puede faltar en respuestas de versiones del backend anteriores a la edición. */
+  reglas?: string | null;
 }

@@ -1,15 +1,12 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { IconoAlojamientoComponent } from '@shared/ui/icono-alojamiento/icono-alojamiento.component';
 import { formatearPesos } from '../../../application/moneda';
-import { EstadoPublicacion, Publicacion } from '../../../domain/models/publicacion';
-
-const ETIQUETA_ESTADO: Record<EstadoPublicacion, string> = {
-  BORRADOR: 'Borrador',
-  PENDIENTE_REVISION: 'Pendiente de revisión',
-  ACTIVA: 'Activa',
-  PAUSADA: 'Pausada',
-  BLOQUEADA: 'Bloqueada',
-};
+import { motivoNoEditable, Publicacion, puedeEditar } from '../../../domain/models/publicacion';
+import {
+  ETIQUETA_ESTADO,
+  EstadoPublicacionComponent,
+} from '../estado-publicacion/estado-publicacion.component';
 
 /**
  * Ficha de la publicación recién guardada, con la misma disposición de una ficha de
@@ -18,7 +15,7 @@ const ETIQUETA_ESTADO: Record<EstadoPublicacion, string> = {
  */
 @Component({
   selector: 'app-publicacion-confirmacion',
-  imports: [IconoAlojamientoComponent],
+  imports: [IconoAlojamientoComponent, EstadoPublicacionComponent, RouterLink],
   templateUrl: './publicacion-confirmacion.component.html',
   styleUrl: './publicacion-confirmacion.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -29,6 +26,15 @@ export class PublicacionConfirmacionComponent {
 
   protected readonly estado = computed(() => ETIQUETA_ESTADO[this.publicacion().estado]);
   protected readonly esBorrador = computed(() => this.publicacion().estado === 'BORRADOR');
+  /** Solo se edita en BORRADOR o PAUSADA; en los demás estados el botón explica por qué no. */
+  protected readonly editable = computed(() => puedeEditar(this.publicacion().estado));
+  protected readonly motivoNoEditable = computed(() => motivoNoEditable(this.publicacion().estado));
+  protected readonly rutaEditar = computed(() => [
+    '/anfitrion',
+    'publicaciones',
+    this.publicacion().idPublicacion,
+    'editar',
+  ]);
   protected readonly precioNoche = computed(() => formatearPesos(this.publicacion().precioNoche));
   protected readonly tarifaLimpieza = computed(() =>
     formatearPesos(this.publicacion().tarifaLimpieza),

@@ -95,20 +95,6 @@
   color: var(--color-text-muted);
 }
 
-.ficha__estado {
-  padding: 2px var(--space-3);
-  border-radius: 999px;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--color-primary);
-  background: var(--color-primary-soft);
-}
-
-.ficha__estado--borrador {
-  color: #8a5a00;
-  background: #fdf1d6;
-}
-
 .ficha__direccion {
   display: flex;
   align-items: flex-start;
@@ -217,4 +203,10 @@
 .ficha__galeria-icono {
   width: 56px;
   height: 56px;
+}
+
+/* Botón "Editar" cuando el estado no lo permite: se ve apagado, pero conserva el tooltip. */
+.ficha__editar--inactivo {
+  opacity: 0.55;
+  cursor: not-allowed;
 }

@@ -1,5 +1,6 @@
 import { FormControl, FormGroup } from '@angular/forms';
 import {
+  decimalNoNegativo,
   decimalPositivo,
   EMAIL_PATTERN,
   enteroPositivo,
@@ -140,6 +141,27 @@ describe('form.validators', () => {
     it('no cuenta los ceros a la izquierda como dígitos enteros', () => {
       expect(validar('00000000001')).toBeNull();
     });
+
+    it('trata el vacío como válido (eso lo valida required)', () => {
+      expect(validar('')).toBeNull();
+      expect(validar(null)).toBeNull();
+    });
+  });
+
+  describe('decimalNoNegativo', () => {
+    const validar = (valor: unknown) => decimalNoNegativo()(new FormControl(valor));
+
+    for (const valido of ['0', '0.00', '0.5', '15000', '15000.50', ' 20 ', '9999999999']) {
+      it(`acepta "${valido}"`, () => {
+        expect(validar(valido)).toBeNull();
+      });
+    }
+
+    for (const invalido of ['-1', '-0.5', '100.555', '12345678901', '15000,50', '1.2.3', 'abc']) {
+      it(`rechaza "${invalido}"`, () => {
+        expect(validar(invalido)).toEqual({ decimalNoNegativo: true });
+      });
+    }
 
     it('trata el vacío como válido (eso lo valida required)', () => {
       expect(validar('')).toBeNull();

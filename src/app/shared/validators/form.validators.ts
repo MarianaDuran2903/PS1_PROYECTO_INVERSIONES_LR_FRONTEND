@@ -133,11 +133,16 @@ export function enteroPositivo(): ValidatorFn {
 }
 
 /**
- * Número mayor que 0 con punto decimal, de máximo `maxEnteros` dígitos enteros y `maxDecimales`
- * decimales (por defecto 10 y 2, como el backend). Acepta solo dígitos y un punto con dígitos a
- * ambos lados; no admite coma, signo ni notación científica. Vacío es válido.
+ * Valida un número decimal escrito como texto: solo dígitos y un punto con dígitos a ambos lados
+ * (sin coma, signo ni notación científica), con un máximo de enteros y de decimales. Vacío es
+ * válido: la obligatoriedad la decide `Validators.required`.
  */
-export function decimalPositivo(maxDecimales = 2, maxEnteros = 10): ValidatorFn {
+function decimalConLimites(
+  clave: string,
+  permitirCero: boolean,
+  maxDecimales: number,
+  maxEnteros: number,
+): ValidatorFn {
   return (control: AbstractControl<unknown>): ValidationErrors | null => {
     const value = control.value;
     if (typeof value !== 'string') {
@@ -161,20 +166,33 @@ export function decimalPositivo(maxDecimales = 2, maxEnteros = 10): ValidatorFn 
           enteros += caracter;
         }
       } else {
-        return { decimalPositivo: true };
+        return { [clave]: true };
       }
     }
 
     const formatoValido = enteros.length > 0 && (!vistoPunto || decimales.length > 0);
     const enterosSignificativos = enteros.replace(/^0+/, '').length;
-    const hayValor = [...enteros, ...decimales].some((digito) => digito !== '0');
+    const hayValor = permitirCero || [...enteros, ...decimales].some((digito) => digito !== '0');
     return formatoValido &&
       hayValor &&
       decimales.length <= maxDecimales &&
       enterosSignificativos <= maxEnteros
       ? null
-      : { decimalPositivo: true };
+      : { [clave]: true };
   };
+}
+
+/**
+ * Número mayor que 0 con punto decimal, de máximo `maxEnteros` dígitos enteros y `maxDecimales`
+ * decimales (por defecto 10 y 2, como el backend).
+ */
+export function decimalPositivo(maxDecimales = 2, maxEnteros = 10): ValidatorFn {
+  return decimalConLimites('decimalPositivo', false, maxDecimales, maxEnteros);
+}
+
+/** Igual que `decimalPositivo`, pero acepta el cero (p. ej. la tarifa de limpieza). */
+export function decimalNoNegativo(maxDecimales = 2, maxEnteros = 10): ValidatorFn {
+  return decimalConLimites('decimalNoNegativo', true, maxDecimales, maxEnteros);
 }
 
 /** Validador de grupo: los dos campos deben tener el mismo valor. */

@@ -33,7 +33,8 @@
           <div class="alert alert--danger pagina__alerta" role="alert">{{ mensaje }}</div>
         }
 
-        <app-crear-publicacion-form
+        <app-publicacion-form
+          modo="crear"
           [ciudades]="facade.ciudades()"
           [tipos]="facade.tipos()"
           [enviando]="facade.enviando()"

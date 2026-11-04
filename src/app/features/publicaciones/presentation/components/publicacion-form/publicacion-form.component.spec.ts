@@ -1,8 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CatalogoItem, NuevaPublicacion } from '../../../domain/models/publicacion';
-import { CrearPublicacionFormComponent } from './crear-publicacion-form.component';
+import { PublicacionFormComponent } from './publicacion-form.component';
 
-describe('CrearPublicacionFormComponent', () => {
+describe('PublicacionFormComponent (modo crear)', () => {
   const CIUDADES: CatalogoItem[] = [
     { id: 1, nombre: 'Bogotá' },
     { id: 2, nombre: 'Medellín' },
@@ -12,7 +12,7 @@ describe('CrearPublicacionFormComponent', () => {
     { id: 20, nombre: 'Casa' },
   ];
 
-  let fixture: ComponentFixture<CrearPublicacionFormComponent>;
+  let fixture: ComponentFixture<PublicacionFormComponent>;
   let element: HTMLElement;
   let emitidos: NuevaPublicacion[];
 
@@ -55,7 +55,7 @@ describe('CrearPublicacionFormComponent', () => {
   const textoError = (id: string) => element.querySelector(`#${id}-error`)?.textContent?.trim();
 
   beforeEach(() => {
-    fixture = TestBed.createComponent(CrearPublicacionFormComponent);
+    fixture = TestBed.createComponent(PublicacionFormComponent);
     element = fixture.nativeElement;
     emitidos = [];
     fixture.componentRef.setInput('ciudades', CIUDADES);
