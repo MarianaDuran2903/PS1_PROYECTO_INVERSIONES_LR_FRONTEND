@@ -1,0 +1,47 @@
+<section class="pagina" aria-labelledby="pagina-titulo">
+  @if (facade.publicacion(); as publicacion) {
+    <app-publicacion-confirmacion [publicacion]="publicacion" (crearOtra)="facade.crearOtra()" />
+  } @else {
+    <nav class="pagina__ruta" aria-label="Ruta">
+      <a routerLink="/anfitrion">Mi panel</a>
+      <span aria-hidden="true">›</span>
+      <span aria-current="page">Nueva publicación</span>
+    </nav>
+
+    <header class="pagina__encabezado">
+      <h1 id="pagina-titulo">Nueva publicación</h1>
+      <p>Registra la información inicial de tu alojamiento. Se guardará como borrador.</p>
+    </header>
+
+    @switch (facade.catalogos()) {
+      @case ('cargando') {
+        <p class="pagina__estado" role="status">
+          <span class="pagina__spinner" aria-hidden="true"></span>
+          Cargando ciudades y tipos de alojamiento…
+        </p>
+      }
+      @case ('error') {
+        <div class="alert alert--danger pagina__error" role="alert">
+          <span>No fue posible cargar las ciudades y los tipos de alojamiento.</span>
+          <button type="button" class="btn btn--outline" (click)="facade.cargarCatalogos()">
+            Reintentar
+          </button>
+        </div>
+      }
+      @default {
+        @if (facade.mensajeError(); as mensaje) {
+          <div class="alert alert--danger pagina__alerta" role="alert">{{ mensaje }}</div>
+        }
+
+        <app-publicacion-form
+          modo="crear"
+          [ciudades]="facade.ciudades()"
+          [tipos]="facade.tipos()"
+          [enviando]="facade.enviando()"
+          [erroresServidor]="facade.erroresCampo()"
+          (guardar)="facade.crear($event)"
+        />
+      }
+    }
+  }
+</section>

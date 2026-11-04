@@ -1,8 +1,9 @@
-import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
+import { HttpClient, HttpContext, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { APP_CONFIG } from '@core/config/app-config';
+import { OMITIR_AVISO_403 } from '@core/http/http-contexts';
 import { httpErrorInterceptor } from '@core/http/interceptors/http-error.interceptor';
 import { ToastService } from '@core/notifications/toast.service';
 import { environment } from '@env/environment';
@@ -127,6 +128,24 @@ describe('authTokenInterceptor', () => {
             t.title === 'Sin permisos' && t.message === 'No tiene permisos para esta operación',
         ),
     ).toBeTrue();
+  });
+
+  it('un 403 de una petición con OMITIR_AVISO_403 no muestra el aviso global ni cierra la sesión', () => {
+    let fallo: unknown;
+    http
+      .get('/api-test/publicaciones/9', { context: new HttpContext().set(OMITIR_AVISO_403, true) })
+      .subscribe({ error: (e: unknown) => (fallo = e) });
+    const { body, opts } = errorDelBackend(
+      403,
+      'Forbidden',
+      'No tiene permisos para esta operación',
+    );
+
+    controller.expectOne('/api-test/publicaciones/9').flush(body, opts);
+
+    expect((fallo as { status: number }).status).toBe(403);
+    expect(toast.toasts().length).toBe(0);
+    expect(session.autenticado()).toBeTrue();
   });
 
   it('deja pasar el error a quien hizo la petición', () => {

@@ -1,0 +1,128 @@
+<article class="ficha" aria-labelledby="ficha-titulo">
+  <div class="alert alert--success ficha__aviso" role="status">
+    <strong>Publicación guardada como borrador.</strong>
+    Todavía no es visible en el Marketplace.
+  </div>
+
+  <nav class="ficha__ruta" aria-label="Ruta de la publicación">
+    <ol>
+      <li>Alojamientos</li>
+      <li>{{ publicacion().ciudad.nombre }}</li>
+      <li>{{ publicacion().tipo.nombre }}</li>
+      <li aria-current="page">{{ publicacion().titulo }}</li>
+    </ol>
+  </nav>
+
+  <div class="ficha__galeria" role="img" aria-label="Esta publicación todavía no tiene fotos">
+    <app-icono-alojamiento class="ficha__galeria-icono" [nombre]="publicacion().tipo.nombre" />
+    <p class="ficha__galeria-titulo">{{ publicacion().tipo.nombre }}</p>
+    <p class="ficha__galeria-texto">Sin fotos todavía</p>
+  </div>
+
+  <div class="ficha__cuerpo">
+    <div class="ficha__principal">
+      <header class="ficha__encabezado">
+        <h1 id="ficha-titulo">{{ publicacion().titulo }}</h1>
+        <p class="ficha__meta">
+          <app-estado-publicacion [estado]="publicacion().estado" />
+          <span>{{ publicacion().tipo.nombre }}</span>
+          <span aria-hidden="true">·</span>
+          <span>{{ textoCapacidad() }}</span>
+        </p>
+        <p class="ficha__direccion">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+            <path
+              d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11Z"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.6"
+            />
+            <circle cx="12" cy="10" r="2.3" fill="none" stroke="currentColor" stroke-width="1.6" />
+          </svg>
+          {{ ubicacion() }}
+        </p>
+      </header>
+
+      <section aria-labelledby="ficha-descripcion">
+        <h2 id="ficha-descripcion">Descripción</h2>
+        <p class="ficha__descripcion">{{ publicacion().descripcion }}</p>
+      </section>
+
+      <section aria-labelledby="ficha-informacion">
+        <h2 id="ficha-informacion">Información práctica</h2>
+        <dl class="ficha__datos">
+          <div>
+            <dt>Tipo de alojamiento</dt>
+            <dd>{{ publicacion().tipo.nombre }}</dd>
+          </div>
+          <div>
+            <dt>Capacidad</dt>
+            <dd>{{ textoCapacidad() }}</dd>
+          </div>
+          <div>
+            <dt>Ciudad</dt>
+            <dd>{{ publicacion().ciudad.nombre }}</dd>
+          </div>
+          @if (publicacion().barrioZona; as barrio) {
+            <div>
+              <dt>Barrio o zona</dt>
+              <dd>{{ barrio }}</dd>
+            </div>
+          }
+          <div>
+            <dt>Política de cancelación</dt>
+            <dd>{{ publicacion().politica.nombre }}</dd>
+          </div>
+        </dl>
+      </section>
+    </div>
+
+    <aside class="ficha__resumen" aria-label="Resumen de la publicación">
+      <h2>{{ publicacion().titulo }}</h2>
+      <p class="ficha__precio">
+        <strong>{{ precioNoche() }}</strong>
+        <span>por noche</span>
+      </p>
+      <dl class="ficha__lineas">
+        <div>
+          <dt>Estado</dt>
+          <dd>{{ estado() }}</dd>
+        </div>
+        <div>
+          <dt>Capacidad</dt>
+          <dd>{{ textoCapacidad() }}</dd>
+        </div>
+        <div>
+          <dt>Tarifa de limpieza</dt>
+          <dd>{{ tarifaLimpieza() }}</dd>
+        </div>
+        <div>
+          <dt>Cancelación</dt>
+          <dd>{{ publicacion().politica.nombre }}</dd>
+        </div>
+      </dl>
+      @if (esBorrador()) {
+        <p class="ficha__nota">
+          Es un borrador: los huéspedes todavía no pueden verla ni reservarla.
+        </p>
+      }
+      @if (editable()) {
+        <a class="btn btn--primary btn--block" [routerLink]="rutaEditar()">Editar publicación</a>
+      } @else {
+        <!-- aria-disabled (y no disabled) para que el tooltip con el motivo se siga mostrando -->
+        <button
+          type="button"
+          class="btn btn--primary btn--block ficha__editar--inactivo"
+          aria-disabled="true"
+          [title]="motivoNoEditable() ?? ''"
+          (click)="$event.preventDefault()"
+        >
+          Editar publicación
+        </button>
+      }
+      <button type="button" class="btn btn--outline btn--block" (click)="crearOtra.emit()">
+        Crear otra publicación
+      </button>
+    </aside>
+  </div>
+</article>
