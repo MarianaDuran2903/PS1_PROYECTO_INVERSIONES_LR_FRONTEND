@@ -14,7 +14,19 @@
     >
 
     @if (esAnfitrion()) {
-      <a class="nav__link" routerLink="/anfitrion" routerLinkActive="nav__link--active">Mi panel</a>
+      <a
+        class="nav__link"
+        routerLink="/anfitrion"
+        routerLinkActive="nav__link--active"
+        [routerLinkActiveOptions]="soloRuta"
+        >Mi panel</a
+      >
+      <a
+        class="nav__link"
+        routerLink="/anfitrion/publicaciones/nueva"
+        routerLinkActive="nav__link--active"
+        >Nueva publicación</a
+      >
     } @else if (!usuario()) {
       <a
         class="nav__link"

@@ -1,0 +1,233 @@
+<form [formGroup]="form" (ngSubmit)="enviar()" novalidate>
+  <fieldset class="publicar" [disabled]="enviando()">
+    <legend class="visually-hidden">Datos de la publicación</legend>
+
+    <div class="publicar__secciones">
+      <section class="seccion" aria-labelledby="sec-basica">
+        <h2 id="sec-basica">Información básica</h2>
+        <p class="seccion__ayuda">
+          Cuéntales a los huéspedes qué hace especial tu alojamiento. Los campos con
+          <span aria-hidden="true">*</span> son obligatorios.
+        </p>
+
+        <div class="field">
+          <label for="titulo">Título <span aria-hidden="true">*</span></label>
+          <input
+            id="titulo"
+            type="text"
+            formControlName="titulo"
+            placeholder="Ej. Apartamento luminoso cerca del parque"
+            [attr.aria-invalid]="errorDe('titulo') !== null"
+            [attr.aria-describedby]="errorDe('titulo') ? 'titulo-error' : null"
+            required
+          />
+          @if (errorDe('titulo'); as error) {
+            <p class="field__error" id="titulo-error">{{ error }}</p>
+          }
+        </div>
+
+        <div class="field">
+          <label for="descripcion">Descripción <span aria-hidden="true">*</span></label>
+          <textarea
+            id="descripcion"
+            formControlName="descripcion"
+            rows="5"
+            placeholder="Describe los espacios, los servicios y lo que hay cerca"
+            [attr.aria-invalid]="errorDe('descripcion') !== null"
+            [attr.aria-describedby]="
+              errorDe('descripcion')
+                ? 'descripcion-contador descripcion-error'
+                : 'descripcion-contador'
+            "
+            required
+          ></textarea>
+          <p class="field__contador" id="descripcion-contador" aria-live="polite">
+            {{ form.controls.descripcion.value.length }}/{{ descripcionMax }}
+          </p>
+          @if (errorDe('descripcion'); as error) {
+            <p class="field__error" id="descripcion-error">{{ error }}</p>
+          }
+        </div>
+      </section>
+
+      <section class="seccion" aria-labelledby="sec-ubicacion">
+        <h2 id="sec-ubicacion">Ubicación</h2>
+        <p class="seccion__ayuda">Indica dónde queda el alojamiento.</p>
+
+        <div class="form__fila">
+          <div class="field">
+            <label for="idCiudad">Ciudad <span aria-hidden="true">*</span></label>
+            <select
+              id="idCiudad"
+              formControlName="idCiudad"
+              [attr.aria-invalid]="errorDe('idCiudad') !== null"
+              [attr.aria-describedby]="errorDe('idCiudad') ? 'idCiudad-error' : null"
+              required
+            >
+              <option [ngValue]="null">Selecciona una ciudad</option>
+              @for (ciudad of ciudades(); track ciudad.id) {
+                <option [ngValue]="ciudad.id">{{ ciudad.nombre }}</option>
+              }
+            </select>
+            @if (errorDe('idCiudad'); as error) {
+              <p class="field__error" id="idCiudad-error">{{ error }}</p>
+            }
+          </div>
+
+          <div class="field">
+            <label for="barrioZona">Barrio o zona</label>
+            <input
+              id="barrioZona"
+              type="text"
+              formControlName="barrioZona"
+              [attr.aria-invalid]="errorDe('barrioZona') !== null"
+              [attr.aria-describedby]="errorDe('barrioZona') ? 'barrioZona-error' : null"
+            />
+            @if (errorDe('barrioZona'); as error) {
+              <p class="field__error" id="barrioZona-error">{{ error }}</p>
+            }
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="direccionTextual">Dirección <span aria-hidden="true">*</span></label>
+          <input
+            id="direccionTextual"
+            type="text"
+            formControlName="direccionTextual"
+            autocomplete="street-address"
+            placeholder="Ej. Calle 10 # 5-20"
+            [attr.aria-invalid]="errorDe('direccionTextual') !== null"
+            [attr.aria-describedby]="errorDe('direccionTextual') ? 'direccionTextual-error' : null"
+            required
+          />
+          @if (errorDe('direccionTextual'); as error) {
+            <p class="field__error" id="direccionTextual-error">{{ error }}</p>
+          }
+        </div>
+      </section>
+
+      <section class="seccion" aria-labelledby="sec-tipo">
+        <h2 id="sec-tipo">Tipo de alojamiento</h2>
+        <p class="seccion__ayuda">Elige la opción que mejor lo describe.</p>
+
+        <div
+          class="chips"
+          role="radiogroup"
+          aria-labelledby="sec-tipo"
+          [attr.aria-describedby]="errorDe('idTipo') ? 'idTipo-error' : null"
+        >
+          @for (tipo of tipos(); track tipo.id) {
+            <label class="chip">
+              <input
+                type="radio"
+                formControlName="idTipo"
+                [value]="tipo.id"
+                [attr.id]="$first ? 'idTipo' : null"
+              />
+              <span class="chip__ficha">
+                <app-icono-alojamiento [nombre]="tipo.nombre" />
+                <span class="chip__texto">{{ tipo.nombre }}</span>
+              </span>
+            </label>
+          }
+        </div>
+        @if (errorDe('idTipo'); as error) {
+          <p class="field__error" id="idTipo-error">{{ error }}</p>
+        }
+      </section>
+
+      <section class="seccion" aria-labelledby="sec-precio">
+        <h2 id="sec-precio">Capacidad y precio</h2>
+        <p class="seccion__ayuda">Cuántas personas caben y cuánto cuesta cada noche.</p>
+
+        <div class="form__fila">
+          <div class="field">
+            <label for="capacidad">Capacidad (huéspedes) <span aria-hidden="true">*</span></label>
+            <input
+              id="capacidad"
+              type="text"
+              inputmode="numeric"
+              formControlName="capacidad"
+              autocomplete="off"
+              [attr.aria-invalid]="errorDe('capacidad') !== null"
+              [attr.aria-describedby]="errorDe('capacidad') ? 'capacidad-error' : null"
+              required
+            />
+            @if (errorDe('capacidad'); as error) {
+              <p class="field__error" id="capacidad-error">{{ error }}</p>
+            }
+          </div>
+
+          <div class="field">
+            <label for="precioNoche"
+              >Precio por noche (COP) <span aria-hidden="true">*</span></label
+            >
+            <input
+              id="precioNoche"
+              type="text"
+              inputmode="decimal"
+              formControlName="precioNoche"
+              autocomplete="off"
+              [attr.aria-invalid]="errorDe('precioNoche') !== null"
+              [attr.aria-describedby]="
+                errorDe('precioNoche') ? 'precioNoche-ayuda precioNoche-error' : 'precioNoche-ayuda'
+              "
+              required
+            />
+            <p class="field__ayuda" id="precioNoche-ayuda">
+              @if (precioFormateado(); as precio) {
+                {{ precio }} por noche
+              } @else {
+                Usa punto para los decimales, por ejemplo 250000.50
+              }
+            </p>
+            @if (errorDe('precioNoche'); as error) {
+              <p class="field__error" id="precioNoche-error">{{ error }}</p>
+            }
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <aside class="resumen" aria-label="Resumen de la publicación">
+      <p class="resumen__etiqueta">Así va tu publicación</p>
+      <h2
+        class="resumen__titulo"
+        [class.resumen__titulo--vacio]="!form.controls.titulo.value.trim()"
+      >
+        {{ form.controls.titulo.value.trim() || 'Título de tu publicación' }}
+      </h2>
+
+      <ul class="resumen__datos">
+        <li>
+          <span class="resumen__dato-nombre">Ciudad</span>
+          <span>{{ nombreCiudad() ?? '—' }}</span>
+        </li>
+        <li>
+          <span class="resumen__dato-nombre">Tipo</span>
+          <span>{{ nombreTipo() ?? '—' }}</span>
+        </li>
+        <li>
+          <span class="resumen__dato-nombre">Capacidad</span>
+          <span>{{ textoCapacidad() ?? '—' }}</span>
+        </li>
+      </ul>
+
+      <p class="resumen__precio">
+        <strong>{{ precioFormateado() ?? '—' }}</strong>
+        <span>por noche</span>
+      </p>
+      <p class="resumen__nota">Se guarda como borrador: todavía no es visible en el Marketplace.</p>
+
+      <button
+        type="submit"
+        class="btn btn--primary btn--block"
+        [disabled]="form.invalid || enviando()"
+        [attr.aria-busy]="enviando()"
+      >
+        {{ enviando() ? 'Guardando…' : 'Guardar' }}
+      </button>
+    </aside>
+  </fieldset>
+</form>

@@ -36,10 +36,11 @@ El proyecto avanza funcionalidad por funcionalidad, según la matriz de requerim
 | RNF-OPC-001 | Aplicación ejecutable en contenedores (Docker) | Hecho |
 | RNF-MAN-001 / 002 | Quality Gate de SonarQube Cloud y revisión de cambios | Configurado (CI y plantilla de PR) |
 | RF-USR-004 a 007 | Recuperar contraseña, perfil y activar/desactivar cuenta | Pendiente |
-| RF-ALOJ, RF-BUS, RF-COT, RF-RES, RF-PAG | Publicaciones, búsqueda, cotización, reservas y pago simulado | Pendiente |
+| RF-ALOJ (HU-008) | Crear una publicación de alojamiento (Anfitrión), guardada como borrador | Hecho (pendiente de probar contra el backend con los endpoints de publicaciones) |
+| RF-ALOJ (resto), RF-BUS, RF-COT, RF-RES, RF-PAG | Listado y edición de publicaciones, búsqueda, cotización, reservas y pago simulado | Pendiente |
 | RF-NOT, RF-RSC, RF-ADM, RF-DASH, RF-REP | Notificaciones, reseñas, administración, indicadores y reportes | Pendiente |
 
-Las páginas `/marketplace`, `/anfitrion` y `/admin` son provisionales: solo muestran un mensaje hasta que se implementen sus historias.
+Las páginas `/marketplace`, `/anfitrion` (salvo la de nueva publicación) y `/admin` son provisionales: solo muestran un mensaje hasta que se implementen sus historias.
 
 ## Tecnologías
 
@@ -270,6 +271,7 @@ presentation  →  application  →  domain  ←  data
 | `/registro` (`?rol=anfitrion` preselecciona Anfitrión) | Solo quien no tiene sesión |
 | `/marketplace` | Huésped |
 | `/anfitrion` | Anfitrión |
+| `/anfitrion/publicaciones/nueva` | Anfitrión (formulario de nueva publicación) |
 | `/admin` | Administrador |
 | `/acceso-denegado` ("Sin permisos") | Se muestra cuando hay sesión pero el rol no alcanza |
 
@@ -320,6 +322,18 @@ Cuerpo `{ "correo": "...", "contrasena": "..." }`. En el login la contraseña so
 ### `GET /auth/sesion`
 
 Se llama al arrancar la app si hay un token guardado (`provideAppInitializer`) para recuperar el usuario y el rol. Si responde `401` se limpia la sesión y se lleva a `/login?expirada=true`.
+
+### Publicaciones (HU-008)
+
+| Método y ruta | Acceso | Uso |
+|---|---|---|
+| `GET /ciudades` | Cualquier rol con token | Lista desplegable de ciudades (`[{ id, nombre }]`, ordenadas por nombre) |
+| `GET /tipos-alojamiento` | Cualquier rol con token | Tipos de alojamiento, que el formulario muestra como opciones |
+| `POST /publicaciones` | Solo ANFITRION | Crea la publicación en estado BORRADOR |
+
+Cuerpo del POST: `titulo`, `descripcion`, `direccionTextual`, `idCiudad`, `barrioZona` (opcional, `null` si queda vacío), `idTipo`, `capacidad` (entero) y `precioNoche` (número, máximo 2 decimales), enviados como números. **No se envían** `idAnfitrion`, `estado` ni `politica`: los fija el servidor. Un `201` devuelve la publicación (estado `BORRADOR`, política "Flexible", `tarifaLimpieza` 0) y el frontend muestra una ficha de confirmación; un `400` con `errores` se muestra bajo cada campo.
+
+Límites del formulario (iguales a los del backend): título 150, descripción 1000 (con contador), dirección 250 y barrio o zona 120 caracteres; capacidad entera mayor que 0; precio mayor que 0, con punto decimal (no coma), máximo 2 decimales y 10 enteros.
 
 ### Errores y sesión
 
