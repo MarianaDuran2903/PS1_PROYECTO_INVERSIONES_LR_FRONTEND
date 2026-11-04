@@ -24,11 +24,14 @@ describe('PublicacionConfirmacionComponent', () => {
   let fixture: ComponentFixture<PublicacionConfirmacionComponent>;
   let element: HTMLElement;
 
-  const crear = (datos: Publicacion = publicacion) => {
+  const crear = (datos: Publicacion = publicacion, modo?: 'confirmacion' | 'detalle') => {
     TestBed.configureTestingModule({ providers: [provideRouter([])] });
     fixture = TestBed.createComponent(PublicacionConfirmacionComponent);
     element = fixture.nativeElement;
     fixture.componentRef.setInput('publicacion', datos);
+    if (modo) {
+      fixture.componentRef.setInput('modo', modo);
+    }
     fixture.detectChanges();
   };
 
@@ -128,6 +131,43 @@ describe('PublicacionConfirmacionComponent', () => {
         expect(boton.getAttribute('href')).toBeNull();
       });
     }
+  });
+
+  describe('modo detalle (al abrir una publicación desde el listado)', () => {
+    it('no muestra el aviso de "guardada como borrador"', () => {
+      crear(publicacion, 'detalle');
+
+      expect(element.querySelector('.ficha__aviso')).toBeNull();
+      expect(element.textContent).not.toContain('Publicación guardada como borrador');
+    });
+
+    it('en vez de "Crear otra publicación" ofrece volver al listado', () => {
+      crear(publicacion, 'detalle');
+
+      expect(element.textContent).not.toContain('Crear otra publicación');
+      const volver = Array.from(
+        element.querySelectorAll<HTMLAnchorElement>('.ficha__resumen a'),
+      ).find((a) => a.textContent?.includes('Volver a mis publicaciones'))!;
+      expect(volver.getAttribute('href')).toBe('/anfitrion/publicaciones');
+    });
+
+    it('conserva los datos, el estado y el botón Editar', () => {
+      crear({ ...publicacion, estado: 'PAUSADA' }, 'detalle');
+
+      expect(element.querySelector('h1')!.textContent).toContain('Apartamento luminoso');
+      expect(element.querySelector('app-estado-publicacion')!.textContent!.trim()).toBe('Pausada');
+      expect(element.querySelector('app-boton-editar-publicacion a')!.getAttribute('href')).toBe(
+        '/anfitrion/publicaciones/9/editar',
+      );
+    });
+
+    it('la ficha de confirmación (por defecto) sigue igual', () => {
+      crear(publicacion);
+
+      expect(element.querySelector('.ficha__aviso')).not.toBeNull();
+      expect(element.textContent).toContain('Crear otra publicación');
+      expect(element.textContent).not.toContain('Volver a mis publicaciones');
+    });
   });
 
   it('emite crearOtra al pulsar el botón', () => {

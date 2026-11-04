@@ -46,3 +46,24 @@ export interface PublicacionResponseDto {
   /** Puede faltar en respuestas de versiones del backend anteriores a la edición. */
   reglas?: string | null;
 }
+
+/** Elemento de GET {apiUrl}/publicaciones/mias. */
+export interface PublicacionResumenResponseDto {
+  idPublicacion: number;
+  titulo: string;
+  estado: EstadoPublicacionDto;
+  ciudad: CatalogoItemDto;
+  tipo: CatalogoItemDto;
+  capacidad: number;
+  precioNoche: number;
+}
+
+/** Respuesta de GET {apiUrl}/publicaciones/mias?pagina=&tamano=. */
+export interface PaginaPublicacionesResponseDto {
+  contenido: PublicacionResumenResponseDto[];
+  pagina: number;
+  tamano: number;
+  totalElementos: number;
+  totalPaginas: number;
+  mensaje: string | null;
+}

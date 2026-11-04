@@ -68,3 +68,25 @@ export function puedeEditar(estado: EstadoPublicacion): boolean {
 export function motivoNoEditable(estado: EstadoPublicacion): string | null {
   return MOTIVO_NO_EDITABLE[estado] ?? null;
 }
+
+/** Publicación tal como aparece en un listado: solo lo necesario para mostrarla en una tarjeta. */
+export interface PublicacionResumen {
+  idPublicacion: number;
+  titulo: string;
+  estado: EstadoPublicacion;
+  ciudad: CatalogoItem;
+  tipo: CatalogoItem;
+  capacidad: number;
+  precioNoche: number;
+}
+
+/** Una página de publicaciones. `pagina` empieza en 0. */
+export interface PaginaPublicaciones {
+  contenido: PublicacionResumen[];
+  pagina: number;
+  tamano: number;
+  totalElementos: number;
+  totalPaginas: number;
+  /** Aviso del backend cuando no hay ninguna publicación; null en otro caso. */
+  mensaje: string | null;
+}
