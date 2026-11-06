@@ -22,6 +22,7 @@ import { formatearPesos } from '../../../application/moneda';
 import {
   ActualizarPublicacion,
   CatalogoItem,
+  IntervencionPublicacion,
   NuevaPublicacion,
   Publicacion,
 } from '../../../domain/models/publicacion';
@@ -33,7 +34,11 @@ const LIMITES = {
   direccionTextual: 250,
   barrioZona: 120,
   reglas: 2000,
+  motivo: 500,
 } as const;
+
+/** El motivo de una intervención administrativa debe tener al menos esta longitud. */
+const MOTIVO_MINIMO = 10;
 
 function crearFormulario(fb: NonNullableFormBuilder) {
   return fb.group({
@@ -53,6 +58,16 @@ function crearFormulario(fb: NonNullableFormBuilder) {
     // Solo se usan al editar; al crear se deshabilitan y no afectan la validez del formulario.
     tarifaLimpieza: ['0', [Validators.required, notBlank(), decimalNoNegativo()]],
     reglas: ['', Validators.maxLength(LIMITES.reglas)],
+    // Solo existe en la intervención administrativa; en los otros modos está deshabilitado.
+    motivo: [
+      '',
+      [
+        Validators.required,
+        notBlank(),
+        Validators.minLength(MOTIVO_MINIMO),
+        Validators.maxLength(LIMITES.motivo),
+      ],
+    ],
   });
 }
 
@@ -60,7 +75,10 @@ type FormularioPublicacion = ReturnType<typeof crearFormulario>;
 type CampoFormulario = keyof FormularioPublicacion['controls'];
 type CampoConContador = keyof typeof LIMITES;
 
-export type ModoFormularioPublicacion = 'crear' | 'editar';
+export type ModoFormularioPublicacion = 'crear' | 'editar' | 'intervenir';
+
+const MENSAJE_MOTIVO = `El motivo debe tener entre ${MOTIVO_MINIMO} y ${LIMITES.motivo} caracteres`;
+const MENSAJE_REGLAS_OBLIGATORIAS = 'Las reglas son obligatorias para una publicación en revisión';
 
 const MENSAJE_CAPACIDAD = 'La capacidad debe ser un número entero mayor que 0';
 const MENSAJE_PRECIO = 'El precio por noche debe ser mayor que 0';
@@ -101,16 +119,28 @@ const MENSAJES: Record<CampoFormulario, ErrorMessages> = {
     blank: 'La tarifa de limpieza es obligatoria',
     decimalNoNegativo: MENSAJE_TARIFA,
   },
-  reglas: { maxlength: `Las reglas admiten máximo ${LIMITES.reglas} caracteres` },
+  reglas: {
+    required: MENSAJE_REGLAS_OBLIGATORIAS,
+    blank: MENSAJE_REGLAS_OBLIGATORIAS,
+    maxlength: `Las reglas admiten máximo ${LIMITES.reglas} caracteres`,
+  },
+  motivo: {
+    required: 'El motivo de la intervención es obligatorio',
+    blank: 'El motivo de la intervención es obligatorio',
+    minlength: MENSAJE_MOTIVO,
+    maxlength: MENSAJE_MOTIVO,
+  },
 };
 
 /**
- * Formulario de publicación, compartido por "Crear" y "Editar". Solo maneja el formulario y su
- * validación: recibe los catálogos, el estado y (al editar) los valores iniciales por inputs, y
- * emite los datos válidos ya como números.
+ * Formulario de publicación, compartido por "Crear", "Editar" y la intervención administrativa.
+ * Solo maneja el formulario y su validación: recibe los catálogos, el estado y (al editar) los
+ * valores iniciales por inputs, y emite los datos válidos ya como números.
  *
  * - `crear`: no muestra la tarifa de limpieza ni las reglas (los fija el servidor al crear).
  * - `editar`: precarga `valoresIniciales`, muestra esos dos campos y emite `guardarCambios`.
+ * - `intervenir`: como `editar`, más el motivo obligatorio (10 a 500 caracteres); emite
+ *   `guardarIntervencion` con `{ motivo, cambios }`.
  */
 @Component({
   selector: 'app-publicacion-form',
@@ -128,21 +158,28 @@ export class PublicacionFormComponent {
   readonly soloLectura = input(false);
   /** Publicación que se precarga al editar. Al cambiar, el formulario se vuelve a llenar. */
   readonly valoresIniciales = input<Publicacion | null>(null);
+  /** Las reglas son obligatorias (p. ej. en una publicación en revisión). */
+  readonly reglasObligatorias = input(false);
   /** Errores por campo devueltos por el servidor (400 con `errores`). */
   readonly erroresServidor = input<Partial<Record<CampoFormulario, string>>>({});
 
   readonly guardar = output<NuevaPublicacion>();
   readonly guardarCambios = output<ActualizarPublicacion>();
+  readonly guardarIntervencion = output<IntervencionPublicacion>();
   readonly cancelar = output<void>();
 
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   protected readonly form: FormularioPublicacion = crearFormulario(inject(NonNullableFormBuilder));
   protected readonly limites = LIMITES;
-  protected readonly esEdicion = computed(() => this.modo() === 'editar');
+  protected readonly motivoMinimo = MOTIVO_MINIMO;
+  /** Editar o intervenir: muestran la tarifa de limpieza y las reglas. */
+  protected readonly esEdicion = computed(() => this.modo() !== 'crear');
+  protected readonly esIntervencion = computed(() => this.modo() === 'intervenir');
 
   constructor() {
-    // La tarifa y las reglas solo existen al editar: deshabilitados no cuentan para la validez.
+    // La tarifa y las reglas solo existen al editar o intervenir, y el motivo solo al intervenir:
+    // los controles deshabilitados no cuentan para la validez del formulario.
     effect(() => {
       const editar = this.esEdicion();
       const { tarifaLimpieza, reglas } = this.form.controls;
@@ -153,6 +190,26 @@ export class PublicacionFormComponent {
           control.disable();
         }
       }
+    });
+
+    effect(() => {
+      const { motivo } = this.form.controls;
+      if (this.esIntervencion()) {
+        motivo.enable();
+      } else {
+        motivo.disable();
+      }
+    });
+
+    effect(() => {
+      const obligatorias = this.reglasObligatorias();
+      const { reglas } = this.form.controls;
+      reglas.setValidators(
+        obligatorias
+          ? [Validators.required, notBlank(), Validators.maxLength(LIMITES.reglas)]
+          : [Validators.maxLength(LIMITES.reglas)],
+      );
+      reglas.updateValueAndValidity();
     });
 
     effect(() => {
@@ -249,7 +306,16 @@ export class PublicacionFormComponent {
       precioNoche: Number(valor.precioNoche.trim()),
     };
 
-    if (this.esEdicion()) {
+    if (this.esIntervencion()) {
+      this.guardarIntervencion.emit({
+        motivo: valor.motivo,
+        cambios: {
+          ...datos,
+          tarifaLimpieza: Number(valor.tarifaLimpieza.trim()),
+          reglas: valor.reglas,
+        },
+      });
+    } else if (this.esEdicion()) {
       this.guardarCambios.emit({
         ...datos,
         tarifaLimpieza: Number(valor.tarifaLimpieza.trim()),
@@ -278,6 +344,7 @@ export class PublicacionFormComponent {
       precioNoche: String(publicacion.precioNoche),
       tarifaLimpieza: String(publicacion.tarifaLimpieza),
       reglas: publicacion.reglas ?? '',
+      motivo: '',
     });
   }
 

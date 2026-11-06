@@ -39,6 +39,7 @@ El proyecto avanza funcionalidad por funcionalidad, según la matriz de requerim
 | RF-ALOJ (HU-008) | Crear una publicación de alojamiento (Anfitrión), guardada como borrador | Hecho (pendiente de probar contra el backend con los endpoints de publicaciones) |
 | RF-ALOJ (HU-009) | Editar una publicación propia (Anfitrión) en BORRADOR o PAUSADA | Hecho (pendiente de probar contra el backend con GET y PUT de publicaciones) |
 | RF-ALOJ (HU-010) | Consultar mis publicaciones (Anfitrión): listado paginado con el estado de cada una | Hecho |
+| RF-ALOJ (HU-011) | Editar una publicación con autorización administrativa (Administrador), con motivo registrado | Hecho |
 | RF-ALOJ (resto), RF-BUS, RF-COT, RF-RES, RF-PAG | Listado y edición de publicaciones, búsqueda, cotización, reservas y pago simulado | Pendiente |
 | RF-NOT, RF-RSC, RF-ADM, RF-DASH, RF-REP | Notificaciones, reseñas, administración, indicadores y reportes | Pendiente |
 
@@ -277,7 +278,8 @@ presentation  →  application  →  domain  ←  data
 | `/anfitrion/publicaciones/nueva` | Anfitrión (formulario de nueva publicación) |
 | `/anfitrion/publicaciones/:id` | Anfitrión propietario (detalle de una publicación; se abre desde el listado) |
 | `/anfitrion/publicaciones/:id/editar` | Anfitrión propietario (editar una publicación; pide confirmación si hay cambios sin guardar) |
-| `/admin` | Administrador |
+| `/admin` | Administrador (panel con el buscador de publicaciones) |
+| `/admin/publicaciones/:id/editar` | Administrador (intervenir una publicación con un motivo; pide confirmación si hay cambios sin guardar) |
 | `/acceso-denegado` ("Sin permisos") | Se muestra cuando hay sesión pero el rol no alcanza |
 
 - Sin sesión, una ruta protegida lleva a `/login?returnUrl=…` y, tras iniciar sesión, vuelve a la página pedida.
@@ -377,6 +379,28 @@ El frontend envía siempre `tamano=10`; `pagina` empieza en 0. La respuesta es `
 - La paginación ("Anterior", "Página X de Y", "Siguiente") se oculta si `totalPaginas` es 1 o menos.
 - Un 400 (paginación inválida) o un fallo de red muestran un aviso con "Reintentar".
 
+### Intervención administrativa de una publicación (HU-011)
+
+| Método y ruta | Acceso | Uso |
+|---|---|---|
+| `GET /admin/publicaciones/{id}` | Solo ADMINISTRADOR | Cargar cualquier publicación (de cualquier Anfitrión) para precargar el formulario |
+| `PUT /admin/publicaciones/{id}` | Solo ADMINISTRADOR | Guardar la intervención con su motivo |
+
+El cuerpo del PUT es `{ "motivo": "...", "cambios": { ...mismos campos que la edición del Anfitrión... } }`. El **motivo es obligatorio, de 10 a 500 caracteres**, y el backend lo guarda en la auditoría junto con quién interviene (el Administrador del token) y cuándo. La intervención no cambia el estado ni el propietario.
+
+El Administrador interviene en cualquier estado **salvo ACTIVA**: una activa debe pausarse antes, y el formulario queda en solo lectura con el mensaje del backend ("La publicación está activa: páusela antes de intervenirla"). En PENDIENTE_REVISION las reglas son obligatorias.
+
+| Respuesta | Qué hace el frontend |
+|---|---|
+| `200` | "Intervención registrada" y vuelve al panel `/admin` |
+| `400` con `errores` | Cada mensaje bajo su campo (las claves del backend vienen como `cambios.capacidad` y `motivo`); no borra lo escrito |
+| `403` | Lleva a "Sin permisos" (la ruta está protegida con el guard de rol Administrador) |
+| `404` | "La publicación no existe" y vuelve al panel |
+| `409` | Muestra el mensaje y pasa el formulario a solo lectura |
+| `401` | Lo resuelve el interceptor (cierra sesión y lleva al login) |
+
+Como el backend solo permite consultar por número, la entrada es un campo "Número de publicación" en `/admin` (componente `buscador-publicacion`, pensado para reemplazarse por una bandeja de publicaciones sin tocar la pantalla de intervención). La pantalla `/admin/publicaciones/:id/editar` reutiliza el formulario de publicación en su modo `intervenir`, que añade el campo del motivo con su contador.
+
 ### Errores y sesión
 
 Todos los endpoints devuelven `{ fecha, estado, error, mensaje, ruta, errores? }`. `401` en una ruta protegida: cierra la sesión y lleva a `/login?expirada=true`. `403`: aviso "Sin permisos" con el `mensaje`, sin cerrar la sesión. Un temporizador cierra la sesión sola al vencer el token (60 minutos, sin renovación).
@@ -387,7 +411,7 @@ El registro oficial de auditoría (tabla `evento_auditoria`) lo escribe el backe
 
 ## Pruebas y calidad
 
-- **Pruebas unitarias** con Karma y Jasmine: 488 pruebas en 43 archivos. Cada capa se prueba aislada: validadores y mappers (funciones puras), repositorio HTTP con `HttpTestingController`, facades con repositorios falsos, guards, interceptores y componentes sobre su DOM.
+- **Pruebas unitarias** con Karma y Jasmine: 599 pruebas en 51 archivos. Cada capa se prueba aislada: validadores y mappers (funciones puras), repositorio HTTP con `HttpTestingController`, facades con repositorios falsos, guards, interceptores y componentes sobre su DOM.
 - **Cobertura**: `npm run test:ci` genera `coverage/` con reporte HTML y `lcov.info` (que lee Sonar).
 - **Lint y formato**: `npm run lint` y `npm run format:check` deben quedar limpios antes de abrir un Pull Request.
 

@@ -69,6 +69,17 @@ export function motivoNoEditable(estado: EstadoPublicacion): string | null {
   return MOTIVO_NO_EDITABLE[estado] ?? null;
 }
 
+/** Intervención administrativa: los nuevos datos de la publicación más el motivo que la autoriza. */
+export interface IntervencionPublicacion {
+  motivo: string;
+  cambios: ActualizarPublicacion;
+}
+
+export type CampoIntervencion = CampoPublicacion | 'motivo';
+
+/** Errores por campo de una intervención; además de los de la publicación, el del motivo. */
+export type ErroresIntervencion = Partial<Record<CampoIntervencion, string>>;
+
 /** Publicación tal como aparece en un listado: solo lo necesario para mostrarla en una tarjeta. */
 export interface PublicacionResumen {
   idPublicacion: number;

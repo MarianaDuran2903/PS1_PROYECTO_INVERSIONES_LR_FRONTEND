@@ -240,10 +240,21 @@
     @if (esEdicion()) {
       <section class="seccion" aria-labelledby="sec-reglas">
         <h2 id="sec-reglas">Reglas de la casa</h2>
-        <p class="seccion__ayuda">Opcional. Por ejemplo horarios, mascotas o fiestas.</p>
+        <p class="seccion__ayuda">
+          @if (reglasObligatorias()) {
+            Obligatorias en una publicación en revisión. Por ejemplo horarios, mascotas o fiestas.
+          } @else {
+            Opcional. Por ejemplo horarios, mascotas o fiestas.
+          }
+        </p>
 
         <div class="field">
-          <label for="reglas">Reglas</label>
+          <label for="reglas"
+            >Reglas
+            @if (reglasObligatorias()) {
+              <span aria-hidden="true">*</span>
+            }
+          </label>
           <textarea
             id="reglas"
             formControlName="reglas"
@@ -263,11 +274,47 @@
         </div>
       </section>
     }
+
+    @if (esIntervencion()) {
+      <section class="seccion" aria-labelledby="sec-motivo">
+        <h2 id="sec-motivo">Motivo de la intervención</h2>
+        <p class="seccion__ayuda">
+          Queda registrado en la auditoría junto con quién interviene y cuándo.
+        </p>
+
+        <div class="field">
+          <label for="motivo">Motivo <span aria-hidden="true">*</span></label>
+          <textarea
+            id="motivo"
+            formControlName="motivo"
+            rows="3"
+            placeholder="Ej. Corrección de la dirección reportada por el Anfitrión"
+            [attr.aria-invalid]="errorDe('motivo') !== null"
+            [attr.aria-describedby]="
+              errorDe('motivo') ? 'motivo-contador motivo-error' : 'motivo-contador'
+            "
+            required
+          ></textarea>
+          <p class="field__contador" id="motivo-contador">
+            {{ contador('motivo') }}/{{ limites.motivo }}
+          </p>
+          @if (errorDe('motivo'); as error) {
+            <p class="field__error" id="motivo-error">{{ error }}</p>
+          }
+        </div>
+      </section>
+    }
   </fieldset>
 
   <aside class="resumen" aria-label="Resumen de la publicación">
     <p class="resumen__etiqueta">
-      {{ esEdicion() ? 'Así queda tu publicación' : 'Así va tu publicación' }}
+      @if (esIntervencion()) {
+        Así queda la publicación
+      } @else if (esEdicion()) {
+        Así queda tu publicación
+      } @else {
+        Así va tu publicación
+      }
     </p>
     <h2 class="resumen__titulo" [class.resumen__titulo--vacio]="!form.controls.titulo.value.trim()">
       {{ form.controls.titulo.value.trim() || 'Título de tu publicación' }}
@@ -301,10 +348,21 @@
 
     @if (esEdicion()) {
       @if (soloLectura()) {
-        <p class="resumen__nota">Esta publicación no se puede editar ahora.</p>
+        <p class="resumen__nota">
+          {{
+            esIntervencion()
+              ? 'Esta publicación no se puede intervenir ahora.'
+              : 'Esta publicación no se puede editar ahora.'
+          }}
+        </p>
       } @else {
         <p class="resumen__nota">
-          Al guardar se reemplazan todos los datos. El estado de la publicación no cambia.
+          @if (esIntervencion()) {
+            Al guardar se reemplazan todos los datos y se registra quién interviene, cuándo y el
+            motivo. El estado y el propietario no cambian.
+          } @else {
+            Al guardar se reemplazan todos los datos. El estado de la publicación no cambia.
+          }
         </p>
         <button
           type="submit"
@@ -312,7 +370,13 @@
           [disabled]="form.invalid || enviando()"
           [attr.aria-busy]="enviando()"
         >
-          {{ enviando() ? 'Guardando…' : 'Guardar cambios' }}
+          {{
+            enviando()
+              ? 'Guardando…'
+              : esIntervencion()
+                ? 'Guardar intervención'
+                : 'Guardar cambios'
+          }}
         </button>
       }
       <button
