@@ -34,6 +34,14 @@
 
     @if (usuario(); as u) {
       <span class="nav__usuario">Hola, {{ u.primerNombre }}</span>
+      <a
+        class="nav__link"
+        routerLink="/perfil"
+        routerLinkActive="nav__link--active"
+        [routerLinkActiveOptions]="soloRuta"
+      >
+        Mi perfil
+      </a>
       <button type="button" class="nav__salir" (click)="cerrarSesion()">Cerrar sesión</button>
     } @else {
       <a
