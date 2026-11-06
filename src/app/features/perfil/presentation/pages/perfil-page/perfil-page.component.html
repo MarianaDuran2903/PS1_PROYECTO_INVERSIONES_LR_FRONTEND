@@ -1,0 +1,47 @@
+<section class="perfil" aria-labelledby="titulo-perfil">
+  <header>
+    <p class="perfil__seccion">Mi cuenta</p>
+    <h1 id="titulo-perfil">Mi perfil</h1>
+    <p>Consulta la información registrada en tu cuenta.</p>
+  </header>
+
+  @if (facade.cargando()) {
+    <p role="status" aria-live="polite">Cargando tu perfil…</p>
+  } @else if (facade.error(); as error) {
+    <div class="perfil__error" role="alert">
+      <p>{{ error }}</p>
+      <button type="button" (click)="facade.cargar()">Reintentar</button>
+    </div>
+  } @else if (facade.perfil(); as perfil) {
+    <dl class="perfil__datos">
+      <div>
+        <dt>Primer nombre</dt>
+        <dd>{{ perfil.primerNombre }}</dd>
+      </div>
+      <div>
+        <dt>Segundo nombre</dt>
+        <dd>{{ perfil.segundoNombre ?? 'No registrado' }}</dd>
+      </div>
+      <div>
+        <dt>Primer apellido</dt>
+        <dd>{{ perfil.primerApellido }}</dd>
+      </div>
+      <div>
+        <dt>Segundo apellido</dt>
+        <dd>{{ perfil.segundoApellido ?? 'No registrado' }}</dd>
+      </div>
+      <div>
+        <dt>Correo electrónico</dt>
+        <dd>{{ perfil.correo }}</dd>
+      </div>
+      <div>
+        <dt>Rol</dt>
+        <dd>{{ etiquetasRol[perfil.rol] }}</dd>
+      </div>
+      <div>
+        <dt>Estado de la cuenta</dt>
+        <dd>{{ perfil.cuentaActiva ? 'Activa' : 'Inactiva' }}</dd>
+      </div>
+    </dl>
+  }
+</section>
