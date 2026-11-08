@@ -1,0 +1,50 @@
+:host {
+  display: block;
+  padding: var(--space-8) var(--space-4) var(--space-12);
+}
+
+.pagina {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
+.pagina__error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.pagina__estado {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0;
+  padding: var(--space-8) 0;
+  color: var(--color-text-muted);
+}
+
+.pagina__spinner {
+  width: 20px;
+  height: 20px;
+  border: 3px solid var(--color-primary-soft);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: girar 0.8s linear infinite;
+}
+
+@keyframes girar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pagina__spinner {
+    animation-duration: 3s;
+  }
+}
