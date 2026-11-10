@@ -114,6 +114,79 @@ describe('SessionService', () => {
     expect(service.autenticado()).toBeFalse();
   });
 
+  it('actualizarNombrePerfil cambia solo los nombres de la misma cuenta', () => {
+    const service = crear();
+    const sesion = sesionQueVence(UNA_HORA);
+
+    service.iniciar(sesion);
+
+    service.actualizarNombrePerfil({
+      idUsuario: 1,
+      primerNombre: 'Carlos',
+      primerApellido: 'Gómez',
+    });
+
+    expect(service.usuario()?.primerNombre).toBe('Carlos');
+    expect(service.usuario()?.primerApellido).toBe('Gómez');
+    expect(service.usuario()?.correo).toBe('ana@correo.com');
+    expect(service.usuario()?.roles).toEqual(['ANFITRION', 'HUESPED']);
+    expect(service.token()).toBe('token-123');
+
+    const guardada = JSON.parse(sessionStorage.getItem(SESSION_STORAGE_KEY)!) as Sesion;
+
+    expect(guardada.usuario.primerNombre).toBe('Carlos');
+    expect(guardada.usuario.primerApellido).toBe('Gómez');
+    expect(guardada.accessToken).toBe('token-123');
+    expect(guardada.expiraEn).toBe(sesion.expiraEn);
+
+    service.cerrar();
+  });
+
+  it('actualizarNombrePerfil conserva el vencimiento original', fakeAsync(() => {
+    const service = crear();
+    service.iniciar(sesionQueVence(UNA_HORA));
+
+    service.actualizarNombrePerfil({
+      idUsuario: 1,
+      primerNombre: 'Carlos',
+      primerApellido: 'Gómez',
+    });
+
+    tick(UNA_HORA);
+
+    expect(service.autenticado()).toBeFalse();
+    expect(router.navigate).toHaveBeenCalledTimes(1);
+  }));
+
+  it('actualizarNombrePerfil ignora una cuenta distinta', () => {
+    const service = crear();
+    service.iniciar(sesionQueVence(UNA_HORA));
+
+    service.actualizarNombrePerfil({
+      idUsuario: 999,
+      primerNombre: 'Otra',
+      primerApellido: 'Cuenta',
+    });
+
+    expect(service.usuario()?.primerNombre).toBe('Ana');
+    expect(service.usuario()?.primerApellido).toBe('Ruiz');
+    service.cerrar();
+  });
+
+  it('actualizarNombrePerfil no crea una sesión si no existe', () => {
+    const service = crear();
+
+    service.actualizarNombrePerfil({
+      idUsuario: 1,
+      primerNombre: 'Carlos',
+      primerApellido: 'Gómez',
+    });
+
+    expect(service.autenticado()).toBeFalse();
+    expect(service.usuario()).toBeNull();
+    expect(sessionStorage.getItem(SESSION_STORAGE_KEY)).toBeNull();
+  });
+
   it('tieneAlgunRol: sin sesión nunca; sin roles pedidos basta estar autenticado', () => {
     const service = crear();
     expect(service.tieneAlgunRol([])).toBeFalse();

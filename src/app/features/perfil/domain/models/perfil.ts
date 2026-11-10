@@ -10,3 +10,10 @@ export interface Perfil {
   rol: RolPerfil;
   cuentaActiva: boolean;
 }
+
+export interface ActualizarPerfilRequest {
+  primerNombre: string;
+  segundoNombre: string | null;
+  primerApellido: string;
+  segundoApellido: string | null;
+}

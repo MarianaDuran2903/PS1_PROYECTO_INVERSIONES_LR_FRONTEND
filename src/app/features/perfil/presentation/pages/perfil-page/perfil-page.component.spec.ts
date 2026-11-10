@@ -3,23 +3,46 @@ import { Subject } from 'rxjs';
 import { Perfil } from '../../../domain/models/perfil';
 import { PerfilRepository } from '../../../domain/repositories/perfil.repository';
 import { PerfilPageComponent } from './perfil-page.component';
+import { ToastService } from '@core/notifications/toast.service';
 
 describe('PerfilPageComponent', () => {
   let fixture: ComponentFixture<PerfilPageComponent>;
   let respuesta: Subject<Perfil>;
+  let respuestaActualizacion: Subject<Perfil>;
   let repository: jasmine.SpyObj<PerfilRepository>;
+  let toast: jasmine.SpyObj<ToastService>;
+
+  const perfil: Perfil = {
+    idUsuario: 7,
+    primerNombre: 'Ana',
+    segundoNombre: null,
+    primerApellido: 'Ruiz',
+    segundoApellido: null,
+    correo: 'ana@example.com',
+    rol: 'HUESPED',
+    cuentaActiva: true,
+  };
 
   beforeEach(async () => {
     respuesta = new Subject<Perfil>();
-    repository = jasmine.createSpyObj<PerfilRepository>('PerfilRepository', ['consultar']);
+    respuestaActualizacion = new Subject<Perfil>();
+    toast = jasmine.createSpyObj<ToastService>('ToastService', ['success']);
+    repository = jasmine.createSpyObj<PerfilRepository>('PerfilRepository', [
+      'consultar',
+      'actualizar',
+    ]);
     repository.consultar.and.returnValue(respuesta);
+    repository.actualizar.and.returnValue(respuestaActualizacion);
 
     await TestBed.configureTestingModule({
       imports: [PerfilPageComponent],
     })
       .overrideComponent(PerfilPageComponent, {
         add: {
-          providers: [{ provide: PerfilRepository, useValue: repository }],
+          providers: [
+            { provide: PerfilRepository, useValue: repository },
+            { provide: ToastService, useValue: toast },
+          ],
         },
       })
       .compileComponents();
@@ -27,6 +50,31 @@ describe('PerfilPageComponent', () => {
     fixture = TestBed.createComponent(PerfilPageComponent);
     fixture.detectChanges();
   });
+
+  function abrirEdicion(): HTMLElement {
+    respuesta.next(perfil);
+    fixture.detectChanges();
+
+    const element = fixture.nativeElement as HTMLElement;
+    element.querySelector<HTMLButtonElement>('.perfil__acciones button')!.click();
+    fixture.detectChanges();
+
+    return element;
+  }
+
+  function escribir(element: HTMLElement, id: string, valor: string): void {
+    const input = element.querySelector<HTMLInputElement>(`#${id}`)!;
+    input.value = valor;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    fixture.detectChanges();
+  }
+
+  function enviar(element: HTMLElement): void {
+    element
+      .querySelector<HTMLFormElement>('form')!
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    fixture.detectChanges();
+  }
 
   it('muestra la carga y después los datos de la cuenta', () => {
     const element = fixture.nativeElement as HTMLElement;
@@ -68,5 +116,89 @@ describe('PerfilPageComponent', () => {
 
     expect(repository.consultar).toHaveBeenCalledTimes(2);
     expect(element.querySelector('[role="status"]')).not.toBeNull();
+  });
+
+  it('abre la edición con los datos registrados', () => {
+    const element = abrirEdicion();
+
+    expect(element.querySelector<HTMLInputElement>('#primerNombre')!.value).toBe('Ana');
+    expect(element.querySelector<HTMLInputElement>('#segundoNombre')!.value).toBe('');
+    expect(element.querySelector<HTMLInputElement>('#primerApellido')!.value).toBe('Ruiz');
+    expect(element.querySelectorAll('input').length).toBe(4);
+    expect(toast.success).not.toHaveBeenCalled();
+  });
+
+  it('cancela sin guardar y recupera los datos originales al volver a editar', () => {
+    const element = abrirEdicion();
+    escribir(element, 'primerNombre', 'Cambio sin guardar');
+
+    element.querySelector<HTMLButtonElement>('.perfil__botones button[type="button"]')!.click();
+    fixture.detectChanges();
+
+    expect(element.querySelector('form')).toBeNull();
+    expect(repository.actualizar).not.toHaveBeenCalled();
+
+    element.querySelector<HTMLButtonElement>('.perfil__acciones button')!.click();
+    fixture.detectChanges();
+
+    expect(element.querySelector<HTMLInputElement>('#primerNombre')!.value).toBe('Ana');
+  });
+
+  it('rechaza un primer nombre vacío sin enviar la actualización', () => {
+    const element = abrirEdicion();
+    escribir(element, 'primerNombre', '');
+    enviar(element);
+
+    expect(repository.actualizar).not.toHaveBeenCalled();
+    expect(element.textContent).toContain('El primer nombre es obligatorio.');
+    expect(toast.success).not.toHaveBeenCalled();
+  });
+
+  it('envía datos normalizados y solo cierra la edición después del éxito', () => {
+    const element = abrirEdicion();
+
+    escribir(element, 'primerNombre', '  Carlos  ');
+    escribir(element, 'segundoNombre', '   ');
+    enviar(element);
+
+    expect(repository.actualizar).toHaveBeenCalledOnceWith({
+      primerNombre: 'Carlos',
+      segundoNombre: null,
+      primerApellido: 'Ruiz',
+      segundoApellido: null,
+    });
+
+    expect(element.querySelector('form')).not.toBeNull();
+    expect(element.querySelector<HTMLButtonElement>('button[type="submit"]')!.disabled).toBeTrue();
+    expect(toast.success).not.toHaveBeenCalled();
+
+    respuestaActualizacion.next({ ...perfil, primerNombre: 'Carlos' });
+    respuestaActualizacion.complete();
+    fixture.detectChanges();
+
+    expect(element.querySelector('form')).toBeNull();
+    expect(element.querySelector('.perfil__datos')!.textContent).toContain('Carlos');
+    expect(toast.success).toHaveBeenCalledOnceWith(
+      'Perfil actualizado',
+      'Tus datos se guardaron correctamente.',
+    );
+  });
+
+  it('conserva lo escrito y permite continuar editando si falla el guardado', () => {
+    const element = abrirEdicion();
+
+    escribir(element, 'primerNombre', 'Carlos');
+    enviar(element);
+
+    respuestaActualizacion.error(new Error('fallo'));
+    fixture.detectChanges();
+
+    expect(element.querySelector('form')).not.toBeNull();
+    expect(element.querySelector<HTMLInputElement>('#primerNombre')!.value).toBe('Carlos');
+    expect(element.querySelector('[role="alert"]')!.textContent).toContain(
+      'No fue posible actualizar',
+    );
+    expect(element.querySelector<HTMLButtonElement>('button[type="submit"]')!.disabled).toBeFalse();
+    expect(toast.success).not.toHaveBeenCalled();
   });
 });

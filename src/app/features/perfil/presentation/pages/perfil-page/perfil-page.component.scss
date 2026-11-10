@@ -60,3 +60,55 @@ button {
     grid-template-columns: 1fr;
   }
 }
+
+.perfil__acciones {
+  margin-top: 1.5rem;
+}
+
+.perfil__formulario {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  padding: 1.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.campo {
+  display: grid;
+  gap: 0.35rem;
+}
+
+label {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
+input {
+  padding: 0.65rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font: inherit;
+}
+
+.campo__error {
+  margin: 0;
+  color: var(--color-danger, #b3261e);
+  font-size: 0.85rem;
+}
+
+.perfil__error-guardado {
+  margin: 0;
+  color: var(--color-danger, #b3261e);
+}
+
+.perfil__exito {
+  margin: 0;
+  color: var(--color-success, #1b7f4b);
+}
+
+.perfil__botones {
+  display: flex;
+  gap: 0.75rem;
+}

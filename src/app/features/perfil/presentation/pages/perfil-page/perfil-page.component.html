@@ -13,6 +13,12 @@
       <button type="button" (click)="facade.cargar()">Reintentar</button>
     </div>
   } @else if (facade.perfil(); as perfil) {
+    <div class="perfil__acciones">
+      @if (!editando) {
+        <button type="button" (click)="editarPerfil()">Editar perfil</button>
+      }
+    </div>
+
     <dl class="perfil__datos">
       <div>
         <dt>Primer nombre</dt>
@@ -43,5 +49,58 @@
         <dd>{{ perfil.cuentaActiva ? 'Activa' : 'Inactiva' }}</dd>
       </div>
     </dl>
+
+    @if (editando) {
+      <form class="perfil__formulario" [formGroup]="formulario" (ngSubmit)="guardarCambios()">
+        <div class="campo">
+          <label for="primerNombre">Primer nombre</label>
+          <input id="primerNombre" type="text" formControlName="primerNombre" maxlength="50" />
+          @if (
+            formulario.controls.primerNombre.touched && formulario.controls.primerNombre.invalid
+          ) {
+            <p class="campo__error">El primer nombre es obligatorio.</p>
+          }
+        </div>
+
+        <div class="campo">
+          <label for="segundoNombre">Segundo nombre</label>
+          <input id="segundoNombre" type="text" formControlName="segundoNombre" maxlength="50" />
+        </div>
+
+        <div class="campo">
+          <label for="primerApellido">Primer apellido</label>
+          <input id="primerApellido" type="text" formControlName="primerApellido" maxlength="50" />
+          @if (
+            formulario.controls.primerApellido.touched && formulario.controls.primerApellido.invalid
+          ) {
+            <p class="campo__error">El primer apellido es obligatorio.</p>
+          }
+        </div>
+
+        <div class="campo">
+          <label for="segundoApellido">Segundo apellido</label>
+          <input
+            id="segundoApellido"
+            type="text"
+            formControlName="segundoApellido"
+            maxlength="50"
+          />
+        </div>
+
+        @if (facade.errorGuardado(); as error) {
+          <p class="perfil__error-guardado" role="alert">{{ error }}</p>
+        }
+
+        <div class="perfil__botones">
+          <button type="submit" [disabled]="facade.guardando()">
+            {{ facade.guardando() ? 'Guardando…' : 'Guardar cambios' }}
+          </button>
+
+          <button type="button" (click)="cancelarEdicion()" [disabled]="facade.guardando()">
+            Cancelar
+          </button>
+        </div>
+      </form>
+    }
   }
 </section>
