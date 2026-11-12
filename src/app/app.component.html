@@ -14,7 +14,20 @@
     >
 
     @if (esAnfitrion()) {
-      <a class="nav__link" routerLink="/anfitrion" routerLinkActive="nav__link--active">Mi panel</a>
+      <a
+        class="nav__link"
+        routerLink="/anfitrion"
+        routerLinkActive="nav__link--active"
+        [routerLinkActiveOptions]="soloRuta"
+        >Mi panel</a
+      >
+      <a
+        class="nav__link"
+        routerLink="/anfitrion/publicaciones"
+        routerLinkActive="nav__link--active"
+        [routerLinkActiveOptions]="soloRuta"
+        >Mis publicaciones</a
+      >
     } @else if (!usuario()) {
       <a
         class="nav__link"
@@ -90,8 +103,70 @@
   </nav>
 </header>
 
-<main class="app-main">
+<main class="app-main" [class.app-main--con-barra]="esAnfitrion()">
   <router-outlet />
 </main>
+
+@if (esAnfitrion()) {
+  <!-- Barra inferior del Anfitrión: botones circulares, con "Nueva publicación" (+) al centro. -->
+  <nav class="barra-inferior" aria-label="Acciones del anfitrión">
+    <a
+      class="barra-inferior__boton"
+      routerLink="/anfitrion/publicaciones"
+      routerLinkActive="barra-inferior__boton--activo"
+      [routerLinkActiveOptions]="soloRuta"
+      aria-label="Mis publicaciones"
+      title="Mis publicaciones"
+    >
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false">
+        <path
+          d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+        />
+      </svg>
+    </a>
+
+    <a
+      class="barra-inferior__boton barra-inferior__boton--principal"
+      routerLink="/anfitrion/publicaciones/nueva"
+      routerLinkActive="barra-inferior__boton--activo"
+      aria-label="Nueva publicación"
+      title="Nueva publicación"
+    >
+      <svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true" focusable="false">
+        <path
+          d="M12 5v14M5 12h14"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.4"
+          stroke-linecap="round"
+        />
+      </svg>
+    </a>
+
+    <a
+      class="barra-inferior__boton"
+      routerLink="/anfitrion"
+      routerLinkActive="barra-inferior__boton--activo"
+      [routerLinkActiveOptions]="soloRuta"
+      aria-label="Mi panel"
+      title="Mi panel"
+    >
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false">
+        <path
+          d="M3 11.5 12 4l9 7.5M5.5 10v10.5h13V10M10 20.5v-5.5h4v5.5"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </svg>
+    </a>
+  </nav>
+}
 
 <app-toast-container />
