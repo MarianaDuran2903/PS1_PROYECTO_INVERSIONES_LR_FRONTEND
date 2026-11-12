@@ -9,10 +9,12 @@ import { Credenciales, Sesion, SesionActiva } from '../models/sesion';
  * Errores esperados:
  * - registrarUsuario: `CorreoYaRegistradoError`, `RegistroInvalidoError`
  * - iniciarSesion: `CredencialesInvalidasError`
+ * - reactivarCuenta: `CredencialesInvalidasError`, `ApiError`
  * - cualquier otro fallo llega como `ApiError`.
  */
 export abstract class AuthRepository {
   abstract registrarUsuario(datos: RegistroUsuario): Observable<UsuarioRegistrado>;
   abstract iniciarSesion(credenciales: Credenciales): Observable<Sesion>;
+  abstract reactivarCuenta(credenciales: Credenciales): Observable<Sesion>;
   abstract obtenerSesion(): Observable<SesionActiva>;
 }

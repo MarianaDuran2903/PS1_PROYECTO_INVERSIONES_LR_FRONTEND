@@ -1,9 +1,14 @@
 import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ApiError } from '@core/http/api-error';
-import { ActualizarPerfilRequest, Perfil } from '../domain/models/perfil';
+import {
+  ActualizarEstadoCuentaRequest,
+  ActualizarPerfilRequest,
+  Perfil,
+} from '../domain/models/perfil';
 import { PerfilRepository } from '../domain/repositories/perfil.repository';
 import { SessionService } from '@features/auth/application/session.service';
+import { Router } from '@angular/router';
 
 interface PerfilState {
   cargando: boolean;
@@ -12,6 +17,9 @@ interface PerfilState {
   guardando: boolean;
   guardado: boolean;
   errorGuardado: string | null;
+  cambiandoEstado: boolean;
+  estadoCambiado: boolean;
+  errorEstado: string | null;
 }
 
 @Injectable()
@@ -19,6 +27,7 @@ export class PerfilFacade {
   private readonly repository = inject(PerfilRepository);
   private readonly destroyRef = inject(DestroyRef);
   private readonly session = inject(SessionService);
+  private readonly router = inject(Router);
 
   private readonly state = signal<PerfilState>({
     cargando: false,
@@ -27,6 +36,9 @@ export class PerfilFacade {
     guardando: false,
     guardado: false,
     errorGuardado: null,
+    cambiandoEstado: false,
+    estadoCambiado: false,
+    errorEstado: null,
   });
 
   readonly cargando = computed(() => this.state().cargando);
@@ -35,6 +47,9 @@ export class PerfilFacade {
   readonly guardando = computed(() => this.state().guardando);
   readonly guardado = computed(() => this.state().guardado);
   readonly errorGuardado = computed(() => this.state().errorGuardado);
+  readonly cambiandoEstado = computed(() => this.state().cambiandoEstado);
+  readonly estadoCambiado = computed(() => this.state().estadoCambiado);
+  readonly errorEstado = computed(() => this.state().errorEstado);
 
   cargar(): void {
     if (this.cargando()) {
@@ -48,6 +63,9 @@ export class PerfilFacade {
       guardando: false,
       guardado: false,
       errorGuardado: null,
+      cambiandoEstado: false,
+      estadoCambiado: false,
+      errorEstado: null,
     });
 
     this.repository
@@ -110,6 +128,52 @@ export class PerfilFacade {
               error instanceof ApiError
                 ? error.message
                 : 'No fue posible actualizar tu perfil. Inténtalo de nuevo.',
+          }));
+        },
+      });
+  }
+
+  cambiarEstado(datos: ActualizarEstadoCuentaRequest): void {
+    if (this.cambiandoEstado()) {
+      return;
+    }
+
+    this.state.update((estado) => ({
+      ...estado,
+      cambiandoEstado: true,
+      estadoCambiado: false,
+      errorEstado: null,
+    }));
+
+    this.repository
+      .cambiarEstado(datos)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (perfil) => {
+          this.state.update((estado) => ({
+            ...estado,
+            cambiandoEstado: false,
+            estadoCambiado: true,
+            errorEstado: null,
+            perfil,
+          }));
+
+          if (!perfil.cuentaActiva) {
+            this.session.cerrar();
+            void this.router.navigate(['/login'], {
+              queryParams: { cuentaDesactivada: 'true' },
+            });
+          }
+        },
+        error: (error: unknown) => {
+          this.state.update((estado) => ({
+            ...estado,
+            cambiandoEstado: false,
+            estadoCambiado: false,
+            errorEstado:
+              error instanceof ApiError
+                ? error.message
+                : 'No fue posible cambiar el estado de tu cuenta. Inténtalo de nuevo.',
           }));
         },
       });

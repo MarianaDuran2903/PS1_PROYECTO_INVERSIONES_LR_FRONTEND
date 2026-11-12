@@ -14,9 +14,7 @@
     </div>
   } @else if (facade.perfil(); as perfil) {
     <div class="perfil__acciones">
-      @if (!editando) {
-        <button type="button" (click)="editarPerfil()">Editar perfil</button>
-      }
+      <button type="button" (click)="abrirModalEdicion()">Editar perfil</button>
     </div>
 
     <dl class="perfil__datos">
@@ -50,7 +48,47 @@
       </div>
     </dl>
 
-    @if (editando) {
+    @if (perfil.cuentaActiva) {
+      <section class="perfil__estado" aria-labelledby="titulo-estado-cuenta">
+        <h2 id="titulo-estado-cuenta">Estado de la cuenta</h2>
+        <p>
+          Al desactivar tu cuenta no podrás iniciar sesión ni acceder a las funcionalidades
+          protegidas hasta que la reactives.
+        </p>
+
+        @if (facade.errorEstado(); as error) {
+          <p class="perfil__error-estado" role="alert">{{ error }}</p>
+        }
+
+        <button
+          type="button"
+          class="perfil__desactivar"
+          (click)="abrirModalDesactivacion()"
+          [disabled]="facade.cambiandoEstado()"
+        >
+          Desactivar mi cuenta
+        </button>
+      </section>
+    }
+  }
+</section>
+
+@if (editando()) {
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-editar-titulo">
+    <div class="modal__contenido">
+      <header class="modal__encabezado">
+        <h2 id="modal-editar-titulo">Editar perfil</h2>
+        <button
+          type="button"
+          class="modal__cerrar"
+          aria-label="Cerrar edición del perfil"
+          (click)="cerrarModalEdicion()"
+          [disabled]="facade.guardando()"
+        >
+          ×
+        </button>
+      </header>
+
       <form class="perfil__formulario" [formGroup]="formulario" (ngSubmit)="guardarCambios()">
         <div class="campo">
           <label for="primerNombre">Primer nombre</label>
@@ -92,15 +130,63 @@
         }
 
         <div class="perfil__botones">
-          <button type="submit" [disabled]="facade.guardando()">
+          <button type="submit" class="perfil__guardar" [disabled]="facade.guardando()">
             {{ facade.guardando() ? 'Guardando…' : 'Guardar cambios' }}
           </button>
 
-          <button type="button" (click)="cancelarEdicion()" [disabled]="facade.guardando()">
+          <button type="button" (click)="cerrarModalEdicion()" [disabled]="facade.guardando()">
             Cancelar
           </button>
         </div>
       </form>
-    }
-  }
-</section>
+    </div>
+  </div>
+}
+
+@if (confirmandoDesactivacion()) {
+  <div class="modal" role="alertdialog" aria-modal="true" aria-labelledby="modal-desactivar-titulo">
+    <div class="modal__contenido">
+      <header class="modal__encabezado">
+        <h2 id="modal-desactivar-titulo">¿Desactivar tu cuenta?</h2>
+        <button
+          type="button"
+          class="modal__cerrar"
+          aria-label="Cerrar confirmación de desactivación"
+          (click)="cerrarModalDesactivacion()"
+          [disabled]="facade.cambiandoEstado()"
+        >
+          ×
+        </button>
+      </header>
+
+      <p>
+        Al desactivar tu cuenta no podrás iniciar sesión ni acceder a las funcionalidades
+        protegidas. Podrás reactivarla iniciando sesión nuevamente con tu correo y contraseña.
+      </p>
+
+      @if (facade.errorEstado(); as error) {
+        <p class="perfil__error-estado" role="alert">{{ error }}</p>
+      }
+
+      <div class="modal__acciones">
+        <button
+          type="button"
+          class="perfil__desactivar"
+          (click)="desactivarCuenta()"
+          [disabled]="facade.cambiandoEstado()"
+        >
+          {{ facade.cambiandoEstado() ? 'Desactivando…' : 'Sí, desactivar' }}
+        </button>
+
+        <button
+          type="button"
+          class="modal__cancelar"
+          (click)="cerrarModalDesactivacion()"
+          [disabled]="facade.cambiandoEstado()"
+        >
+          Cancelar
+        </button>
+      </div>
+    </div>
+  </div>
+}

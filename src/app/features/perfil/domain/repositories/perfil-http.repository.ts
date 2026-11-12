@@ -2,7 +2,11 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { APP_CONFIG } from '@core/config/app-config';
 import { map, Observable } from 'rxjs';
-import { ActualizarPerfilRequest, Perfil } from '../../domain/models/perfil';
+import {
+  ActualizarEstadoCuentaRequest,
+  ActualizarPerfilRequest,
+  Perfil,
+} from '../../domain/models/perfil';
 import { PerfilRepository } from '@features/perfil/domain/repositories/perfil.repository';
 
 @Injectable()
@@ -16,6 +20,12 @@ export class PerfilHttpRepository extends PerfilRepository {
 
   override actualizar(datos: ActualizarPerfilRequest): Observable<Perfil> {
     return this.http.put<Perfil>(this.url, datos).pipe(map((dto) => this.mapearPerfil(dto)));
+  }
+
+  override cambiarEstado(datos: ActualizarEstadoCuentaRequest): Observable<Perfil> {
+    return this.http
+      .patch<Perfil>(`${this.url}/estado`, datos)
+      .pipe(map((dto) => this.mapearPerfil(dto)));
   }
 
   private mapearPerfil(dto: Perfil): Perfil {

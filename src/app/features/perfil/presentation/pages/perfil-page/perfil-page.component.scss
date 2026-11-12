@@ -69,8 +69,7 @@ button {
   display: grid;
   gap: 1rem;
   margin-top: 1.5rem;
-  padding: 1.5rem;
-  border: 1px solid var(--color-border);
+  padding: 1rem;
   border-radius: var(--radius-md);
   background: var(--color-surface);
 }
@@ -111,4 +110,86 @@ input {
 .perfil__botones {
   display: flex;
   gap: 0.75rem;
+}
+
+.perfil__botones .perfil__guardar {
+  display: flex;
+  gap: 0.75rem;
+  background-color: #1b7f4b;
+  color: white;
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  background: rgb(0 0 0 / 0.55);
+}
+
+.modal__contenido {
+  width: min(100%, 520px);
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: var(--space-6);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.25);
+}
+
+.modal__encabezado {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.modal__encabezado h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.modal__cerrar {
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.modal__contenido p {
+  margin: 0 0 var(--space-4);
+  color: var(--color-text-muted);
+}
+
+.modal__acciones {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+}
+
+.modal__acciones .perfil__desactivar {
+  margin-top: 0;
+  background-color: #b3261e;
+  color: white;
+}
+
+.modal__cancelar {
+  padding: 0.65rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+
+.perfil__desactivar {
+  margin-top: 0;
+  background-color: #b3261e;
+  color: white;
 }

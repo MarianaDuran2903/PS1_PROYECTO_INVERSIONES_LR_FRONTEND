@@ -17,3 +17,7 @@ export interface ActualizarPerfilRequest {
   primerApellido: string;
   segundoApellido: string | null;
 }
+
+export interface ActualizarEstadoCuentaRequest {
+  cuentaActiva: boolean;
+}
