@@ -21,6 +21,7 @@ import { UsuarioResponseDto } from '../dtos/registro-usuario.dto';
 import { LoginResponseDto, SesionResponseDto } from '../dtos/sesion.dto';
 import { RegistroUsuarioMapper } from '../mappers/registro-usuario.mapper';
 import { SesionMapper } from '../mappers/sesion.mapper';
+import { CuentaDesactivadaError } from '@features/auth/domain/errors/cuenta-desactivada.error';
 
 const CAMPOS: readonly CampoRegistroUsuario[] = [
   'primerNombre',
@@ -62,6 +63,15 @@ export class AuthHttpRepository extends AuthRepository {
       );
   }
 
+  override reactivarCuenta(credenciales: Credenciales): Observable<Sesion> {
+    return this.http
+      .post<LoginResponseDto>(`${this.baseUrl}/reactivar`, SesionMapper.toRequest(credenciales))
+      .pipe(
+        map((dto) => SesionMapper.toDomain(dto)),
+        catchError((error: unknown) => throwError(() => this.toLoginError(error))),
+      );
+  }
+
   override obtenerSesion(): Observable<SesionActiva> {
     return this.http
       .get<SesionResponseDto>(`${this.baseUrl}/sesion`)
@@ -70,9 +80,15 @@ export class AuthHttpRepository extends AuthRepository {
 
   /** 401 = credenciales: siempre el mensaje genérico que manda el backend. */
   private toLoginError(error: unknown): unknown {
-    return error instanceof ApiError && error.status === 401
-      ? new CredencialesInvalidasError(error.message)
-      : error;
+    if (!(error instanceof ApiError)) {
+      return error;
+    }
+
+    if (error.status === 409) {
+      return new CuentaDesactivadaError(error.message);
+    }
+
+    return error.status === 401 ? new CredencialesInvalidasError(error.message) : error;
   }
 
   private toRegistroError(error: unknown, correo: string): unknown {

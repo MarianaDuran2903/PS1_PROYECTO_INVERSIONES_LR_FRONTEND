@@ -4,13 +4,18 @@ import { Perfil } from '../../../domain/models/perfil';
 import { PerfilRepository } from '../../../domain/repositories/perfil.repository';
 import { PerfilPageComponent } from './perfil-page.component';
 import { ToastService } from '@core/notifications/toast.service';
+import { SessionService } from '@features/auth/application/session.service';
+import { Router } from '@angular/router';
 
 describe('PerfilPageComponent', () => {
   let fixture: ComponentFixture<PerfilPageComponent>;
   let respuesta: Subject<Perfil>;
   let respuestaActualizacion: Subject<Perfil>;
+  let respuestaEstado: Subject<Perfil>;
   let repository: jasmine.SpyObj<PerfilRepository>;
   let toast: jasmine.SpyObj<ToastService>;
+  let router: jasmine.SpyObj<Router>;
+  let session: jasmine.SpyObj<SessionService>;
 
   const perfil: Perfil = {
     idUsuario: 7,
@@ -26,13 +31,22 @@ describe('PerfilPageComponent', () => {
   beforeEach(async () => {
     respuesta = new Subject<Perfil>();
     respuestaActualizacion = new Subject<Perfil>();
+    respuestaEstado = new Subject<Perfil>();
     toast = jasmine.createSpyObj<ToastService>('ToastService', ['success']);
+    router = jasmine.createSpyObj<Router>('Router', ['navigate']);
+    router.navigate.and.resolveTo(true);
+    session = jasmine.createSpyObj<SessionService>('SessionService', [
+      'cerrar',
+      'actualizarNombrePerfil',
+    ]);
     repository = jasmine.createSpyObj<PerfilRepository>('PerfilRepository', [
       'consultar',
       'actualizar',
+      'cambiarEstado',
     ]);
     repository.consultar.and.returnValue(respuesta);
     repository.actualizar.and.returnValue(respuestaActualizacion);
+    repository.cambiarEstado.and.returnValue(respuestaEstado);
 
     await TestBed.configureTestingModule({
       imports: [PerfilPageComponent],
@@ -42,6 +56,8 @@ describe('PerfilPageComponent', () => {
           providers: [
             { provide: PerfilRepository, useValue: repository },
             { provide: ToastService, useValue: toast },
+            { provide: Router, useValue: router },
+            { provide: SessionService, useValue: session },
           ],
         },
       })
@@ -74,6 +90,17 @@ describe('PerfilPageComponent', () => {
       .querySelector<HTMLFormElement>('form')!
       .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
     fixture.detectChanges();
+  }
+
+  function abrirModalDesactivacion(): HTMLElement {
+    respuesta.next(perfil);
+    fixture.detectChanges();
+
+    const element = fixture.nativeElement as HTMLElement;
+    element.querySelector<HTMLButtonElement>('.perfil__desactivar')!.click();
+    fixture.detectChanges();
+
+    return element;
   }
 
   it('muestra la carga y después los datos de la cuenta', () => {
@@ -200,5 +227,86 @@ describe('PerfilPageComponent', () => {
     );
     expect(element.querySelector<HTMLButtonElement>('button[type="submit"]')!.disabled).toBeFalse();
     expect(toast.success).not.toHaveBeenCalled();
+  });
+
+  describe('gestión del estado de la cuenta', () => {
+    it('abre y cancela el modal de desactivación', () => {
+      const element = abrirModalDesactivacion();
+
+      expect(element.querySelector('[aria-labelledby="modal-desactivar-titulo"]')).not.toBeNull();
+      expect(repository.cambiarEstado).not.toHaveBeenCalled();
+
+      element
+        .querySelector<HTMLButtonElement>(
+          '[aria-labelledby="modal-desactivar-titulo"] .modal__cancelar',
+        )!
+        .click();
+      fixture.detectChanges();
+
+      expect(element.querySelector('[aria-labelledby="modal-desactivar-titulo"]')).toBeNull();
+      expect(repository.cambiarEstado).not.toHaveBeenCalled();
+    });
+
+    it('confirma la desactivación y envía cuentaActiva en falso', () => {
+      const element = abrirModalDesactivacion();
+
+      element
+        .querySelector<HTMLButtonElement>(
+          '[aria-labelledby="modal-desactivar-titulo"] .perfil__desactivar',
+        )!
+        .click();
+      fixture.detectChanges();
+
+      expect(repository.cambiarEstado).toHaveBeenCalledOnceWith({
+        cuentaActiva: false,
+      });
+      expect(
+        element.querySelector<HTMLButtonElement>(
+          '[aria-labelledby="modal-desactivar-titulo"] .perfil__desactivar',
+        )!.disabled,
+      ).toBeTrue();
+    });
+
+    it('cierra la sesión y redirige al login después de desactivar', () => {
+      const element = abrirModalDesactivacion();
+
+      element
+        .querySelector<HTMLButtonElement>(
+          '[aria-labelledby="modal-desactivar-titulo"] .perfil__desactivar',
+        )!
+        .click();
+      fixture.detectChanges();
+
+      respuestaEstado.next({ ...perfil, cuentaActiva: false });
+      respuestaEstado.complete();
+      fixture.detectChanges();
+
+      expect(session.cerrar).toHaveBeenCalledOnceWith();
+      expect(router.navigate).toHaveBeenCalledOnceWith(['/login'], {
+        queryParams: { cuentaDesactivada: 'true' },
+      });
+      expect(element.querySelector('[aria-labelledby="modal-desactivar-titulo"]')).toBeNull();
+    });
+
+    it('mantiene el modal y muestra el error si la desactivación falla', () => {
+      const element = abrirModalDesactivacion();
+
+      element
+        .querySelector<HTMLButtonElement>(
+          '[aria-labelledby="modal-desactivar-titulo"] .perfil__desactivar',
+        )!
+        .click();
+      fixture.detectChanges();
+
+      respuestaEstado.error(new Error('fallo'));
+      fixture.detectChanges();
+
+      expect(element.querySelector('[aria-labelledby="modal-desactivar-titulo"]')).not.toBeNull();
+      expect(element.querySelector('.perfil__error-estado')!.textContent).toContain(
+        'No fue posible cambiar el estado',
+      );
+      expect(session.cerrar).not.toHaveBeenCalled();
+      expect(router.navigate).not.toHaveBeenCalled();
+    });
   });
 });

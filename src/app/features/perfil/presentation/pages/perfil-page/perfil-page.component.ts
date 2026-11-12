@@ -1,6 +1,10 @@
-import { ChangeDetectionStrategy, Component, effect, inject, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject, OnInit, signal } from '@angular/core';
 import { PerfilFacade } from '../../../application/perfil.facade';
-import { ActualizarPerfilRequest, RolPerfil } from '../../../domain/models/perfil';
+import {
+  ActualizarEstadoCuentaRequest,
+  ActualizarPerfilRequest,
+  RolPerfil,
+} from '../../../domain/models/perfil';
 import { PerfilRepository } from '../../../domain/repositories/perfil.repository';
 import { PerfilHttpRepository } from '@features/perfil/domain/repositories/perfil-http.repository';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -18,7 +22,9 @@ export class PerfilPageComponent implements OnInit {
   protected readonly facade = inject(PerfilFacade);
   private readonly toast = inject(ToastService);
 
-  protected editando = false;
+  protected readonly editando = signal(false);
+  protected readonly confirmandoDesactivacion = signal(false);
+
   protected formulario = new FormGroup({
     primerNombre: new FormControl('', {
       nonNullable: true,
@@ -48,8 +54,13 @@ export class PerfilPageComponent implements OnInit {
     effect(() => {
       if (this.facade.guardado()) {
         this.toast.success('Perfil actualizado', 'Tus datos se guardaron correctamente.');
+        this.cerrarModalEdicion();
+      }
+    });
 
-        this.editando = false;
+    effect(() => {
+      if (this.facade.estadoCambiado()) {
+        this.cerrarModalDesactivacion();
       }
     });
   }
@@ -58,7 +69,7 @@ export class PerfilPageComponent implements OnInit {
     this.facade.cargar();
   }
 
-  protected editarPerfil(): void {
+  protected abrirModalEdicion(): void {
     const perfil = this.facade.perfil();
 
     if (!perfil) {
@@ -72,11 +83,11 @@ export class PerfilPageComponent implements OnInit {
       segundoApellido: perfil.segundoApellido ?? '',
     });
     this.facade.reiniciarGuardado();
-    this.editando = true;
+    this.editando.set(true);
   }
 
-  protected cancelarEdicion(): void {
-    this.editando = false;
+  protected cerrarModalEdicion(): void {
+    this.editando.set(false);
   }
 
   protected guardarCambios(): void {
@@ -95,5 +106,29 @@ export class PerfilPageComponent implements OnInit {
     };
 
     this.facade.actualizar(datos);
+  }
+
+  protected abrirModalDesactivacion(): void {
+    this.confirmandoDesactivacion.set(true);
+  }
+
+  protected cerrarModalDesactivacion(): void {
+    if (this.facade.cambiandoEstado()) {
+      return;
+    }
+
+    this.confirmandoDesactivacion.set(false);
+  }
+
+  protected desactivarCuenta(): void {
+    if (this.facade.cambiandoEstado()) {
+      return;
+    }
+
+    const datos: ActualizarEstadoCuentaRequest = {
+      cuentaActiva: false,
+    };
+
+    this.facade.cambiarEstado(datos);
   }
 }
