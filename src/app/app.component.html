@@ -46,8 +46,34 @@
     }
 
     @if (usuario(); as u) {
-      <span class="nav__usuario">Hola, {{ u.primerNombre }}</span>
-      <button type="button" class="nav__salir" (click)="cerrarSesion()">Cerrar sesión</button>
+      <div class="cuenta">
+        <button
+          type="button"
+          class="cuenta__avatar"
+          (click)="alternarMenuCuenta()"
+          [attr.aria-expanded]="menuCuentaAbierto()"
+          aria-controls="opciones-cuenta"
+          aria-label="Menú de mi cuenta"
+        >
+          {{ u.primerNombre.charAt(0) | uppercase }}
+        </button>
+
+        @if (menuCuentaAbierto()) {
+          <div class="cuenta__menu" id="opciones-cuenta">
+            <a class="cuenta__opcion" routerLink="/perfil" (click)="cerrarMenuCuenta()">
+              Mi perfil
+            </a>
+
+            <button
+              type="button"
+              class="cuenta__opcion cuenta__opcion--salir"
+              (click)="cerrarSesion()"
+            >
+              Cerrar sesión
+            </button>
+          </div>
+        }
+      </div>
     } @else {
       <a
         class="nav__link nav__link--cuenta"

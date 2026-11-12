@@ -13,6 +13,7 @@ import {
 import { RegistroUsuario } from '../../domain/models/registro-usuario';
 import { UsuarioResponseDto } from '../dtos/registro-usuario.dto';
 import { AuthHttpRepository } from './auth-http.repository';
+import { CuentaDesactivadaError } from '@features/auth/domain/errors/cuenta-desactivada.error';
 
 describe('AuthHttpRepository', () => {
   const base = '/api-test/auth';
@@ -186,6 +187,68 @@ describe('AuthHttpRepository', () => {
 
       expect(fallo).toBeInstanceOf(ApiError);
       expect(fallo).not.toBeInstanceOf(CredencialesInvalidasError);
+    });
+  });
+
+  describe('reactivarCuenta', () => {
+    it('envía credenciales a /auth/reactivar y crea la sesión', () => {
+      const antes = Date.now();
+      let token = '';
+      let expiraEn = 0;
+
+      repository
+        .reactivarCuenta({ correo: ' ana@correo.com ', contrasena: 'Segura#2026' })
+        .subscribe((sesion) => {
+          token = sesion.accessToken;
+          expiraEn = sesion.expiraEn;
+        });
+
+      const req = http.expectOne(`${base}/reactivar`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({
+        correo: 'ana@correo.com',
+        contrasena: 'Segura#2026',
+      });
+      req.flush({ token: 'jwt', tipo: 'Bearer', expiraEn: 3600, usuario });
+
+      expect(token).toBe('jwt');
+      expect(expiraEn).toBeGreaterThanOrEqual(antes + 3_600_000);
+    });
+
+    it('409 CUENTA_DESACTIVADA se convierte en CuentaDesactivadaError', () => {
+      let fallo: unknown;
+
+      repository
+        .reactivarCuenta({ correo: 'ana@correo.com', contrasena: 'Segura#2026' })
+        .subscribe({ error: (e: unknown) => (fallo = e) });
+
+      const { body, opts } = error(
+        409,
+        'CUENTA_DESACTIVADA',
+        'Tu cuenta está desactivada. Puedes reactivarla para volver a acceder.',
+      );
+
+      http.expectOne(`${base}/reactivar`).flush(body, opts);
+
+      expect(fallo).toBeInstanceOf(CuentaDesactivadaError);
+      expect((fallo as Error).message).toBe(
+        'Tu cuenta está desactivada. Puedes reactivarla para volver a acceder.',
+      );
+    });
+
+    it('401 se convierte en CredencialesInvalidasError', () => {
+      let fallo: unknown;
+
+      repository
+        .reactivarCuenta({ correo: 'ana@correo.com', contrasena: 'mala' })
+        .subscribe({ error: (e: unknown) => (fallo = e) });
+
+      const { body, opts } = error(401, 'Unauthorized', 'Correo o contraseña incorrectos');
+
+      http.expectOne(`${base}/reactivar`).flush(body, opts);
+
+      expect(fallo).toBeInstanceOf(CredencialesInvalidasError);
+      expect((fallo as Error).message).toBe('Correo o contraseña incorrectos');
     });
   });
 
