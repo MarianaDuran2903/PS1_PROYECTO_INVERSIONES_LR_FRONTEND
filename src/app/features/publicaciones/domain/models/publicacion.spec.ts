@@ -1,9 +1,22 @@
 import {
+  accionesAdministrador,
   EstadoPublicacion,
   motivoNoEditable,
   puedeEditar,
   puedeEnviarARevision,
 } from './publicacion';
+
+describe('accionesAdministrador', () => {
+  it('una publicación pendiente de revisión se puede aprobar o rechazar', () => {
+    expect(accionesAdministrador('PENDIENTE_REVISION')).toEqual(['aprobar', 'rechazar']);
+  });
+
+  for (const estado of ['BORRADOR', 'ACTIVA', 'PAUSADA', 'BLOQUEADA'] as const) {
+    it(`en ${estado} el Administrador no tiene acciones de revisión`, () => {
+      expect(accionesAdministrador(estado)).toEqual([]);
+    });
+  }
+});
 
 describe('puedeEnviarARevision', () => {
   const estados: [EstadoPublicacion, boolean][] = [

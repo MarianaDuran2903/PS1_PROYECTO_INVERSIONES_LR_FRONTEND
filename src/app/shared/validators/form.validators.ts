@@ -29,6 +29,22 @@ export function notBlank(): ValidatorFn {
 }
 
 /**
+ * El texto, ya recortado, debe tener entre `min` y `max` caracteres (los dos incluidos). Se mide el
+ * texto recortado porque es el que se envía; un texto vacío o solo de espacios no cumple. El error
+ * lleva los límites para armar el mensaje.
+ */
+export function longitudEntre(min: number, max: number): ValidatorFn {
+  return (control: AbstractControl<unknown>): ValidationErrors | null => {
+    const value = control.value;
+    if (typeof value !== 'string') {
+      return null;
+    }
+    const largo = value.trim().length;
+    return largo >= min && largo <= max ? null : { longitudEntre: { min, max, actual: largo } };
+  };
+}
+
+/**
  * Nombre o apellido: letras (con tildes y ñ) separadas por UN espacio, guion o apóstrofe, sin
  * separador al inicio ni al final. Se recorre carácter por carácter, igual que el backend, para
  * evitar expresiones regulares con grupos repetidos. Se evalúa el texto ya recortado, que es el

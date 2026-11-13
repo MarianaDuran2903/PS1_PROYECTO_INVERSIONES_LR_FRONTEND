@@ -4,6 +4,7 @@ import {
   decimalPositivo,
   EMAIL_PATTERN,
   enteroPositivo,
+  longitudEntre,
   matchFields,
   notBlank,
   personName,
@@ -12,6 +13,42 @@ import {
 import { firstErrorMessage } from './validation-messages';
 
 describe('form.validators', () => {
+  describe('longitudEntre', () => {
+    const validar = (valor: unknown) => longitudEntre(10, 500)(new FormControl(valor));
+
+    it('acepta de 10 a 500 caracteres, los dos límites incluidos', () => {
+      expect(validar('1234567890')).toBeNull();
+      expect(validar('a'.repeat(500))).toBeNull();
+      expect(validar('Las fotos no corresponden')).toBeNull();
+    });
+
+    it('rechaza menos de 10 y más de 500', () => {
+      expect(validar('123456789')).not.toBeNull();
+      expect(validar('a'.repeat(501))).not.toBeNull();
+    });
+
+    it('mide el texto recortado: los espacios de los lados no cuentan', () => {
+      expect(validar('   123456789   ')).not.toBeNull();
+      expect(validar('   1234567890   ')).toBeNull();
+      expect(validar(' ' + 'a'.repeat(500) + ' ')).toBeNull();
+    });
+
+    it('un texto vacío o solo de espacios no cumple', () => {
+      expect(validar('')).not.toBeNull();
+      expect(validar(' '.repeat(30))).not.toBeNull();
+    });
+
+    it('el error lleva los límites y el largo real para armar el mensaje', () => {
+      expect(validar('abc')).toEqual({ longitudEntre: { min: 10, max: 500, actual: 3 } });
+      expect(firstErrorMessage(validar('abc'))).toBe('Debe tener entre 10 y 500 caracteres.');
+    });
+
+    it('ignora un valor que no es texto', () => {
+      expect(validar(null)).toBeNull();
+      expect(validar(undefined)).toBeNull();
+    });
+  });
+
   describe('notBlank', () => {
     it('rechaza valores con solo espacios', () => {
       expect(notBlank()(new FormControl('   '))).toEqual({ blank: true });

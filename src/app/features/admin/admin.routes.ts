@@ -17,6 +17,11 @@ const REPOSITORIOS_DE_INTERVENCION: Provider[] = [
   { provide: PublicacionRepository, useClass: PublicacionHttpRepository },
 ];
 
+/** La bandeja de revisión solo necesita el repositorio administrativo. */
+const REPOSITORIO_DE_REVISION: Provider[] = [
+  { provide: PublicacionAdminRepository, useClass: PublicacionAdminHttpRepository },
+];
+
 export const ADMIN_ROUTES: Routes = [
   {
     path: '',
@@ -25,6 +30,16 @@ export const ADMIN_ROUTES: Routes = [
     loadComponent: () =>
       import('./presentation/pages/admin-home/admin-home.component').then(
         (m) => m.AdminHomeComponent,
+      ),
+  },
+  {
+    path: 'publicaciones/pendientes',
+    title: 'Publicaciones pendientes | Inversiones LR',
+    canActivate: [autenticadoGuard, rolGuard([RolUsuario.Administrador])],
+    providers: REPOSITORIO_DE_REVISION,
+    loadComponent: () =>
+      import('./presentation/pages/bandeja-pendientes-page/bandeja-pendientes-page.component').then(
+        (m) => m.BandejaPendientesPageComponent,
       ),
   },
   {

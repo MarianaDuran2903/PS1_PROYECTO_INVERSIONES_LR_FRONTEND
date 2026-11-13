@@ -19,6 +19,15 @@ describe('AdminHomeComponent', () => {
     expect(element.querySelector('app-buscador-publicacion')).not.toBeNull();
   });
 
+  it('ofrece el acceso "Publicaciones pendientes de revisión" a la bandeja', () => {
+    const { element } = crear();
+
+    const enlace = element.querySelector<HTMLAnchorElement>(
+      'a[href="/admin/publicaciones/pendientes"]',
+    );
+    expect(enlace?.textContent?.trim()).toBe('Publicaciones pendientes de revisión');
+  });
+
   it('al elegir un número abre la intervención de esa publicación', () => {
     const { fixture, element, router } = crear();
     const input = element.querySelector<HTMLInputElement>('#numeroPublicacion')!;

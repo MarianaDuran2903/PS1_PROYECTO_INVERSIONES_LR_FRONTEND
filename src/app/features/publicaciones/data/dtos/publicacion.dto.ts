@@ -67,3 +67,13 @@ export interface PaginaPublicacionesResponseDto {
   totalPaginas: number;
   mensaje: string | null;
 }
+
+/** Respuesta de GET {apiUrl}/admin/publicaciones/pendientes: publicaciones completas, no resumen. */
+export interface PaginaPublicacionesCompletasResponseDto {
+  contenido: PublicacionResponseDto[];
+  pagina: number;
+  tamano: number;
+  totalElementos: number;
+  totalPaginas: number;
+  mensaje: string | null;
+}
