@@ -14,6 +14,10 @@ const DEFAULT_MESSAGES: ErrorMessages = {
     `Debe tener al menos ${(error as { requiredLength: number }).requiredLength} caracteres.`,
   maxlength: (error) =>
     `Debe tener máximo ${(error as { requiredLength: number }).requiredLength} caracteres.`,
+  longitudEntre: (error) => {
+    const { min, max } = error as { min: number; max: number };
+    return `Debe tener entre ${min} y ${max} caracteres.`;
+  },
   passwordStrength:
     'La contraseña debe tener al menos una mayúscula, una minúscula, un número y un carácter especial, sin espacios',
   passwordBytes: 'La contraseña no puede superar los 72 bytes',

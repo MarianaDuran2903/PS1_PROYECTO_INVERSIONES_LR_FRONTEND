@@ -41,6 +41,7 @@ El proyecto avanza funcionalidad por funcionalidad, según la matriz de requerim
 | RF-ALOJ (HU-010) | Consultar mis publicaciones (Anfitrión): listado paginado con el estado de cada una | Hecho |
 | RF-ALOJ (HU-011) | Editar una publicación con autorización administrativa (Administrador), con motivo registrado | Hecho |
 | RF-ALOJ (HU-012) | Solicitar la activación de una publicación (Anfitrión): envío del borrador a revisión | Hecho |
+| RF-ALOJ (HU-013) | Revisar una publicación pendiente (Administrador): bandeja, aprobar o rechazar con motivo | Hecho |
 | RF-ALOJ (resto), RF-BUS, RF-COT, RF-RES, RF-PAG | Listado y edición de publicaciones, búsqueda, cotización, reservas y pago simulado | Pendiente |
 | RF-NOT, RF-RSC, RF-ADM, RF-DASH, RF-REP | Notificaciones, reseñas, administración, indicadores y reportes | Pendiente |
 
@@ -279,7 +280,8 @@ presentation  →  application  →  domain  ←  data
 | `/anfitrion/publicaciones/nueva` | Anfitrión (formulario de nueva publicación) |
 | `/anfitrion/publicaciones/:id` | Anfitrión propietario (detalle de una publicación; se abre desde el listado) |
 | `/anfitrion/publicaciones/:id/editar` | Anfitrión propietario (editar una publicación; pide confirmación si hay cambios sin guardar) |
-| `/admin` | Administrador (panel con el buscador de publicaciones) |
+| `/admin` | Administrador (panel con el acceso a la bandeja de pendientes y el buscador de publicaciones) |
+| `/admin/publicaciones/pendientes` | Administrador (bandeja de publicaciones pendientes de revisión: aprobar o rechazar con motivo) |
 | `/admin/publicaciones/:id/editar` | Administrador (intervenir una publicación con un motivo; pide confirmación si hay cambios sin guardar) |
 | `/acceso-denegado` ("Sin permisos") | Se muestra cuando hay sesión pero el rol no alcanza |
 
@@ -420,6 +422,29 @@ Como el backend solo permite consultar por número, la entrada es un campo "Núm
 
 El caso de uso es `SolicitarActivacionFacade`, que cada página provee y escucha (`resultado$`). `TransicionNoPermitidaError` (409) queda disponible para las demás acciones del ciclo de vida.
 
+### Revisar una publicación pendiente (HU-013)
+
+Tres endpoints bajo `/admin/publicaciones`, solo rol ADMINISTRADOR. La bandeja está en `/admin/publicaciones/pendientes` (acceso desde el panel `/admin`).
+
+| Método y ruta | Uso |
+|---|---|
+| `GET /admin/publicaciones/pendientes?pagina=&tamano=` | Publicaciones en PENDIENTE_REVISION, completas, de la más antigua a la más reciente (`tamano` de 1 a 100; la bandeja pide 10) |
+| `POST /admin/publicaciones/{id}/aprobar` | Sin cuerpo; pasa la publicación a ACTIVA |
+| `POST /admin/publicaciones/{id}/rechazar` | `{ "motivo": "..." }` (de 10 a 500 caracteres, recortado); devuelve la publicación a BORRADOR para que el Anfitrión la corrija |
+
+| Respuesta | Qué hace el frontend |
+|---|---|
+| Lista `200` | Una tarjeta por publicación con la información completa (título, descripción, dirección, barrio, ciudad, tipo, política, capacidad, precios, reglas y «Anfitrión #id»), paginación y, sin pendientes, el `mensaje` de la API ("No hay publicaciones pendientes de revisión") |
+| Aprobar `200` | Aviso "Publicación aprobada" y recarga: la saca de la bandeja |
+| Aprobar `400` con `errores` (`descripcion`, `direccionTextual`, `barrioZona`, `reglas`) | Muestra el mensaje y los campos pendientes dentro de la tarjeta, con un enlace "Intervenir publicación"; la publicación sigue pendiente |
+| Rechazar `200` | Aviso "Publicación rechazada", cierra el cuadro y recarga |
+| Rechazar `400` con `errores.motivo` | El mensaje queda dentro del cuadro, que sigue abierto |
+| `404` o `409` (ya no está en PENDIENTE_REVISION) | Aviso con el mensaje del backend y recarga para refrescar la bandeja |
+
+Aprobar pide confirmación. Rechazar abre el cuadro del motivo (`app-modal-motivo`), un componente reutilizable de `shared/ui` basado en el `<dialog>` nativo: Escape cancela, el foco va al campo de texto al abrir y valida de 10 a 500 caracteres del texto recortado (`longitudEntre`) con contador. Lo reusará el bloqueo de publicaciones (HU-015).
+
+`accionesAdministrador(estado)` decide qué botones muestra cada tarjeta: Aprobar y Rechazar en PENDIENTE_REVISION y ninguno en los demás estados. Un rol distinto de Administrador no entra a la bandeja (`rolGuard`).
+
 ### Errores y sesión
 
 Todos los endpoints devuelven `{ fecha, estado, error, mensaje, ruta, errores? }`. `401` en una ruta protegida: cierra la sesión y lleva a `/login?expirada=true`. `403`: aviso "Sin permisos" con el `mensaje`, sin cerrar la sesión. Un temporizador cierra la sesión sola al vencer el token (60 minutos, sin renovación).
@@ -430,7 +455,7 @@ El registro oficial de auditoría (tabla `evento_auditoria`) lo escribe el backe
 
 ## Pruebas y calidad
 
-- **Pruebas unitarias** con Karma y Jasmine: 706 pruebas en 60 archivos. Cada capa se prueba aislada: validadores y mappers (funciones puras), repositorio HTTP con `HttpTestingController`, facades con repositorios falsos, guards, interceptores y componentes sobre su DOM.
+- **Pruebas unitarias** con Karma y Jasmine: 805 pruebas en 65 archivos. Cada capa se prueba aislada: validadores y mappers (funciones puras), repositorio HTTP con `HttpTestingController`, facades con repositorios falsos, guards, interceptores y componentes sobre su DOM.
 - **Cobertura**: `npm run test:ci` genera `coverage/` con reporte HTML y `lcov.info` (que lee Sonar).
 - **Lint y formato**: `npm run lint` y `npm run format:check` deben quedar limpios antes de abrir un Pull Request.
 

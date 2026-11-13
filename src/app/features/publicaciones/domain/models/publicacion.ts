@@ -102,13 +102,27 @@ export interface PublicacionResumen {
   precioNoche: number;
 }
 
-/** Una página de publicaciones. `pagina` empieza en 0. */
-export interface PaginaPublicaciones {
-  contenido: PublicacionResumen[];
+/** Una página de resultados de cualquier listado. `pagina` empieza en 0. */
+export interface Pagina<T> {
+  contenido: T[];
   pagina: number;
   tamano: number;
   totalElementos: number;
   totalPaginas: number;
-  /** Aviso del backend cuando no hay ninguna publicación; null en otro caso. */
+  /** Aviso del backend cuando no hay ningún elemento; null en otro caso. */
   mensaje: string | null;
+}
+
+/** Una página de publicaciones en formato resumen (el listado de "Mis publicaciones"). */
+export type PaginaPublicaciones = Pagina<PublicacionResumen>;
+
+/** Acciones que el Administrador puede ejecutar sobre una publicación según su estado. */
+export type AccionAdministrador = 'aprobar' | 'rechazar';
+
+/**
+ * Acciones del Administrador disponibles en cada estado. Por ahora solo la revisión de las
+ * pendientes (aprobar o rechazar); el bloqueo y la reactivación la ampliarán.
+ */
+export function accionesAdministrador(estado: EstadoPublicacion): AccionAdministrador[] {
+  return estado === 'PENDIENTE_REVISION' ? ['aprobar', 'rechazar'] : [];
 }

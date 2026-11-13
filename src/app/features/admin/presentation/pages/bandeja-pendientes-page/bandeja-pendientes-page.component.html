@@ -1,0 +1,188 @@
+<section class="pagina" aria-labelledby="bandeja-titulo">
+  <header class="pagina__encabezado">
+    <div>
+      <p class="pagina__ruta"><a routerLink="/admin">← Administración</a></p>
+      <h1 id="bandeja-titulo">Publicaciones pendientes de revisión</h1>
+      <p>
+        De la más antigua a la más reciente. Aprueba las que cumplen o recházalas con un motivo.
+      </p>
+    </div>
+  </header>
+
+  @switch (facade.estado()) {
+    @case ('cargando') {
+      <p class="pagina__estado" role="status">
+        <span class="pagina__spinner" aria-hidden="true"></span>
+        Cargando las publicaciones pendientes…
+      </p>
+    }
+    @case ('error') {
+      <div class="alert alert--danger pagina__error" role="alert">
+        <span>No fue posible cargar las publicaciones pendientes.</span>
+        <button type="button" class="btn btn--outline" (click)="facade.reintentar()">
+          Reintentar
+        </button>
+      </div>
+    }
+    @default {
+      @if (facade.vacia()) {
+        <div class="vacio" role="status">
+          <p class="vacio__mensaje">{{ facade.mensajeVacio() }}</p>
+          <a class="btn btn--outline" routerLink="/admin">Volver al panel</a>
+        </div>
+      } @else {
+        <p class="total">
+          {{ facade.totalElementos() }}
+          {{ facade.totalElementos() === 1 ? 'publicación pendiente' : 'publicaciones pendientes' }}
+        </p>
+
+        <ul class="lista">
+          @for (publicacion of facade.publicaciones(); track publicacion.idPublicacion) {
+            <li class="tarjeta">
+              <header class="tarjeta__encabezado">
+                <div>
+                  <h2 class="tarjeta__titulo">{{ publicacion.titulo }}</h2>
+                  <p class="tarjeta__meta">
+                    Publicación n.º {{ publicacion.idPublicacion }} · Anfitrión #{{
+                      publicacion.idAnfitrion
+                    }}
+                  </p>
+                </div>
+                <app-estado-publicacion [estado]="publicacion.estado" />
+              </header>
+
+              <dl class="tarjeta__datos">
+                <div>
+                  <dt>Dirección</dt>
+                  <dd>{{ publicacion.direccionTextual }}</dd>
+                </div>
+                <div>
+                  <dt>Barrio o zona</dt>
+                  <dd>{{ publicacion.barrioZona ?? 'Sin indicar' }}</dd>
+                </div>
+                <div>
+                  <dt>Ciudad</dt>
+                  <dd>{{ publicacion.ciudad.nombre }}</dd>
+                </div>
+                <div>
+                  <dt>Tipo de alojamiento</dt>
+                  <dd>{{ publicacion.tipo.nombre }}</dd>
+                </div>
+                <div>
+                  <dt>Política de cancelación</dt>
+                  <dd>{{ publicacion.politica.nombre }}</dd>
+                </div>
+                <div>
+                  <dt>Capacidad</dt>
+                  <dd>{{ textoCapacidad(publicacion.capacidad) }}</dd>
+                </div>
+                <div>
+                  <dt>Precio por noche</dt>
+                  <dd>{{ pesos(publicacion.precioNoche) }}</dd>
+                </div>
+                <div>
+                  <dt>Tarifa de limpieza</dt>
+                  <dd>{{ pesos(publicacion.tarifaLimpieza) }}</dd>
+                </div>
+              </dl>
+
+              <section class="tarjeta__texto">
+                <h3>Descripción</h3>
+                <p>{{ publicacion.descripcion }}</p>
+              </section>
+              <section class="tarjeta__texto">
+                <h3>Reglas</h3>
+                <p>{{ publicacion.reglas ?? 'El Anfitrión no escribió reglas.' }}</p>
+              </section>
+
+              @if (facade.avisoDe(publicacion.idPublicacion); as aviso) {
+                <div class="alert alert--danger tarjeta__aviso" role="alert">
+                  <p class="tarjeta__aviso-titulo">{{ aviso.mensaje }}</p>
+                  <ul>
+                    @for (pendiente of aviso.pendientes; track pendiente.campo) {
+                      <li [attr.data-campo]="pendiente.campo">{{ pendiente.mensaje }}</li>
+                    }
+                  </ul>
+                  <a
+                    class="btn btn--outline"
+                    [routerLink]="['/admin', 'publicaciones', publicacion.idPublicacion, 'editar']"
+                    >Intervenir publicación</a
+                  >
+                </div>
+              }
+
+              <footer class="tarjeta__acciones">
+                @for (accion of acciones(publicacion.estado); track accion) {
+                  @if (accion === 'aprobar') {
+                    <button
+                      type="button"
+                      class="btn btn--primary"
+                      [disabled]="facade.ocupado()"
+                      [attr.aria-busy]="
+                        facade.idEnCurso() === publicacion.idPublicacion &&
+                        facade.accionEnCurso() === 'aprobar'
+                      "
+                      (click)="facade.aprobar(publicacion.idPublicacion)"
+                    >
+                      {{
+                        facade.idEnCurso() === publicacion.idPublicacion &&
+                        facade.accionEnCurso() === 'aprobar'
+                          ? 'Aprobando…'
+                          : 'Aprobar'
+                      }}
+                    </button>
+                  } @else {
+                    <button
+                      type="button"
+                      class="btn btn--outline"
+                      [disabled]="facade.ocupado()"
+                      (click)="facade.iniciarRechazo(publicacion.idPublicacion)"
+                    >
+                      Rechazar
+                    </button>
+                  }
+                }
+              </footer>
+            </li>
+          }
+        </ul>
+
+        @if (facade.hayVariasPaginas()) {
+          <nav class="paginacion" aria-label="Paginación de publicaciones pendientes">
+            <button
+              type="button"
+              class="btn btn--outline"
+              [disabled]="!facade.hayAnterior()"
+              (click)="facade.anterior()"
+            >
+              Anterior
+            </button>
+            <span class="paginacion__texto">
+              Página {{ facade.paginaActual() + 1 }} de {{ facade.totalPaginas() }}
+            </span>
+            <button
+              type="button"
+              class="btn btn--outline"
+              [disabled]="!facade.haySiguiente()"
+              (click)="facade.siguiente()"
+            >
+              Siguiente
+            </button>
+          </nav>
+        }
+      }
+    }
+  }
+
+  <app-modal-motivo
+    [abierto]="facade.idARechazar() !== null"
+    [titulo]="tituloModal()"
+    ayuda="Explica qué debe corregir el Anfitrión. La publicación volverá a borrador y el motivo queda registrado."
+    etiqueta="Motivo del rechazo"
+    textoConfirmar="Rechazar publicación"
+    [enviando]="facade.accionEnCurso() === 'rechazar'"
+    [error]="facade.errorMotivo()"
+    (confirmar)="facade.confirmarRechazo($event)"
+    (cancelar)="facade.cancelarRechazo()"
+  />
+</section>

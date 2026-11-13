@@ -1,19 +1,28 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { BuscadorPublicacionComponent } from '../../components/buscador-publicacion/buscador-publicacion.component';
 
 /**
- * Panel del Administrador. La moderación, la auditoría y los indicadores (RF-ADM, RF-DASH) vienen
- * después; por ahora permite intervenir una publicación a partir de su número.
+ * Panel del Administrador. Da acceso a la bandeja de publicaciones pendientes de revisión y
+ * permite intervenir una publicación a partir de su número. La auditoría y los indicadores
+ * (RF-ADM, RF-DASH) vienen después.
  */
 @Component({
   selector: 'app-admin-home',
-  imports: [BuscadorPublicacionComponent],
+  imports: [BuscadorPublicacionComponent, RouterLink],
   template: `
     <section class="panel">
       <div class="card encabezado">
         <h1>Administración</h1>
         <p>Aquí estarán la moderación, la auditoría y los indicadores del negocio.</p>
+      </div>
+
+      <div class="card accesos">
+        <h2>Revisión de publicaciones</h2>
+        <p>Decide qué alojamientos se ofrecen en la plataforma.</p>
+        <a class="btn btn--primary" routerLink="/admin/publicaciones/pendientes"
+          >Publicaciones pendientes de revisión</a
+        >
       </div>
 
       <app-buscador-publicacion (buscar)="intervenir($event)" />
@@ -40,6 +49,21 @@ import { BuscadorPublicacionComponent } from '../../components/buscador-publicac
 
     .encabezado p {
       margin-top: var(--space-2);
+    }
+
+    .accesos {
+      display: grid;
+      gap: var(--space-3);
+      justify-items: start;
+    }
+
+    .accesos h2,
+    .accesos p {
+      margin: 0;
+    }
+
+    .accesos p {
+      color: var(--color-text-muted);
     }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
