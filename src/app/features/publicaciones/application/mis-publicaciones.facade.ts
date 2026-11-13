@@ -1,102 +1,60 @@
-import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Subscription } from 'rxjs';
-import { PaginaPublicaciones } from '../domain/models/publicacion';
+import { DestroyRef, inject, Injectable } from '@angular/core';
+import { PublicacionResumen } from '../domain/models/publicacion';
 import { PublicacionRepository } from '../domain/repositories/publicacion.repository';
+import { ListadoPaginado } from './listado-paginado';
 
-/** Publicaciones por página. Se envía siempre; la primera página es la 0. */
-export const TAMANO_PAGINA = 10;
-
-export type EstadoListado = 'cargando' | 'listo' | 'error';
+export { TAMANO_PAGINA } from './listado-paginado';
+export type { EstadoListado } from './listado-paginado';
 
 /** Respaldo si el backend no manda `mensaje` en una lista vacía. */
 const MENSAJE_SIN_PUBLICACIONES = 'No tiene publicaciones registradas';
-
-interface MisPublicacionesState {
-  estado: EstadoListado;
-  paginaSolicitada: number;
-  resultado: PaginaPublicaciones | null;
-}
-
-const ESTADO_INICIAL: MisPublicacionesState = {
-  estado: 'cargando',
-  paginaSolicitada: 0,
-  resultado: null,
-};
 
 /**
  * Facade / caso de uso "Consultar mis publicaciones" (Anfitrión). Pide al backend las
  * publicaciones del Anfitrión autenticado, una página a la vez, y las expone tal como llegan:
  * el backend ya filtra por propietario y las ordena de la más reciente a la más antigua, así que
- * aquí no se filtra ni se reordena nada.
+ * aquí no se filtra ni se reordena nada. La paginación es la de `ListadoPaginado`.
  */
 @Injectable()
 export class MisPublicacionesFacade {
   private readonly repository = inject(PublicacionRepository);
-  private readonly destroyRef = inject(DestroyRef);
-
-  private readonly state = signal<MisPublicacionesState>(ESTADO_INICIAL);
-  private peticion: Subscription | undefined;
-
-  readonly estado = computed(() => this.state().estado);
-  readonly publicaciones = computed(() => this.state().resultado?.contenido ?? []);
-  readonly totalElementos = computed(() => this.state().resultado?.totalElementos ?? 0);
-  readonly totalPaginas = computed(() => this.state().resultado?.totalPaginas ?? 0);
-  /** Página mostrada, empezando en 0. */
-  readonly paginaActual = computed(() => this.state().resultado?.pagina ?? 0);
-
-  /** Sin ninguna publicación en la cuenta. */
-  readonly vacia = computed(() => {
-    const { estado, resultado } = this.state();
-    return estado === 'listo' && resultado !== null && resultado.totalElementos === 0;
-  });
-  readonly mensajeVacio = computed(
-    () => this.state().resultado?.mensaje ?? MENSAJE_SIN_PUBLICACIONES,
+  private readonly listado = new ListadoPaginado<PublicacionResumen>(
+    (pagina, tamano) => this.repository.listarPropias(pagina, tamano),
+    inject(DestroyRef),
+    MENSAJE_SIN_PUBLICACIONES,
   );
 
+  readonly estado = this.listado.estado;
+  readonly publicaciones = this.listado.elementos;
+  readonly totalElementos = this.listado.totalElementos;
+  readonly totalPaginas = this.listado.totalPaginas;
+  /** Página mostrada, empezando en 0. */
+  readonly paginaActual = this.listado.paginaActual;
+
+  /** Sin ninguna publicación en la cuenta. */
+  readonly vacia = this.listado.vacia;
+  readonly mensajeVacio = this.listado.mensajeVacio;
+
   /** La paginación solo aparece si hay más de una página. */
-  readonly hayVariasPaginas = computed(() => this.totalPaginas() > 1);
-  readonly hayAnterior = computed(() => this.paginaActual() > 0);
-  readonly haySiguiente = computed(() => this.paginaActual() + 1 < this.totalPaginas());
+  readonly hayVariasPaginas = this.listado.hayVariasPaginas;
+  readonly hayAnterior = this.listado.hayAnterior;
+  readonly haySiguiente = this.listado.haySiguiente;
 
   /** Carga una página (la 0 por defecto). Una petición nueva cancela la anterior. */
   cargar(pagina = 0): void {
-    this.peticion?.unsubscribe();
-    this.state.update((actual) => ({ ...actual, estado: 'cargando', paginaSolicitada: pagina }));
-
-    this.peticion = this.repository
-      .listarPropias(pagina, TAMANO_PAGINA)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (resultado) => this.alCargar(resultado, pagina),
-        error: () => this.state.update((actual) => ({ ...actual, estado: 'error' })),
-      });
+    this.listado.cargar(pagina);
   }
 
   siguiente(): void {
-    if (this.haySiguiente()) {
-      this.cargar(this.paginaActual() + 1);
-    }
+    this.listado.siguiente();
   }
 
   anterior(): void {
-    if (this.hayAnterior()) {
-      this.cargar(this.paginaActual() - 1);
-    }
+    this.listado.anterior();
   }
 
   /** Vuelve a pedir la página que falló. */
   reintentar(): void {
-    this.cargar(this.state().paginaSolicitada);
-  }
-
-  private alCargar(resultado: PaginaPublicaciones, pagina: number): void {
-    // Página fuera de rango (p. ej. se vació la última): se muestra la última que sí existe.
-    const ultima = resultado.totalPaginas - 1;
-    if (resultado.contenido.length === 0 && resultado.totalElementos > 0 && pagina > ultima) {
-      this.cargar(Math.max(ultima, 0));
-      return;
-    }
-    this.state.set({ estado: 'listo', paginaSolicitada: pagina, resultado });
+    this.listado.reintentar();
   }
 }

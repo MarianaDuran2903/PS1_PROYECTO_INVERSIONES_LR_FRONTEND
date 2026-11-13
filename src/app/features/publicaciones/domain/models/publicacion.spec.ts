@@ -1,4 +1,72 @@
-import { EstadoPublicacion, motivoNoEditable, puedeEditar } from './publicacion';
+import {
+  accionesAdministrador,
+  EstadoPublicacion,
+  motivoNoEditable,
+  puedeEditar,
+  puedeEnviarARevision,
+  puedePausar,
+} from './publicacion';
+
+describe('puedePausar', () => {
+  const estados: [EstadoPublicacion, boolean][] = [
+    ['BORRADOR', false],
+    ['PENDIENTE_REVISION', false],
+    ['ACTIVA', true],
+    ['PAUSADA', false],
+    ['BLOQUEADA', false],
+  ];
+  for (const [estado, esperado] of estados) {
+    it(`${estado}: ${esperado ? 'se puede' : 'no se puede'} pausar`, () => {
+      expect(puedePausar(estado)).toBe(esperado);
+    });
+  }
+
+  it('el motivo de una publicación activa dice que primero se pausa', () => {
+    expect(motivoNoEditable('ACTIVA')).toBe(
+      'Esta publicación está activa. Para editarla, páusala primero.',
+    );
+  });
+});
+
+describe('accionesAdministrador', () => {
+  const esperadas: [EstadoPublicacion, string[]][] = [
+    ['BORRADOR', []],
+    ['PENDIENTE_REVISION', ['aprobar', 'rechazar', 'bloquear']],
+    ['ACTIVA', ['bloquear']],
+    ['PAUSADA', ['reactivar', 'bloquear']],
+    ['BLOQUEADA', ['reactivar']],
+  ];
+  for (const [estado, acciones] of esperadas) {
+    it(`en ${estado}: ${acciones.length > 0 ? acciones.join(', ') : 'ninguna acción'}`, () => {
+      expect(accionesAdministrador(estado)).toEqual(acciones as never);
+    });
+  }
+
+  it('un borrador no tiene acciones: aún no se ha publicado', () => {
+    expect(accionesAdministrador('BORRADOR')).toEqual([]);
+  });
+
+  it('devuelve una copia: modificarla no cambia las acciones del estado', () => {
+    accionesAdministrador('ACTIVA').push('aprobar');
+
+    expect(accionesAdministrador('ACTIVA')).toEqual(['bloquear']);
+  });
+});
+
+describe('puedeEnviarARevision', () => {
+  const estados: [EstadoPublicacion, boolean][] = [
+    ['BORRADOR', true],
+    ['PENDIENTE_REVISION', false],
+    ['ACTIVA', false],
+    ['PAUSADA', false],
+    ['BLOQUEADA', false],
+  ];
+  for (const [estado, esperado] of estados) {
+    it(`${estado}: ${esperado ? 'se puede' : 'no se puede'} enviar a revisión`, () => {
+      expect(puedeEnviarARevision(estado)).toBe(esperado);
+    });
+  }
+});
 
 describe('reglas de edición de una publicación', () => {
   it('se puede editar solo en BORRADOR y PAUSADA', () => {
@@ -11,7 +79,7 @@ describe('reglas de edición de una publicación', () => {
 
   it('explica por qué no se puede editar en cada estado', () => {
     expect(motivoNoEditable('ACTIVA')).toBe(
-      'Esta publicación está activa. Para editarla, solicita al Administrador que la pause.',
+      'Esta publicación está activa. Para editarla, páusala primero.',
     );
     expect(motivoNoEditable('PENDIENTE_REVISION')).toBe(
       'La publicación está en revisión del Administrador.',

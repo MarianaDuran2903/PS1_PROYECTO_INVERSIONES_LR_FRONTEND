@@ -1,0 +1,113 @@
+<section class="pagina" aria-labelledby="gestion-titulo">
+  <header class="pagina__encabezado">
+    <p class="pagina__ruta"><a routerLink="/admin">← Administración</a></p>
+    <h1 id="gestion-titulo">Gestión de publicaciones</h1>
+    <p>Revisa, bloquea y reactiva las publicaciones de la plataforma.</p>
+  </header>
+
+  <div class="pestanas" role="tablist" aria-label="Estado de las publicaciones">
+    @for (pestana of pestanas; track pestana.clave; let indice = $index) {
+      <button
+        type="button"
+        role="tab"
+        class="pestanas__pestana"
+        [id]="'pestana-' + pestana.clave"
+        aria-controls="panel-gestion"
+        [attr.aria-selected]="facade.pestana() === pestana.clave"
+        [attr.tabindex]="facade.pestana() === pestana.clave ? 0 : -1"
+        (click)="seleccionar(pestana.clave)"
+        (keydown)="teclaEnPestana($event, indice)"
+      >
+        {{ pestana.etiqueta }}
+      </button>
+    }
+  </div>
+
+  <div
+    id="panel-gestion"
+    class="panel"
+    role="tabpanel"
+    [attr.aria-labelledby]="'pestana-' + facade.pestana()"
+  >
+    @switch (facade.estado()) {
+      @case ('cargando') {
+        <p class="panel__estado" role="status">
+          <span class="panel__spinner" aria-hidden="true"></span>
+          Cargando las publicaciones…
+        </p>
+      }
+      @case ('error') {
+        <div class="alert alert--danger panel__error" role="alert">
+          <span>No fue posible cargar las publicaciones.</span>
+          <button type="button" class="btn btn--outline" (click)="facade.reintentar()">
+            Reintentar
+          </button>
+        </div>
+      }
+      @default {
+        @if (facade.vacia()) {
+          <div class="vacio" role="status">
+            <p class="vacio__mensaje">{{ facade.mensajeVacio() }}</p>
+          </div>
+        } @else {
+          <p class="total">
+            {{ facade.totalElementos() }}
+            {{ facade.totalElementos() === 1 ? 'publicación' : 'publicaciones' }}
+          </p>
+
+          <ul class="lista">
+            @for (publicacion of facade.publicaciones(); track publicacion.idPublicacion) {
+              <li>
+                <app-tarjeta-publicacion-admin
+                  [publicacion]="publicacion"
+                  [completa]="facade.pestana() === 'pendientes'"
+                  [aviso]="decisiones.avisoDe(publicacion.idPublicacion)"
+                  [accionEnCurso]="accionEnCurso(publicacion.idPublicacion)"
+                  [ocupado]="decisiones.ocupado()"
+                  (accionar)="accionar(publicacion.idPublicacion, $event)"
+                />
+              </li>
+            }
+          </ul>
+
+          @if (facade.hayVariasPaginas()) {
+            <nav class="paginacion" aria-label="Paginación de publicaciones">
+              <button
+                type="button"
+                class="btn btn--outline"
+                [disabled]="!facade.hayAnterior()"
+                (click)="facade.anterior()"
+              >
+                Anterior
+              </button>
+              <span class="paginacion__texto">
+                Página {{ facade.paginaActual() + 1 }} de {{ facade.totalPaginas() }}
+              </span>
+              <button
+                type="button"
+                class="btn btn--outline"
+                [disabled]="!facade.haySiguiente()"
+                (click)="facade.siguiente()"
+              >
+                Siguiente
+              </button>
+            </nav>
+          }
+        }
+      }
+    }
+  </div>
+
+  @let textos = modal();
+  <app-modal-motivo
+    [abierto]="textos !== null"
+    [titulo]="textos?.titulo ?? ''"
+    [ayuda]="textos?.ayuda ?? ''"
+    [etiqueta]="textos?.etiqueta ?? 'Motivo'"
+    [textoConfirmar]="textos?.textoConfirmar ?? 'Confirmar'"
+    [enviando]="decisiones.ocupado()"
+    [error]="decisiones.errorMotivo()"
+    (confirmar)="decisiones.confirmarMotivo($event)"
+    (cancelar)="decisiones.cancelarMotivo()"
+  />
+</section>

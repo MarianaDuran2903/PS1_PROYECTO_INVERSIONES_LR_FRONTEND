@@ -1,0 +1,97 @@
+<header class="tarjeta__encabezado">
+  <div>
+    <h2 class="tarjeta__titulo">
+      @if (conEnlace()) {
+        <a class="tarjeta__enlace" [routerLink]="rutaDetalle()">{{ publicacion().titulo }}</a>
+      } @else {
+        {{ publicacion().titulo }}
+      }
+    </h2>
+    <p class="tarjeta__meta">
+      Publicación n.º {{ publicacion().idPublicacion }} · Anfitrión #{{ publicacion().idAnfitrion }}
+    </p>
+    <p class="tarjeta__meta">
+      {{ publicacion().tipo.nombre }} · {{ publicacion().ciudad.nombre }} ·
+      <strong>{{ pesos(publicacion().precioNoche) }}</strong> por noche
+    </p>
+  </div>
+  <app-estado-publicacion [estado]="publicacion().estado" />
+</header>
+
+@if (publicacion().motivoBloqueo; as motivo) {
+  <p class="tarjeta__bloqueo" role="note"><strong>Motivo del bloqueo:</strong> {{ motivo }}</p>
+}
+
+@if (completa()) {
+  <dl class="tarjeta__datos">
+    <div>
+      <dt>Dirección</dt>
+      <dd>{{ publicacion().direccionTextual }}</dd>
+    </div>
+    <div>
+      <dt>Barrio o zona</dt>
+      <dd>{{ publicacion().barrioZona ?? 'Sin indicar' }}</dd>
+    </div>
+    <div>
+      <dt>Ciudad</dt>
+      <dd>{{ publicacion().ciudad.nombre }}</dd>
+    </div>
+    <div>
+      <dt>Tipo de alojamiento</dt>
+      <dd>{{ publicacion().tipo.nombre }}</dd>
+    </div>
+    <div>
+      <dt>Política de cancelación</dt>
+      <dd>{{ publicacion().politica.nombre }}</dd>
+    </div>
+    <div>
+      <dt>Capacidad</dt>
+      <dd>{{ textoCapacidad() }}</dd>
+    </div>
+    <div>
+      <dt>Precio por noche</dt>
+      <dd>{{ pesos(publicacion().precioNoche) }}</dd>
+    </div>
+    <div>
+      <dt>Tarifa de limpieza</dt>
+      <dd>{{ pesos(publicacion().tarifaLimpieza) }}</dd>
+    </div>
+  </dl>
+
+  <section class="tarjeta__texto">
+    <h3>Descripción</h3>
+    <p>{{ publicacion().descripcion }}</p>
+  </section>
+  <section class="tarjeta__texto">
+    <h3>Reglas</h3>
+    <p>{{ publicacion().reglas ?? 'El Anfitrión no escribió reglas.' }}</p>
+  </section>
+}
+
+@if (aviso(); as aviso) {
+  <div class="alert alert--danger tarjeta__aviso" role="alert">
+    <p class="tarjeta__aviso-titulo">{{ aviso.mensaje }}</p>
+    <ul>
+      @for (pendiente of aviso.pendientes; track pendiente.campo) {
+        <li [attr.data-campo]="pendiente.campo">{{ pendiente.mensaje }}</li>
+      }
+    </ul>
+    <a class="btn btn--outline" [routerLink]="rutaIntervenir()">Intervenir publicación</a>
+  </div>
+}
+
+@if (botones().length > 0) {
+  <footer class="tarjeta__acciones">
+    @for (boton of botones(); track boton.accion) {
+      <button
+        type="button"
+        [class]="'btn ' + boton.variante"
+        [disabled]="ocupado()"
+        [attr.aria-busy]="accionEnCurso() === boton.accion"
+        (click)="accionar.emit(boton.accion)"
+      >
+        {{ accionEnCurso() === boton.accion ? boton.enCurso : boton.texto }}
+      </button>
+    }
+  </footer>
+}

@@ -1,14 +1,14 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { Router } from '@angular/router';
-import { BuscadorPublicacionComponent } from '../../components/buscador-publicacion/buscador-publicacion.component';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { RouterLink } from '@angular/router';
 
 /**
- * Panel del Administrador. La moderación, la auditoría y los indicadores (RF-ADM, RF-DASH) vienen
- * después; por ahora permite intervenir una publicación a partir de su número.
+ * Panel del Administrador. Da acceso a la gestión de publicaciones (pendientes, activas, pausadas,
+ * bloqueadas y todas) y a la bandeja de pendientes de revisión. La auditoría y los indicadores
+ * (RF-ADM, RF-DASH) vienen después.
  */
 @Component({
   selector: 'app-admin-home',
-  imports: [BuscadorPublicacionComponent],
+  imports: [RouterLink],
   template: `
     <section class="panel">
       <div class="card encabezado">
@@ -16,7 +16,16 @@ import { BuscadorPublicacionComponent } from '../../components/buscador-publicac
         <p>Aquí estarán la moderación, la auditoría y los indicadores del negocio.</p>
       </div>
 
-      <app-buscador-publicacion (buscar)="intervenir($event)" />
+      <div class="card accesos">
+        <h2>Publicaciones</h2>
+        <p>Revisa, bloquea y reactiva las publicaciones de la plataforma.</p>
+        <div class="accesos__botones">
+          <a class="btn btn--primary" routerLink="/admin/publicaciones">Gestión de publicaciones</a>
+          <a class="btn btn--outline" routerLink="/admin/publicaciones/pendientes"
+            >Publicaciones pendientes de revisión</a
+          >
+        </div>
+      </div>
     </section>
   `,
   styles: `
@@ -41,13 +50,28 @@ import { BuscadorPublicacionComponent } from '../../components/buscador-publicac
     .encabezado p {
       margin-top: var(--space-2);
     }
+
+    .accesos {
+      display: grid;
+      gap: var(--space-3);
+      justify-items: start;
+    }
+
+    .accesos h2,
+    .accesos p {
+      margin: 0;
+    }
+
+    .accesos p {
+      color: var(--color-text-muted);
+    }
+
+    .accesos__botones {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-3);
+    }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AdminHomeComponent {
-  private readonly router = inject(Router);
-
-  protected intervenir(idPublicacion: number): void {
-    void this.router.navigate(['/admin', 'publicaciones', idPublicacion, 'editar']);
-  }
-}
+export class AdminHomeComponent {}

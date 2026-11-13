@@ -9,6 +9,11 @@ import { catchError, throwError } from 'rxjs';
 import { SessionService } from '../session.service';
 
 /** Endpoints públicos: no llevan token y su 401/403 no significa "sesión vencida". */
+const RUTAS_PUBLICAS = ['/auth/login', '/auth/registro', '/alojamientos'];
+
+/**
+ * - Agrega `Authorization: Bearer <token>` solo a las peticiones a nuestro API (nunca a otros
+ *   hosts), excepto login, registro y el listado público de alojamientos.
 const RUTAS_PUBLICAS = ['/auth/login', '/auth/registro', '/auth/recuperacion'];
 
 /**

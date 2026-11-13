@@ -37,6 +37,7 @@ describe('EditarPublicacionPageComponent', () => {
     precioNoche: 250000,
     tarifaLimpieza: 30000,
     reglas: 'No fumar',
+    motivoBloqueo: null,
   });
 
   let fixture: ComponentFixture<EditarPublicacionPageComponent>;
@@ -175,8 +176,7 @@ describe('EditarPublicacionPageComponent', () => {
     }
 
     const avisos = {
-      ACTIVA:
-        'Esta publicación está activa. Para editarla, solicita al Administrador que la pause.',
+      ACTIVA: 'Esta publicación está activa. Para editarla, páusala primero.',
       PENDIENTE_REVISION: 'La publicación está en revisión del Administrador.',
       BLOQUEADA: 'La publicación está bloqueada.',
     } as const;
