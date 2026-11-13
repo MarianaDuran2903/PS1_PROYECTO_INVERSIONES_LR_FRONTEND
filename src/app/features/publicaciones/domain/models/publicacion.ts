@@ -64,6 +64,17 @@ export function puedeEditar(estado: EstadoPublicacion): boolean {
   return ESTADOS_EDITABLES.includes(estado);
 }
 
+/** Solo un borrador se envía a revisión: es el único estado desde el que se solicita la activación. */
+export function puedeEnviarARevision(estado: EstadoPublicacion): boolean {
+  return estado === 'BORRADOR';
+}
+
+/** Campos que el backend exige para solicitar la activación (la creación no pide todos). */
+export type CampoPendienteActivacion = 'descripcion' | 'direccionTextual' | 'barrioZona' | 'reglas';
+
+/** Información que falta para solicitar la activación, con el mensaje del backend por campo. */
+export type PendientesActivacion = Partial<Record<CampoPendienteActivacion, string>>;
+
 /** Por qué no se puede editar en ese estado; null si sí se puede. */
 export function motivoNoEditable(estado: EstadoPublicacion): string | null {
   return MOTIVO_NO_EDITABLE[estado] ?? null;

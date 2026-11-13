@@ -5,18 +5,22 @@ import { ApiError } from '@core/http/api-error';
 import { OMITIR_AVISO_403 } from '@core/http/http-contexts';
 import { catchError, map, Observable, throwError } from 'rxjs';
 import {
+  InformacionMinimaIncompletaError,
   PublicacionAjenaError,
   PublicacionInvalidaError,
   PublicacionNoEditableError,
   PublicacionNoEncontradaError,
+  TransicionNoPermitidaError,
 } from '../../domain/errors/publicacion.errors';
 import {
   ActualizarPublicacion,
+  CampoPendienteActivacion,
   CampoPublicacion,
   CatalogoItem,
   ErroresPublicacion,
   NuevaPublicacion,
   PaginaPublicaciones,
+  PendientesActivacion,
   Publicacion,
 } from '../../domain/models/publicacion';
 import { PublicacionRepository } from '../../domain/repositories/publicacion.repository';
@@ -37,6 +41,14 @@ const CAMPOS: readonly CampoPublicacion[] = [
   'capacidad',
   'precioNoche',
   'tarifaLimpieza',
+  'reglas',
+];
+
+/** Campos que el backend puede devolver como pendientes al solicitar la activación. */
+const CAMPOS_PENDIENTES: readonly CampoPendienteActivacion[] = [
+  'descripcion',
+  'direccionTextual',
+  'barrioZona',
   'reglas',
 ];
 
@@ -97,6 +109,19 @@ export class PublicacionHttpRepository extends PublicacionRepository {
       );
   }
 
+  override solicitarActivacion(idPublicacion: number): Observable<Publicacion> {
+    return this.http
+      .post<PublicacionResponseDto>(
+        `${this.apiUrl}/publicaciones/${idPublicacion}/enviar-revision`,
+        null,
+        { context: new HttpContext().set(OMITIR_AVISO_403, true) },
+      )
+      .pipe(
+        map(PublicacionMapper.toDomain),
+        catchError((error: unknown) => throwError(() => this.errorDeActivacion(error))),
+      );
+  }
+
   override listarPropias(pagina: number, tamano: number): Observable<PaginaPublicaciones> {
     const params = new HttpParams().set('pagina', pagina).set('tamano', tamano);
     return this.http
@@ -116,6 +141,37 @@ export class PublicacionHttpRepository extends PublicacionRepository {
       }
     }
     return new PublicacionInvalidaError(errores);
+  }
+
+  /**
+   * Errores de solicitar la activación: 403 (ajena), 404 (no existe), 409 (no está en BORRADOR) y
+   * 400 con los campos pendientes. Un 400 sin campos conocidos pasa como ApiError.
+   */
+  private errorDeActivacion(error: unknown): unknown {
+    if (!(error instanceof ApiError)) {
+      return error;
+    }
+    if (error.status === 403) {
+      return new PublicacionAjenaError('No puedes enviar a revisión esta publicación');
+    }
+    if (error.status === 404) {
+      return new PublicacionNoEncontradaError();
+    }
+    if (error.status === 409) {
+      return new TransicionNoPermitidaError(error.message);
+    }
+    if (error.status === 400) {
+      const pendientes: PendientesActivacion = {};
+      for (const { field, message } of error.fieldErrors) {
+        if ((CAMPOS_PENDIENTES as readonly string[]).includes(field)) {
+          pendientes[field as CampoPendienteActivacion] = message;
+        }
+      }
+      if (Object.keys(pendientes).length > 0) {
+        return new InformacionMinimaIncompletaError(pendientes, error.message);
+      }
+    }
+    return error;
   }
 
   /** Errores de cargar y editar: 403 (ajena), 404 (no existe), 409 (estado) y 400 por campo. */

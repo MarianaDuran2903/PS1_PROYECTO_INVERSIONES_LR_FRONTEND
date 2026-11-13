@@ -1,4 +1,24 @@
-import { EstadoPublicacion, motivoNoEditable, puedeEditar } from './publicacion';
+import {
+  EstadoPublicacion,
+  motivoNoEditable,
+  puedeEditar,
+  puedeEnviarARevision,
+} from './publicacion';
+
+describe('puedeEnviarARevision', () => {
+  const estados: [EstadoPublicacion, boolean][] = [
+    ['BORRADOR', true],
+    ['PENDIENTE_REVISION', false],
+    ['ACTIVA', false],
+    ['PAUSADA', false],
+    ['BLOQUEADA', false],
+  ];
+  for (const [estado, esperado] of estados) {
+    it(`${estado}: ${esperado ? 'se puede' : 'no se puede'} enviar a revisión`, () => {
+      expect(puedeEnviarARevision(estado)).toBe(esperado);
+    });
+  }
+});
 
 describe('reglas de edición de una publicación', () => {
   it('se puede editar solo en BORRADOR y PAUSADA', () => {

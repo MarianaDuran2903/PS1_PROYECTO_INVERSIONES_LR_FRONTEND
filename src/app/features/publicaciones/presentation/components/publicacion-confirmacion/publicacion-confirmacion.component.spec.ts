@@ -180,6 +180,49 @@ describe('PublicacionConfirmacionComponent', () => {
     expect(veces).toBe(1);
   });
 
+  describe('enviar a revisión (HU-012)', () => {
+    const botonEnviar = () =>
+      Array.from(element.querySelectorAll<HTMLButtonElement>('button')).find((b) =>
+        b.textContent?.includes('Enviar a revisión'),
+      );
+
+    it('en el detalle de un borrador muestra el botón y emite "enviarARevision" al pulsarlo', () => {
+      crear(publicacion, 'detalle');
+      let veces = 0;
+      fixture.componentInstance.enviarARevision.subscribe(() => veces++);
+
+      botonEnviar()!.click();
+
+      expect(veces).toBe(1);
+    });
+
+    it('en el detalle muestra el indicador de carga mientras se envía', () => {
+      crear(publicacion, 'detalle');
+      fixture.componentRef.setInput('enviandoRevision', true);
+      fixture.detectChanges();
+
+      const boton = Array.from(element.querySelectorAll<HTMLButtonElement>('button')).find((b) =>
+        b.textContent?.includes('Enviando'),
+      )!;
+      expect(boton.disabled).toBeTrue();
+    });
+
+    it('en el detalle de una publicación en revisión muestra el texto y no el botón', () => {
+      crear({ ...publicacion, estado: 'PENDIENTE_REVISION' }, 'detalle');
+
+      expect(botonEnviar()).toBeUndefined();
+      expect(element.querySelector('.ficha__resumen')!.textContent).toContain(
+        'En revisión del Administrador',
+      );
+    });
+
+    it('justo después de crear (modo confirmación) no ofrece enviar a revisión', () => {
+      crear(publicacion, 'confirmacion');
+
+      expect(botonEnviar()).toBeUndefined();
+    });
+  });
+
   it('no dice que es un borrador si el estado es otro', () => {
     crear({ ...publicacion, estado: 'ACTIVA' });
 

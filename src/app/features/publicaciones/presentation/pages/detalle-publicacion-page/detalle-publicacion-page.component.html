@@ -14,7 +14,18 @@
     }
     @default {
       @if (facade.publicacion(); as publicacion) {
-        <app-publicacion-confirmacion [publicacion]="publicacion" modo="detalle" />
+        @if (activacion.idPendientes() === publicacion.idPublicacion) {
+          <app-pendientes-activacion
+            [idPublicacion]="publicacion.idPublicacion"
+            [pendientes]="activacion.pendientes()"
+          />
+        }
+        <app-publicacion-confirmacion
+          [publicacion]="publicacion"
+          modo="detalle"
+          [enviandoRevision]="activacion.idEnviando() === publicacion.idPublicacion"
+          (enviarARevision)="enviarARevision(publicacion.idPublicacion)"
+        />
       }
     }
   }

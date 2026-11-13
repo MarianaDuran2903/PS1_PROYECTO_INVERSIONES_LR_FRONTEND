@@ -115,6 +115,13 @@
         [bloque]="true"
       />
       @if (esDetalle()) {
+        <app-accion-activacion
+          variante="primary"
+          [bloque]="true"
+          [estado]="publicacion().estado"
+          [enviando]="enviandoRevision()"
+          (enviar)="enviarARevision.emit()"
+        />
         <a class="btn btn--outline btn--block" routerLink="/anfitrion/publicaciones"
           >Volver a mis publicaciones</a
         >
