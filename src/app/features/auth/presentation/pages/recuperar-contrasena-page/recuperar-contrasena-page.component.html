@@ -1,0 +1,33 @@
+<section class="recuperar card" aria-labelledby="recuperar-titulo">
+  <header class="recuperar__encabezado">
+    <h1 id="recuperar-titulo">Recupera tu contraseña</h1>
+    <p>Escribe tu correo y te enviaremos las instrucciones para crear una nueva contraseña.</p>
+  </header>
+
+  @if (facade.estado() === 'enviado') {
+    <div class="alert alert--success recuperar__alerta" role="status">
+      {{ facade.confirmacion() }}
+    </div>
+    @if (esDesarrollo) {
+      <p class="recuperar__nota">
+        Modo simulado: el correo no se envía; el token aparece en el log del servidor como
+        CORREO_SIMULADO_RECUPERACION.
+      </p>
+    }
+    <p class="recuperar__enlace">
+      <a routerLink="/restablecer-contrasena">Ya tengo mi código de recuperación</a>
+    </p>
+  } @else {
+    @if (facade.mensajeError(); as mensaje) {
+      <div class="alert alert--danger recuperar__alerta" role="alert">{{ mensaje }}</div>
+    }
+
+    <app-recuperar-contrasena-form
+      [enviando]="facade.enviando()"
+      [errorCorreoServidor]="facade.errorCorreo()"
+      (solicitar)="facade.solicitar($event)"
+    />
+  }
+
+  <p class="recuperar__pie"><a routerLink="/login">Volver a iniciar sesión</a></p>
+</section>

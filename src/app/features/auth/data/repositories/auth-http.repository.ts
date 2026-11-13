@@ -5,6 +5,16 @@ import { ApiError } from '@core/http/api-error';
 import { catchError, map, Observable, throwError } from 'rxjs';
 import { CredencialesInvalidasError } from '../../domain/errors/login.errors';
 import {
+  EnlaceRecuperacionInvalidoError,
+  RestablecimientoInvalidoError,
+  SolicitudRecuperacionInvalidaError,
+} from '../../domain/errors/recuperacion.errors';
+import {
+  CampoRestablecimiento,
+  ErroresRestablecimiento,
+  RestablecerContrasena,
+} from '../../domain/models/recuperacion';
+import {
   CorreoYaRegistradoError,
   RegistroInvalidoError,
 } from '../../domain/errors/registro.errors';
@@ -17,6 +27,11 @@ import {
 import { RolRegistrable, RolUsuario } from '../../domain/models/rol-usuario';
 import { Credenciales, Sesion, SesionActiva } from '../../domain/models/sesion';
 import { AuthRepository } from '../../domain/repositories/auth.repository';
+import {
+  MensajeResponseDto,
+  RestablecerContrasenaRequestDto,
+  SolicitudRecuperacionRequestDto,
+} from '../dtos/recuperacion.dto';
 import { UsuarioResponseDto } from '../dtos/registro-usuario.dto';
 import { LoginResponseDto, SesionResponseDto } from '../dtos/sesion.dto';
 import { RegistroUsuarioMapper } from '../mappers/registro-usuario.mapper';
@@ -29,6 +44,12 @@ const CAMPOS: readonly CampoRegistroUsuario[] = [
   'primerApellido',
   'segundoApellido',
   'correo',
+  'contrasena',
+  'confirmarContrasena',
+];
+
+const CAMPOS_RESTABLECIMIENTO: readonly CampoRestablecimiento[] = [
+  'token',
   'contrasena',
   'confirmarContrasena',
 ];
@@ -76,6 +97,59 @@ export class AuthHttpRepository extends AuthRepository {
     return this.http
       .get<SesionResponseDto>(`${this.baseUrl}/sesion`)
       .pipe(map(SesionMapper.toSesionActiva));
+  }
+
+  override solicitarRecuperacion(correo: string): Observable<string> {
+    const request: SolicitudRecuperacionRequestDto = { correo: correo.trim() };
+    return this.http
+      .post<MensajeResponseDto>(`${this.baseUrl}/recuperacion/solicitud`, request)
+      .pipe(
+        map((dto) => dto.mensaje),
+        catchError((error: unknown) => throwError(() => this.toSolicitudError(error))),
+      );
+  }
+
+  override restablecerContrasena(datos: RestablecerContrasena): Observable<string> {
+    const request: RestablecerContrasenaRequestDto = {
+      token: datos.token.trim(),
+      contrasena: datos.contrasena,
+      confirmarContrasena: datos.confirmarContrasena,
+    };
+    return this.http
+      .post<MensajeResponseDto>(`${this.baseUrl}/recuperacion/restablecer`, request)
+      .pipe(
+        map((dto) => dto.mensaje),
+        catchError((error: unknown) => throwError(() => this.toRestablecimientoError(error))),
+      );
+  }
+
+  /** 400 con `errores.correo`: el correo vacío o con formato inválido. */
+  private toSolicitudError(error: unknown): unknown {
+    if (!(error instanceof ApiError) || error.status !== 400) {
+      return error;
+    }
+    const correo = error.fieldErrors.find(({ field }) => field === 'correo');
+    return correo ? new SolicitudRecuperacionInvalidaError({ correo: correo.message }) : error;
+  }
+
+  /**
+   * 400 con `errores`: validación por campo. 400 sin `errores`: el token no sirve (no existe,
+   * venció o ya se usó), siempre con el mismo mensaje.
+   */
+  private toRestablecimientoError(error: unknown): unknown {
+    if (!(error instanceof ApiError) || error.status !== 400) {
+      return error;
+    }
+    if (error.fieldErrors.length === 0) {
+      return new EnlaceRecuperacionInvalidoError(error.message);
+    }
+    const errores: ErroresRestablecimiento = {};
+    for (const { field, message } of error.fieldErrors) {
+      if ((CAMPOS_RESTABLECIMIENTO as readonly string[]).includes(field)) {
+        errores[field as CampoRestablecimiento] = message;
+      }
+    }
+    return Object.keys(errores).length > 0 ? new RestablecimientoInvalidoError(errores) : error;
   }
 
   /** 401 = credenciales: siempre el mensaje genérico que manda el backend. */
