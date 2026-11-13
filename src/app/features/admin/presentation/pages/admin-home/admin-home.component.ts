@@ -1,15 +1,14 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
-import { BuscadorPublicacionComponent } from '../../components/buscador-publicacion/buscador-publicacion.component';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { RouterLink } from '@angular/router';
 
 /**
- * Panel del Administrador. Da acceso a la bandeja de publicaciones pendientes de revisión y
- * permite intervenir una publicación a partir de su número. La auditoría y los indicadores
+ * Panel del Administrador. Da acceso a la gestión de publicaciones (pendientes, activas, pausadas,
+ * bloqueadas y todas) y a la bandeja de pendientes de revisión. La auditoría y los indicadores
  * (RF-ADM, RF-DASH) vienen después.
  */
 @Component({
   selector: 'app-admin-home',
-  imports: [BuscadorPublicacionComponent, RouterLink],
+  imports: [RouterLink],
   template: `
     <section class="panel">
       <div class="card encabezado">
@@ -18,14 +17,15 @@ import { BuscadorPublicacionComponent } from '../../components/buscador-publicac
       </div>
 
       <div class="card accesos">
-        <h2>Revisión de publicaciones</h2>
-        <p>Decide qué alojamientos se ofrecen en la plataforma.</p>
-        <a class="btn btn--primary" routerLink="/admin/publicaciones/pendientes"
-          >Publicaciones pendientes de revisión</a
-        >
+        <h2>Publicaciones</h2>
+        <p>Revisa, bloquea y reactiva las publicaciones de la plataforma.</p>
+        <div class="accesos__botones">
+          <a class="btn btn--primary" routerLink="/admin/publicaciones">Gestión de publicaciones</a>
+          <a class="btn btn--outline" routerLink="/admin/publicaciones/pendientes"
+            >Publicaciones pendientes de revisión</a
+          >
+        </div>
       </div>
-
-      <app-buscador-publicacion (buscar)="intervenir($event)" />
     </section>
   `,
   styles: `
@@ -65,13 +65,13 @@ import { BuscadorPublicacionComponent } from '../../components/buscador-publicac
     .accesos p {
       color: var(--color-text-muted);
     }
+
+    .accesos__botones {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-3);
+    }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AdminHomeComponent {
-  private readonly router = inject(Router);
-
-  protected intervenir(idPublicacion: number): void {
-    void this.router.navigate(['/admin', 'publicaciones', idPublicacion, 'editar']);
-  }
-}
+export class AdminHomeComponent {}

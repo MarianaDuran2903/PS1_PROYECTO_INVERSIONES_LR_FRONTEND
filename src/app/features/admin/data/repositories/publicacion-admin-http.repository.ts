@@ -16,6 +16,7 @@ import {
 import {
   CampoIntervencion,
   CampoPendienteActivacion,
+  EstadoPublicacion,
   ErroresIntervencion,
   IntervencionPublicacion,
   Pagina,
@@ -27,7 +28,7 @@ import { IntervencionInvalidaError } from '../../domain/errors/intervencion.erro
 import { MotivoInvalidoError } from '../../domain/errors/revision.errors';
 import { PublicacionAdminRepository } from '../../domain/repositories/publicacion-admin.repository';
 import { EdicionAdministrativaRequestDto } from '../dtos/edicion-administrativa.dto';
-import { RechazoPublicacionRequestDto } from '../dtos/revision.dto';
+import { MotivoPublicacionRequestDto } from '../dtos/revision.dto';
 
 const CAMPOS: readonly CampoIntervencion[] = [
   'motivo',
@@ -98,17 +99,51 @@ export class PublicacionAdminHttpRepository extends PublicacionAdminRepository {
   }
 
   override rechazar(idPublicacion: number, motivo: string): Observable<Publicacion> {
-    const cuerpo: RechazoPublicacionRequestDto = { motivo: motivo.trim() };
+    return this.conMotivo(idPublicacion, 'rechazar', motivo, (error) => this.errorDeMotivo(error));
+  }
+
+  override bloquear(idPublicacion: number, motivo: string): Observable<Publicacion> {
+    return this.conMotivo(idPublicacion, 'bloquear', motivo, (error) => this.errorDeMotivo(error));
+  }
+
+  override reactivar(idPublicacion: number, motivo: string): Observable<Publicacion> {
+    return this.conMotivo(idPublicacion, 'reactivar', motivo, (error) =>
+      this.errorDeReactivacion(error),
+    );
+  }
+
+  override listar(
+    estado: EstadoPublicacion | null,
+    pagina: number,
+    tamano: number,
+  ): Observable<Pagina<Publicacion>> {
+    let params = new HttpParams().set('pagina', pagina).set('tamano', tamano);
+    if (estado !== null) {
+      params = params.set('estado', estado);
+    }
     return this.http
-      .post<PublicacionResponseDto>(`${this.baseUrl}/${idPublicacion}/rechazar`, cuerpo)
+      .get<PaginaPublicacionesCompletasResponseDto>(this.baseUrl, { params })
+      .pipe(map(PublicacionMapper.toPaginaCompleta));
+  }
+
+  /** POST de una acción que pide el motivo (rechazar, bloquear o reactivar), recortado. */
+  private conMotivo(
+    idPublicacion: number,
+    accion: 'rechazar' | 'bloquear' | 'reactivar',
+    motivo: string,
+    aError: (error: unknown) => unknown,
+  ): Observable<Publicacion> {
+    const cuerpo: MotivoPublicacionRequestDto = { motivo: motivo.trim() };
+    return this.http
+      .post<PublicacionResponseDto>(`${this.baseUrl}/${idPublicacion}/${accion}`, cuerpo)
       .pipe(
         map(PublicacionMapper.toDomain),
-        catchError((error: unknown) => throwError(() => this.errorDeRechazo(error))),
+        catchError((error: unknown) => throwError(() => aError(error))),
       );
   }
 
-  /** 404 y 409 de la revisión: la publicación no existe o ya no está en PENDIENTE_REVISION. */
-  private errorDeRevision(error: ApiError): unknown {
+  /** 404 y 409 de una decisión: la publicación no existe o su estado no permite la acción. */
+  private errorDeEstado(error: ApiError): unknown {
     if (error.status === 404) {
       return new PublicacionNoEncontradaError();
     }
@@ -118,37 +153,54 @@ export class PublicacionAdminHttpRepository extends PublicacionAdminRepository {
     return null;
   }
 
+  /** El 400 con campos de información mínima (descripción, dirección, barrio o reglas), si lo es. */
+  private pendientesDe(error: ApiError): InformacionMinimaIncompletaError | null {
+    if (error.status !== 400) {
+      return null;
+    }
+    const pendientes: PendientesActivacion = {};
+    for (const { field, message } of error.fieldErrors) {
+      if ((CAMPOS_PENDIENTES as readonly string[]).includes(field)) {
+        pendientes[field as CampoPendienteActivacion] = message;
+      }
+    }
+    return Object.keys(pendientes).length > 0
+      ? new InformacionMinimaIncompletaError(pendientes, error.message)
+      : null;
+  }
+
+  /** El 400 con `errores.motivo`, si lo es. */
+  private motivoDe(error: ApiError): MotivoInvalidoError | null {
+    const motivo =
+      error.status === 400 ? error.fieldErrors.find(({ field }) => field === 'motivo') : undefined;
+    return motivo ? new MotivoInvalidoError(motivo.message) : null;
+  }
+
   /** 400 con campos pendientes → información mínima incompleta; 404 y 409 con su error de dominio. */
   private errorDeAprobacion(error: unknown): unknown {
     if (!(error instanceof ApiError)) {
       return error;
     }
-    if (error.status === 400) {
-      const pendientes: PendientesActivacion = {};
-      for (const { field, message } of error.fieldErrors) {
-        if ((CAMPOS_PENDIENTES as readonly string[]).includes(field)) {
-          pendientes[field as CampoPendienteActivacion] = message;
-        }
-      }
-      if (Object.keys(pendientes).length > 0) {
-        return new InformacionMinimaIncompletaError(pendientes, error.message);
-      }
-    }
-    return this.errorDeRevision(error) ?? error;
+    return this.pendientesDe(error) ?? this.errorDeEstado(error) ?? error;
   }
 
   /** 400 con `errores.motivo` → motivo inválido; 404 y 409 con su error de dominio. */
-  private errorDeRechazo(error: unknown): unknown {
+  private errorDeMotivo(error: unknown): unknown {
     if (!(error instanceof ApiError)) {
       return error;
     }
-    if (error.status === 400) {
-      const motivo = error.fieldErrors.find(({ field }) => field === 'motivo');
-      if (motivo) {
-        return new MotivoInvalidoError(motivo.message);
-      }
+    return this.motivoDe(error) ?? this.errorDeEstado(error) ?? error;
+  }
+
+  /**
+   * Reactivar puede fallar por el motivo (`errores.motivo`) o por falta de información mínima
+   * (campos pendientes); además, 404 y 409 con su error de dominio.
+   */
+  private errorDeReactivacion(error: unknown): unknown {
+    if (!(error instanceof ApiError)) {
+      return error;
     }
-    return this.errorDeRevision(error) ?? error;
+    return this.motivoDe(error) ?? this.pendientesDe(error) ?? this.errorDeEstado(error) ?? error;
   }
 
   /** 404 y 409 con su error de dominio; 400 con `errores` → por campo; el resto pasa como ApiError. */

@@ -42,10 +42,12 @@ El proyecto avanza funcionalidad por funcionalidad, según la matriz de requerim
 | RF-ALOJ (HU-011) | Editar una publicación con autorización administrativa (Administrador), con motivo registrado | Hecho |
 | RF-ALOJ (HU-012) | Solicitar la activación de una publicación (Anfitrión): envío del borrador a revisión | Hecho |
 | RF-ALOJ (HU-013) | Revisar una publicación pendiente (Administrador): bandeja, aprobar o rechazar con motivo | Hecho |
+| RF-ALOJ (HU-014) | Pausar una publicación activa (Anfitrión) y listado público de alojamientos disponibles | Hecho |
+| RF-ADM (HU-015) | Bloquear una publicación engañosa y reactivar una pausada o bloqueada (Administrador), con motivo; el Anfitrión ve el motivo del bloqueo | Hecho |
 | RF-ALOJ (resto), RF-BUS, RF-COT, RF-RES, RF-PAG | Listado y edición de publicaciones, búsqueda, cotización, reservas y pago simulado | Pendiente |
 | RF-NOT, RF-RSC, RF-ADM, RF-DASH, RF-REP | Notificaciones, reseñas, administración, indicadores y reportes | Pendiente |
 
-Las páginas `/marketplace`, `/anfitrion` (salvo la de nueva publicación) y `/admin` son provisionales: solo muestran un mensaje hasta que se implementen sus historias.
+Las páginas `/anfitrion` (salvo las de publicaciones) y `/admin` (salvo la gestión de publicaciones) son provisionales: solo muestran un mensaje hasta que se implementen sus historias.
 
 ## Tecnologías
 
@@ -215,9 +217,10 @@ Copia [`.env.example`](.env.example) como `.env` (no se sube a git):
 │           │   ├── application/      Facades, sesión, guards e interceptor de token
 │           │   └── presentation/     Páginas (contenedores) y componentes (formularios)
 │           ├── home/                 Portada pública
-│           ├── marketplace/          Búsqueda y reservas (provisional)
+│           ├── alojamientos/         Listado público de alojamientos disponibles
+│           ├── marketplace/          Marketplace del Huésped (reutiliza el listado de alojamientos)
 │           ├── anfitrion/            Panel del anfitrión (provisional)
-│           └── admin/                Panel de administración (provisional)
+│           └── admin/                Panel de administración y gestión de publicaciones
 ├── Dockerfile · docker-compose.yml · .env.example
 ├── angular.json · package.json · karma.conf.js · proxy.conf.js
 └── sonar-project.properties
@@ -274,14 +277,17 @@ presentation  →  application  →  domain  ←  data
 | `/` | Todos (portada) |
 | `/login` | Solo quien no tiene sesión |
 | `/registro` (`?rol=anfitrion` preselecciona Anfitrión) | Solo quien no tiene sesión |
-| `/marketplace` | Huésped |
+| `/alojamientos` | Todos (listado público de alojamientos disponibles, sin sesión) |
+| `/marketplace` | Huésped (el mismo listado de alojamientos disponibles) |
 | `/anfitrion` | Anfitrión |
 | `/anfitrion/publicaciones` | Anfitrión (Mis publicaciones: listado paginado de las suyas) |
 | `/anfitrion/publicaciones/nueva` | Anfitrión (formulario de nueva publicación) |
 | `/anfitrion/publicaciones/:id` | Anfitrión propietario (detalle de una publicación; se abre desde el listado) |
 | `/anfitrion/publicaciones/:id/editar` | Anfitrión propietario (editar una publicación; pide confirmación si hay cambios sin guardar) |
-| `/admin` | Administrador (panel con el acceso a la bandeja de pendientes y el buscador de publicaciones) |
+| `/admin` | Administrador (panel con los accesos a la gestión de publicaciones y a la bandeja de pendientes) |
+| `/admin/publicaciones` | Administrador (gestión de publicaciones: pestañas Pendientes, Activas, Pausadas, Bloqueadas y Todas; bloquear y reactivar con motivo) |
 | `/admin/publicaciones/pendientes` | Administrador (bandeja de publicaciones pendientes de revisión: aprobar o rechazar con motivo) |
+| `/admin/publicaciones/:id` | Administrador (detalle de una publicación, con el motivo del bloqueo y sus acciones) |
 | `/admin/publicaciones/:id/editar` | Administrador (intervenir una publicación con un motivo; pide confirmación si hay cambios sin guardar) |
 | `/acceso-denegado` ("Sin permisos") | Se muestra cuando hay sesión pero el rol no alcanza |
 
@@ -402,7 +408,7 @@ El Administrador interviene en cualquier estado **salvo ACTIVA**: una activa deb
 | `409` | Muestra el mensaje y pasa el formulario a solo lectura |
 | `401` | Lo resuelve el interceptor (cierra sesión y lleva al login) |
 
-Como el backend solo permite consultar por número, la entrada es un campo "Número de publicación" en `/admin` (componente `buscador-publicacion`, pensado para reemplazarse por una bandeja de publicaciones sin tocar la pantalla de intervención). La pantalla `/admin/publicaciones/:id/editar` reutiliza el formulario de publicación en su modo `intervenir`, que añade el campo del motivo con su contador.
+Se llega desde el detalle del Administrador (`/admin/publicaciones/:id`, enlace "Intervenir (editar)"). La pantalla `/admin/publicaciones/:id/editar` reutiliza el formulario de publicación en su modo `intervenir`, que añade el campo del motivo con su contador.
 
 ### Solicitar la activación de una publicación (HU-012)
 
@@ -445,6 +451,60 @@ Aprobar pide confirmación. Rechazar abre el cuadro del motivo (`app-modal-motiv
 
 `accionesAdministrador(estado)` decide qué botones muestra cada tarjeta: Aprobar y Rechazar en PENDIENTE_REVISION y ninguno en los demás estados. Un rol distinto de Administrador no entra a la bandeja (`rolGuard`).
 
+### Pausar una publicación activa (HU-014)
+
+`POST /publicaciones/{id}/pausar`, solo rol ANFITRION, sin cuerpo. Pasa una publicación ACTIVA propia a PAUSADA: deja de aparecer en las búsquedas, conserva su información y se puede editar mientras está pausada (el Administrador la revisa para reactivarla).
+
+| Respuesta | Qué hace el frontend |
+|---|---|
+| `200` con la publicación (`estado: "PAUSADA"`) | Aviso "Publicación pausada" y recarga del listado (página actual) o del detalle |
+| `403` (de otro Anfitrión) | Aviso con el mensaje; no se muestra el aviso global de permisos (`OMITIR_AVISO_403`) |
+| `404` | Aviso "La publicación no existe" |
+| `409` (no está ACTIVA) | Aviso con el mensaje del backend (por ejemplo "La publicación ya está pausada") y recarga para refrescar el estado |
+
+**Dónde está.** Botón "Pausar" en cada fila ACTIVA de "Mis publicaciones" y en la ficha de detalle de una publicación activa; las PAUSADA muestran "El Administrador revisará tus ajustes antes de reactivarla" y tienen "Editar" activo. Antes de pausar se pide confirmación ("¿Pausar la publicación? Dejará de aparecer en las búsquedas. Podrás editarla mientras esté pausada y el Administrador la revisará para reactivarla."). El texto de una activa en la edición pasó a "Esta publicación está activa. Para editarla, páusala primero.", porque ahora es el propio Anfitrión quien pausa.
+
+### Alojamientos disponibles (HU-014)
+
+`GET /alojamientos?pagina=&tamano=`, **público**: el frontend no envía `Authorization` ni cierra la sesión por un 401 (`/alojamientos` está en `RUTAS_PUBLICAS` del interceptor). Devuelve solo publicaciones ACTIVAS, de la más reciente a la más antigua, con el mismo resumen de "Mis publicaciones" (`idPublicacion`, `titulo`, `estado`, `ciudad`, `tipo`, `capacidad`, `precioNoche`); `tamano` de 1 a 100 y, sin ninguna, `mensaje: "No hay alojamientos disponibles por el momento"`. No hay detalle público por id y el resumen no trae dirección ni datos del Anfitrión.
+
+- **Feature `features/alojamientos`** con las mismas capas: `AlojamientoRepository.listar(pagina, tamano)`, su implementación HTTP, `AlojamientosFacade` y `alojamientos-page` (tarjetas con título, ciudad, tipo, capacidad y precio por noche; paginación; estado vacío con el `mensaje` de la API; sin acciones de gestión).
+- **Paginación compartida.** `ListadoPaginado<T>` concentra los estados (cargando, listo, error, vacía) y la navegación entre páginas; la usan `MisPublicacionesFacade` y `AlojamientosFacade`.
+- **Rutas.** `/alojamientos` es pública (sin guard) y `/marketplace` (Huésped) muestra la misma página con el mismo repositorio, sin duplicar código. La portada tiene el enlace "Ver alojamientos".
+
+### Bloquear y reactivar publicaciones (HU-015)
+
+**Cambio en la publicación.** `PublicacionResponseDto` trae `motivoBloqueo` (texto o `null`; solo tiene valor si está BLOQUEADA) en `GET /publicaciones/{id}`, en `GET /admin/publicaciones/{id}` y en los listados del Administrador. El modelo `Publicacion` lo expone como `motivoBloqueo: string | null` (si el backend no lo manda, queda en `null`).
+
+Rol ADMINISTRADOR, bajo `/admin/publicaciones`:
+
+| Método y ruta | Uso |
+|---|---|
+| `GET ?estado=&pagina=&tamano=` | Todas las publicaciones, completas, de la más reciente a la más antigua. `estado` es opcional (`BORRADOR`, `PENDIENTE_REVISION`, `ACTIVA`, `PAUSADA`, `BLOQUEADA`, en mayúsculas); sin él trae todas. `tamano` de 1 a 100 (la gestión pide 10). Vacío: `mensaje: "No hay publicaciones para mostrar"` |
+| `POST /{id}/bloquear` | `{ "motivo": "..." }` (de 10 a 500 caracteres, recortado). La publicación queda BLOQUEADA con `motivoBloqueo` |
+| `POST /{id}/reactivar` | `{ "motivo": "..." }`. La publicación queda ACTIVA y `motivoBloqueo` vuelve a `null` |
+
+| Respuesta | Qué hace el frontend |
+|---|---|
+| Bloquear o reactivar `200` | Aviso ("Publicación bloqueada" o "Publicación reactivada"), cierra el cuadro del motivo y recarga la pestaña |
+| `400` con `errores.motivo` | El mensaje queda dentro del cuadro del motivo, que sigue abierto |
+| Reactivar `400` por falta de información mínima (`descripcion`, `direccionTextual`, `barrioZona`, `reglas`) | Cierra el cuadro y muestra el mensaje y los campos pendientes en la fila, con un enlace "Intervenir publicación"; la publicación no cambia ni sale de la lista |
+| `404` o `409` (borrador, ya bloqueada, no está PAUSADA ni BLOQUEADA…) | Aviso con el mensaje del backend y recarga para refrescar el estado |
+
+**Acciones por estado** (`accionesAdministrador`): PENDIENTE_REVISION → aprobar, rechazar y bloquear; ACTIVA → bloquear; PAUSADA → reactivar y bloquear; BLOQUEADA → reactivar; BORRADOR → ninguna.
+
+**Gestión de publicaciones** (`/admin/publicaciones`). Pestañas Pendientes, Activas, Pausadas, Bloqueadas y Todas, con paginación de 10 y estado vacío con el `mensaje` de la API. Pendientes usa `GET /pendientes`; Activas, Pausadas, Bloqueadas y Todas usan `GET ?estado=` (Todas, sin `estado`). Cada fila muestra título, «Anfitrión #id», ciudad, tipo, precio, estado y, si está bloqueada, el motivo del bloqueo destacado; en Pendientes se usa la tarjeta completa de la bandeja de HU-013. Al reactivar una bloqueada, el cuadro del motivo muestra el motivo del bloqueo para decidir con esa información.
+
+**Detalle del Administrador** (`/admin/publicaciones/:id`, después de `pendientes`). Información completa con `GET /admin/publicaciones/{id}`, el motivo del bloqueo destacado y los mismos botones. Con un 404 avisa "La publicación no existe" y vuelve a la gestión. Cuando el estado no es ACTIVA ofrece "Intervenir (editar)", que lleva a `/admin/publicaciones/:id/editar` (esa ruta se conserva).
+
+**Panel `/admin`.** Reemplaza el buscador por número por los accesos a la gestión de publicaciones y a la bandeja de pendientes.
+
+**Anfitrión.** La ficha de detalle de una publicación bloqueada muestra un recuadro con el motivo del bloqueo, y las filas BLOQUEADA de "Mis publicaciones" tienen el enlace "Ver motivo" al detalle.
+
+**Listado público.** Si la sesión es de Administrador, cada tarjeta de `/alojamientos` muestra «Gestionar», que lleva a `/admin/publicaciones/:id`. Una publicación bloqueada no aparece en ese listado.
+
+La decisión sobre una publicación (aprobar, rechazar, bloquear, reactivar) la concentra `DecisionesPublicacionFacade`, que comparten la gestión y el detalle. El cuadro del motivo es el componente reutilizable `app-modal-motivo`.
+
 ### Errores y sesión
 
 Todos los endpoints devuelven `{ fecha, estado, error, mensaje, ruta, errores? }`. `401` en una ruta protegida: cierra la sesión y lleva a `/login?expirada=true`. `403`: aviso "Sin permisos" con el `mensaje`, sin cerrar la sesión. Un temporizador cierra la sesión sola al vencer el token (60 minutos, sin renovación).
@@ -455,7 +515,7 @@ El registro oficial de auditoría (tabla `evento_auditoria`) lo escribe el backe
 
 ## Pruebas y calidad
 
-- **Pruebas unitarias** con Karma y Jasmine: 805 pruebas en 65 archivos. Cada capa se prueba aislada: validadores y mappers (funciones puras), repositorio HTTP con `HttpTestingController`, facades con repositorios falsos, guards, interceptores y componentes sobre su DOM.
+- **Pruebas unitarias** con Karma y Jasmine: 1084 pruebas en 84 archivos. Cada capa se prueba aislada: validadores y mappers (funciones puras), repositorio HTTP con `HttpTestingController`, facades con repositorios falsos, guards, interceptores y componentes sobre su DOM.
 - **Cobertura**: `npm run test:ci` genera `coverage/` con reporte HTML y `lcov.info` (que lee Sonar).
 - **Lint y formato**: `npm run lint` y `npm run format:check` deben quedar limpios antes de abrir un Pull Request.
 

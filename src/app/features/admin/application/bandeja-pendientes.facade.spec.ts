@@ -30,6 +30,7 @@ describe('BandejaPendientesFacade', () => {
     precioNoche: 250000,
     tarifaLimpieza: 30000,
     reglas: 'No fumar',
+    motivoBloqueo: null,
   });
   const pagina = (
     contenido: Publicacion[],

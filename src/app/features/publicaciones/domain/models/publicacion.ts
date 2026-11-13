@@ -49,19 +49,26 @@ export interface Publicacion {
   precioNoche: number;
   tarifaLimpieza: number;
   reglas: string | null;
+  /** Por qué el Administrador la bloqueó. Solo tiene valor si está BLOQUEADA; null en otro caso. */
+  motivoBloqueo: string | null;
 }
 
 /** Solo una publicación en borrador o pausada se puede editar. */
 const ESTADOS_EDITABLES: readonly EstadoPublicacion[] = ['BORRADOR', 'PAUSADA'];
 
 const MOTIVO_NO_EDITABLE: Partial<Record<EstadoPublicacion, string>> = {
-  ACTIVA: 'Esta publicación está activa. Para editarla, solicita al Administrador que la pause.',
+  ACTIVA: 'Esta publicación está activa. Para editarla, páusala primero.',
   PENDIENTE_REVISION: 'La publicación está en revisión del Administrador.',
   BLOQUEADA: 'La publicación está bloqueada.',
 };
 
 export function puedeEditar(estado: EstadoPublicacion): boolean {
   return ESTADOS_EDITABLES.includes(estado);
+}
+
+/** Solo una publicación activa se pausa: es el único estado desde el que se puede pausar. */
+export function puedePausar(estado: EstadoPublicacion): boolean {
+  return estado === 'ACTIVA';
 }
 
 /** Solo un borrador se envía a revisión: es el único estado desde el que se solicita la activación. */
@@ -117,12 +124,21 @@ export interface Pagina<T> {
 export type PaginaPublicaciones = Pagina<PublicacionResumen>;
 
 /** Acciones que el Administrador puede ejecutar sobre una publicación según su estado. */
-export type AccionAdministrador = 'aprobar' | 'rechazar';
+export type AccionAdministrador = 'aprobar' | 'rechazar' | 'bloquear' | 'reactivar';
+
+const ACCIONES_POR_ESTADO: Record<EstadoPublicacion, AccionAdministrador[]> = {
+  BORRADOR: [],
+  PENDIENTE_REVISION: ['aprobar', 'rechazar', 'bloquear'],
+  ACTIVA: ['bloquear'],
+  PAUSADA: ['reactivar', 'bloquear'],
+  BLOQUEADA: ['reactivar'],
+};
 
 /**
- * Acciones del Administrador disponibles en cada estado. Por ahora solo la revisión de las
- * pendientes (aprobar o rechazar); el bloqueo y la reactivación la ampliarán.
+ * Acciones del Administrador disponibles en cada estado: aprobar o rechazar una pendiente,
+ * bloquear una engañosa (en revisión, activa o pausada) y reactivar una pausada o bloqueada. Un
+ * borrador aún no se ha publicado, así que no tiene acciones.
  */
 export function accionesAdministrador(estado: EstadoPublicacion): AccionAdministrador[] {
-  return estado === 'PENDIENTE_REVISION' ? ['aprobar', 'rechazar'] : [];
+  return [...ACCIONES_POR_ESTADO[estado]];
 }

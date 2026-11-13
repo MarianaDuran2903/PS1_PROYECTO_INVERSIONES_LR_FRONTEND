@@ -45,6 +45,8 @@ export interface PublicacionResponseDto {
   tarifaLimpieza: number;
   /** Puede faltar en respuestas de versiones del backend anteriores a la edición. */
   reglas?: string | null;
+  /** Solo tiene valor si la publicación está BLOQUEADA; puede faltar en backends anteriores. */
+  motivoBloqueo?: string | null;
 }
 
 /** Elemento de GET {apiUrl}/publicaciones/mias. */

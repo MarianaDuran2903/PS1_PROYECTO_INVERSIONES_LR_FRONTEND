@@ -26,6 +26,7 @@ describe('CrearPublicacionPageComponent', () => {
     precioNoche: 250000,
     tarifaLimpieza: 0,
     reglas: null,
+    motivoBloqueo: null,
   };
 
   let fixture: ComponentFixture<CrearPublicacionPageComponent>;

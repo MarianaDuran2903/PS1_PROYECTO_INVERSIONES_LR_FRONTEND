@@ -25,6 +25,8 @@
           modo="detalle"
           [enviandoRevision]="activacion.idEnviando() === publicacion.idPublicacion"
           (enviarARevision)="enviarARevision(publicacion.idPublicacion)"
+          [pausando]="pausa.idPausando() === publicacion.idPublicacion"
+          (pausar)="pausar(publicacion.idPublicacion)"
         />
       }
     }

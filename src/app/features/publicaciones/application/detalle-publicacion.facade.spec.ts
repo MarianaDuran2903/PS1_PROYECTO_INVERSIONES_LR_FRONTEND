@@ -27,6 +27,7 @@ describe('DetallePublicacionFacade', () => {
     precioNoche: 100000,
     tarifaLimpieza: 0,
     reglas: null,
+    motivoBloqueo: null,
   };
 
   let repository: jasmine.SpyObj<PublicacionRepository>;
