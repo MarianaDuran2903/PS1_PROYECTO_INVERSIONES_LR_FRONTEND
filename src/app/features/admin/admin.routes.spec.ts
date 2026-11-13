@@ -129,7 +129,7 @@ describe('ADMIN_ROUTES: /admin/publicaciones/:id/editar (intervención administr
     controller.verify();
   });
 
-  it('el panel /admin no pide nada al backend y muestra el buscador', async () => {
+  it('el panel /admin no pide nada al backend y ofrece los accesos a la gestión de publicaciones', async () => {
     iniciarSesionCon('ADMINISTRADOR');
     const controller = TestBed.inject(HttpTestingController);
 
@@ -137,7 +137,11 @@ describe('ADMIN_ROUTES: /admin/publicaciones/:id/editar (intervención administr
     await harness.navigateByUrl('/admin');
 
     expect(url()).toBe('/admin');
-    expect(harness.routeNativeElement!.querySelector('app-buscador-publicacion')).not.toBeNull();
+    const hrefs = Array.from(harness.routeNativeElement!.querySelectorAll('a')).map((a) =>
+      a.getAttribute('href'),
+    );
+    expect(hrefs).toContain('/admin/publicaciones');
+    expect(hrefs).toContain('/admin/publicaciones/pendientes');
     controller.verify();
   });
 

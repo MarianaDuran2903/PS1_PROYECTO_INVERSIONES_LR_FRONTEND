@@ -1,54 +1,43 @@
 import { TestBed } from '@angular/core/testing';
-import { provideRouter, Router } from '@angular/router';
+import { provideRouter } from '@angular/router';
 import { AdminHomeComponent } from './admin-home.component';
 
 describe('AdminHomeComponent', () => {
   const crear = () => {
     TestBed.configureTestingModule({ providers: [provideRouter([])] });
-    const router = TestBed.inject(Router);
-    spyOn(router, 'navigate').and.resolveTo(true);
     const fixture = TestBed.createComponent(AdminHomeComponent);
     fixture.detectChanges();
-    return { fixture, element: fixture.nativeElement as HTMLElement, router };
+    return { fixture, element: fixture.nativeElement as HTMLElement };
   };
+  const enlace = (element: HTMLElement, href: string) =>
+    element.querySelector<HTMLAnchorElement>(`a[href="${href}"]`);
 
-  it('muestra el título y el buscador de publicaciones', () => {
+  it('muestra el título del panel', () => {
     const { element } = crear();
 
     expect(element.querySelector('h1')!.textContent).toContain('Administración');
-    expect(element.querySelector('app-buscador-publicacion')).not.toBeNull();
+  });
+
+  it('ofrece el acceso a la gestión de publicaciones', () => {
+    const { element } = crear();
+
+    expect(enlace(element, '/admin/publicaciones')?.textContent?.trim()).toBe(
+      'Gestión de publicaciones',
+    );
   });
 
   it('ofrece el acceso "Publicaciones pendientes de revisión" a la bandeja', () => {
     const { element } = crear();
 
-    const enlace = element.querySelector<HTMLAnchorElement>(
-      'a[href="/admin/publicaciones/pendientes"]',
+    expect(enlace(element, '/admin/publicaciones/pendientes')?.textContent?.trim()).toBe(
+      'Publicaciones pendientes de revisión',
     );
-    expect(enlace?.textContent?.trim()).toBe('Publicaciones pendientes de revisión');
   });
 
-  it('al elegir un número abre la intervención de esa publicación', () => {
-    const { fixture, element, router } = crear();
-    const input = element.querySelector<HTMLInputElement>('#numeroPublicacion')!;
-    input.value = '15';
-    input.dispatchEvent(new Event('input'));
-    fixture.detectChanges();
+  it('ya no tiene el buscador por número: lo reemplazó la gestión de publicaciones', () => {
+    const { element } = crear();
 
-    element.querySelector('form')!.dispatchEvent(new Event('submit'));
-
-    expect(router.navigate).toHaveBeenCalledOnceWith(['/admin', 'publicaciones', 15, 'editar']);
-  });
-
-  it('con un número inválido no navega', () => {
-    const { fixture, element, router } = crear();
-    const input = element.querySelector<HTMLInputElement>('#numeroPublicacion')!;
-    input.value = 'abc';
-    input.dispatchEvent(new Event('input'));
-    fixture.detectChanges();
-
-    element.querySelector('form')!.dispatchEvent(new Event('submit'));
-
-    expect(router.navigate).not.toHaveBeenCalled();
+    expect(element.querySelector('#numeroPublicacion')).toBeNull();
+    expect(element.querySelector('form')).toBeNull();
   });
 });

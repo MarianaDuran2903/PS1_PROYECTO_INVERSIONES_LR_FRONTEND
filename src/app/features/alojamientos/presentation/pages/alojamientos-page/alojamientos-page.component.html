@@ -47,10 +47,19 @@
                 </p>
               </div>
 
-              <p class="tarjeta__precio">
-                <strong>{{ pesos(alojamiento.precioNoche) }}</strong>
-                <span>por noche</span>
-              </p>
+              <div class="tarjeta__lado">
+                <p class="tarjeta__precio">
+                  <strong>{{ pesos(alojamiento.precioNoche) }}</strong>
+                  <span>por noche</span>
+                </p>
+                @if (esAdministrador()) {
+                  <a
+                    class="btn btn--outline"
+                    [routerLink]="['/admin', 'publicaciones', alojamiento.idPublicacion]"
+                    >Gestionar</a
+                  >
+                }
+              </div>
             </li>
           }
         </ul>

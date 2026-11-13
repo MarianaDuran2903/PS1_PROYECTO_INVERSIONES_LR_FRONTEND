@@ -110,6 +110,13 @@
   color: var(--color-text-muted);
 }
 
+.tarjeta__lado {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
 .tarjeta__precio {
   display: flex;
   flex-wrap: wrap;
@@ -167,8 +174,11 @@
     grid-template-columns: auto minmax(0, 1fr);
   }
 
-  .tarjeta__precio {
+  .tarjeta__lado {
     grid-column: 1 / -1;
-    justify-content: flex-start;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
   }
 }

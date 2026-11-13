@@ -37,6 +37,7 @@ describe('EditarPublicacionPageComponent', () => {
     precioNoche: 250000,
     tarifaLimpieza: 30000,
     reglas: 'No fumar',
+    motivoBloqueo: null,
   });
 
   let fixture: ComponentFixture<EditarPublicacionPageComponent>;

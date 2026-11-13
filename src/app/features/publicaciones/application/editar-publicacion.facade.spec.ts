@@ -36,6 +36,7 @@ describe('EditarPublicacionFacade', () => {
     precioNoche: 100000,
     tarifaLimpieza: 0,
     reglas: null,
+    motivoBloqueo: null,
   });
   const datos: ActualizarPublicacion = {
     titulo: 'Casa nueva',

@@ -15,6 +15,16 @@
     </ol>
   </nav>
 
+  @if (esDetalle() && estaBloqueada()) {
+    <div class="ficha__bloqueo" role="note">
+      <p class="ficha__bloqueo-titulo">El Administrador bloqueó esta publicación</p>
+      <p class="ficha__bloqueo-motivo">
+        <strong>Motivo:</strong>
+        {{ publicacion().motivoBloqueo ?? 'No se indicó un motivo.' }}
+      </p>
+    </div>
+  }
+
   <div class="ficha__galeria" role="img" aria-label="Esta publicación todavía no tiene fotos">
     <app-icono-alojamiento class="ficha__galeria-icono" [nombre]="publicacion().tipo.nombre" />
     <p class="ficha__galeria-titulo">{{ publicacion().tipo.nombre }}</p>

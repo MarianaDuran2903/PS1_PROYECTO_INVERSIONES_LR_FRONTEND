@@ -28,6 +28,7 @@ describe('DetallePublicacionPageComponent: enviar a revisión', () => {
     precioNoche: 250000,
     tarifaLimpieza: 30000,
     reglas: null,
+    motivoBloqueo: null,
   });
 
   let fixture: ComponentFixture<DetallePublicacionPageComponent>;

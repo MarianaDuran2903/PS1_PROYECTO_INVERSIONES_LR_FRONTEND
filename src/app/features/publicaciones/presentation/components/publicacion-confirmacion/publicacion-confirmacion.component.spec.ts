@@ -19,6 +19,7 @@ describe('PublicacionConfirmacionComponent', () => {
     precioNoche: 250000,
     tarifaLimpieza: 0,
     reglas: null,
+    motivoBloqueo: null,
   };
 
   let fixture: ComponentFixture<PublicacionConfirmacionComponent>;
@@ -177,6 +178,58 @@ describe('PublicacionConfirmacionComponent', () => {
     element.querySelector<HTMLButtonElement>('.ficha__resumen button')!.click();
 
     expect(veces).toBe(1);
+  });
+
+  describe('motivo del bloqueo (HU-015)', () => {
+    const bloqueada: Publicacion = {
+      ...publicacion,
+      estado: 'BLOQUEADA',
+      motivoBloqueo: 'Las fotos no corresponden al alojamiento',
+    };
+
+    it('en el detalle de una publicación bloqueada muestra un recuadro con el motivo', () => {
+      crear(bloqueada, 'detalle');
+
+      const recuadro = element.querySelector('.ficha__bloqueo')!;
+      expect(recuadro.textContent).toContain('El Administrador bloqueó esta publicación');
+      expect(recuadro.textContent).toContain('Las fotos no corresponden al alojamiento');
+      expect(recuadro.getAttribute('role')).toBe('note');
+    });
+
+    it('si por algún motivo no llegó el texto, lo dice en vez de dejar el recuadro vacío', () => {
+      crear({ ...bloqueada, motivoBloqueo: null }, 'detalle');
+
+      expect(element.querySelector('.ficha__bloqueo')!.textContent).toContain(
+        'No se indicó un motivo.',
+      );
+    });
+
+    it('en otros estados no hay recuadro', () => {
+      for (const estado of ['BORRADOR', 'PENDIENTE_REVISION', 'ACTIVA', 'PAUSADA'] as const) {
+        TestBed.resetTestingModule();
+        crear({ ...publicacion, estado }, 'detalle');
+
+        expect(element.querySelector('.ficha__bloqueo')).withContext(estado).toBeNull();
+      }
+    });
+
+    it('fuera del detalle (modo confirmación) tampoco aparece', () => {
+      crear(bloqueada, 'confirmacion');
+
+      expect(element.querySelector('.ficha__bloqueo')).toBeNull();
+    });
+
+    it('una publicación bloqueada sigue sin poder editarse ni pausarse', () => {
+      crear(bloqueada, 'detalle');
+
+      const acciones = Array.from(
+        element.querySelectorAll('.ficha__resumen button, .ficha__resumen a'),
+      )
+        .map((e) => e.textContent!.trim())
+        .join('|');
+      expect(acciones).not.toContain('Pausar');
+      expect(acciones).not.toContain('Enviar a revisión');
+    });
   });
 
   describe('pausar (HU-014)', () => {

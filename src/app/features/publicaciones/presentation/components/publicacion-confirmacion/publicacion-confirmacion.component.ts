@@ -50,6 +50,7 @@ export class PublicacionConfirmacionComponent {
   protected readonly estado = computed(() => ETIQUETA_ESTADO[this.publicacion().estado]);
   protected readonly esDetalle = computed(() => this.modo() === 'detalle');
   protected readonly esBorrador = computed(() => this.publicacion().estado === 'BORRADOR');
+  protected readonly estaBloqueada = computed(() => this.publicacion().estado === 'BLOQUEADA');
   protected readonly precioNoche = computed(() => formatearPesos(this.publicacion().precioNoche));
   protected readonly tarifaLimpieza = computed(() =>
     formatearPesos(this.publicacion().tarifaLimpieza),

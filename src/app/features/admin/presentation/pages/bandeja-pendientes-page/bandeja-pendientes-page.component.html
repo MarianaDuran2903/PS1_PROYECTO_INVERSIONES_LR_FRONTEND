@@ -38,111 +38,16 @@
 
         <ul class="lista">
           @for (publicacion of facade.publicaciones(); track publicacion.idPublicacion) {
-            <li class="tarjeta">
-              <header class="tarjeta__encabezado">
-                <div>
-                  <h2 class="tarjeta__titulo">{{ publicacion.titulo }}</h2>
-                  <p class="tarjeta__meta">
-                    Publicación n.º {{ publicacion.idPublicacion }} · Anfitrión #{{
-                      publicacion.idAnfitrion
-                    }}
-                  </p>
-                </div>
-                <app-estado-publicacion [estado]="publicacion.estado" />
-              </header>
-
-              <dl class="tarjeta__datos">
-                <div>
-                  <dt>Dirección</dt>
-                  <dd>{{ publicacion.direccionTextual }}</dd>
-                </div>
-                <div>
-                  <dt>Barrio o zona</dt>
-                  <dd>{{ publicacion.barrioZona ?? 'Sin indicar' }}</dd>
-                </div>
-                <div>
-                  <dt>Ciudad</dt>
-                  <dd>{{ publicacion.ciudad.nombre }}</dd>
-                </div>
-                <div>
-                  <dt>Tipo de alojamiento</dt>
-                  <dd>{{ publicacion.tipo.nombre }}</dd>
-                </div>
-                <div>
-                  <dt>Política de cancelación</dt>
-                  <dd>{{ publicacion.politica.nombre }}</dd>
-                </div>
-                <div>
-                  <dt>Capacidad</dt>
-                  <dd>{{ textoCapacidad(publicacion.capacidad) }}</dd>
-                </div>
-                <div>
-                  <dt>Precio por noche</dt>
-                  <dd>{{ pesos(publicacion.precioNoche) }}</dd>
-                </div>
-                <div>
-                  <dt>Tarifa de limpieza</dt>
-                  <dd>{{ pesos(publicacion.tarifaLimpieza) }}</dd>
-                </div>
-              </dl>
-
-              <section class="tarjeta__texto">
-                <h3>Descripción</h3>
-                <p>{{ publicacion.descripcion }}</p>
-              </section>
-              <section class="tarjeta__texto">
-                <h3>Reglas</h3>
-                <p>{{ publicacion.reglas ?? 'El Anfitrión no escribió reglas.' }}</p>
-              </section>
-
-              @if (facade.avisoDe(publicacion.idPublicacion); as aviso) {
-                <div class="alert alert--danger tarjeta__aviso" role="alert">
-                  <p class="tarjeta__aviso-titulo">{{ aviso.mensaje }}</p>
-                  <ul>
-                    @for (pendiente of aviso.pendientes; track pendiente.campo) {
-                      <li [attr.data-campo]="pendiente.campo">{{ pendiente.mensaje }}</li>
-                    }
-                  </ul>
-                  <a
-                    class="btn btn--outline"
-                    [routerLink]="['/admin', 'publicaciones', publicacion.idPublicacion, 'editar']"
-                    >Intervenir publicación</a
-                  >
-                </div>
-              }
-
-              <footer class="tarjeta__acciones">
-                @for (accion of acciones(publicacion.estado); track accion) {
-                  @if (accion === 'aprobar') {
-                    <button
-                      type="button"
-                      class="btn btn--primary"
-                      [disabled]="facade.ocupado()"
-                      [attr.aria-busy]="
-                        facade.idEnCurso() === publicacion.idPublicacion &&
-                        facade.accionEnCurso() === 'aprobar'
-                      "
-                      (click)="facade.aprobar(publicacion.idPublicacion)"
-                    >
-                      {{
-                        facade.idEnCurso() === publicacion.idPublicacion &&
-                        facade.accionEnCurso() === 'aprobar'
-                          ? 'Aprobando…'
-                          : 'Aprobar'
-                      }}
-                    </button>
-                  } @else {
-                    <button
-                      type="button"
-                      class="btn btn--outline"
-                      [disabled]="facade.ocupado()"
-                      (click)="facade.iniciarRechazo(publicacion.idPublicacion)"
-                    >
-                      Rechazar
-                    </button>
-                  }
-                }
-              </footer>
+            <li>
+              <app-tarjeta-publicacion-admin
+                [publicacion]="publicacion"
+                [completa]="true"
+                [acciones]="acciones"
+                [aviso]="facade.avisoDe(publicacion.idPublicacion)"
+                [accionEnCurso]="accionEnCurso(publicacion.idPublicacion)"
+                [ocupado]="facade.ocupado()"
+                (accionar)="accionar(publicacion.idPublicacion, $event)"
+              />
             </li>
           }
         </ul>

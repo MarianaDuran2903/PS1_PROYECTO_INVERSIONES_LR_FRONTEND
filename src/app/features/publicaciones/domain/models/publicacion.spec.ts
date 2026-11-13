@@ -29,15 +29,28 @@ describe('puedePausar', () => {
 });
 
 describe('accionesAdministrador', () => {
-  it('una publicación pendiente de revisión se puede aprobar o rechazar', () => {
-    expect(accionesAdministrador('PENDIENTE_REVISION')).toEqual(['aprobar', 'rechazar']);
-  });
-
-  for (const estado of ['BORRADOR', 'ACTIVA', 'PAUSADA', 'BLOQUEADA'] as const) {
-    it(`en ${estado} el Administrador no tiene acciones de revisión`, () => {
-      expect(accionesAdministrador(estado)).toEqual([]);
+  const esperadas: [EstadoPublicacion, string[]][] = [
+    ['BORRADOR', []],
+    ['PENDIENTE_REVISION', ['aprobar', 'rechazar', 'bloquear']],
+    ['ACTIVA', ['bloquear']],
+    ['PAUSADA', ['reactivar', 'bloquear']],
+    ['BLOQUEADA', ['reactivar']],
+  ];
+  for (const [estado, acciones] of esperadas) {
+    it(`en ${estado}: ${acciones.length > 0 ? acciones.join(', ') : 'ninguna acción'}`, () => {
+      expect(accionesAdministrador(estado)).toEqual(acciones as never);
     });
   }
+
+  it('un borrador no tiene acciones: aún no se ha publicado', () => {
+    expect(accionesAdministrador('BORRADOR')).toEqual([]);
+  });
+
+  it('devuelve una copia: modificarla no cambia las acciones del estado', () => {
+    accionesAdministrador('ACTIVA').push('aprobar');
+
+    expect(accionesAdministrador('ACTIVA')).toEqual(['bloquear']);
+  });
 });
 
 describe('puedeEnviarARevision', () => {

@@ -194,6 +194,26 @@
   color: var(--color-text-muted);
 }
 
+/* El motivo del bloqueo es lo primero que el Anfitrión debe ver en una publicación bloqueada. */
+.ficha__bloqueo {
+  padding: var(--space-4) var(--space-6);
+  border-left: 4px solid var(--color-danger);
+  border-radius: var(--radius-md);
+  color: var(--color-danger);
+  background: var(--color-danger-bg);
+}
+
+.ficha__bloqueo-titulo {
+  margin: 0 0 var(--space-1);
+  font-weight: 700;
+}
+
+.ficha__bloqueo-motivo {
+  margin: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+
 @media (max-width: 900px) {
   .ficha__cuerpo {
     grid-template-columns: minmax(0, 1fr);

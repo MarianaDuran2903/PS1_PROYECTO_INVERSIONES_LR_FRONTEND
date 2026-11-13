@@ -104,6 +104,7 @@ export const PublicacionMapper = {
       precioNoche: dto.precioNoche,
       tarifaLimpieza: dto.tarifaLimpieza,
       reglas: dto.reglas ?? null,
+      motivoBloqueo: dto.motivoBloqueo ?? null,
     };
   },
 };

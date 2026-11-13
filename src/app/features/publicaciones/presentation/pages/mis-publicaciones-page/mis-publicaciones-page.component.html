@@ -83,6 +83,13 @@
                   [deshabilitado]="ocupado()"
                   (enviar)="activacion.solicitar(publicacion.idPublicacion)"
                 />
+                @if (publicacion.estado === 'BLOQUEADA') {
+                  <a
+                    class="btn btn--outline"
+                    [routerLink]="['/anfitrion', 'publicaciones', publicacion.idPublicacion]"
+                    >Ver motivo</a
+                  >
+                }
                 <app-accion-pausa
                   [estado]="publicacion.estado"
                   [pausando]="pausa.idPausando() === publicacion.idPublicacion"

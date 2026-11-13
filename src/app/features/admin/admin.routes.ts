@@ -17,10 +17,13 @@ const REPOSITORIOS_DE_INTERVENCION: Provider[] = [
   { provide: PublicacionRepository, useClass: PublicacionHttpRepository },
 ];
 
-/** La bandeja de revisión solo necesita el repositorio administrativo. */
+/** La gestión, la bandeja de revisión y el detalle solo necesitan el repositorio administrativo. */
 const REPOSITORIO_DE_REVISION: Provider[] = [
   { provide: PublicacionAdminRepository, useClass: PublicacionAdminHttpRepository },
 ];
+
+/** Todas las pantallas de gestión exigen sesión y rol Administrador. */
+const GUARDS_DE_GESTION = [autenticadoGuard, rolGuard([RolUsuario.Administrador])];
 
 export const ADMIN_ROUTES: Routes = [
   {
@@ -33,19 +36,41 @@ export const ADMIN_ROUTES: Routes = [
       ),
   },
   {
+    path: 'publicaciones',
+    title: 'Gestión de publicaciones | Inversiones LR',
+    pathMatch: 'full',
+    canActivate: GUARDS_DE_GESTION,
+    providers: REPOSITORIO_DE_REVISION,
+    loadComponent: () =>
+      import('./presentation/pages/gestion-publicaciones-page/gestion-publicaciones-page.component').then(
+        (m) => m.GestionPublicacionesPageComponent,
+      ),
+  },
+  {
     path: 'publicaciones/pendientes',
     title: 'Publicaciones pendientes | Inversiones LR',
-    canActivate: [autenticadoGuard, rolGuard([RolUsuario.Administrador])],
+    canActivate: GUARDS_DE_GESTION,
     providers: REPOSITORIO_DE_REVISION,
     loadComponent: () =>
       import('./presentation/pages/bandeja-pendientes-page/bandeja-pendientes-page.component').then(
         (m) => m.BandejaPendientesPageComponent,
       ),
   },
+  // Va después de `pendientes`, que si no se tomaría por un id.
+  {
+    path: 'publicaciones/:id',
+    title: 'Detalle de la publicación | Inversiones LR',
+    canActivate: GUARDS_DE_GESTION,
+    providers: REPOSITORIO_DE_REVISION,
+    loadComponent: () =>
+      import('./presentation/pages/detalle-publicacion-admin-page/detalle-publicacion-admin-page.component').then(
+        (m) => m.DetallePublicacionAdminPageComponent,
+      ),
+  },
   {
     path: 'publicaciones/:id/editar',
     title: 'Intervenir publicación | Inversiones LR',
-    canActivate: [autenticadoGuard, rolGuard([RolUsuario.Administrador])],
+    canActivate: GUARDS_DE_GESTION,
     // Pide confirmación al salir con cambios sin guardar.
     canDeactivate: [cambiosSinGuardarGuard],
     providers: REPOSITORIOS_DE_INTERVENCION,

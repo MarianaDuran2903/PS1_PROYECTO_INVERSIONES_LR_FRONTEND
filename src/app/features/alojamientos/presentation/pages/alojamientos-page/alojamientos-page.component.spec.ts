@@ -1,6 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { ApiError } from '@core/http/api-error';
+import { SESSION_STORAGE_KEY, SessionService } from '@features/auth/application/session.service';
+import { RolUsuario } from '@features/auth/domain/models/rol-usuario';
 import {
   PaginaPublicaciones,
   PublicacionResumen,
@@ -146,6 +148,80 @@ describe('AlojamientosPageComponent', () => {
       'No hay alojamientos disponibles por el momento',
     );
     expect(tarjetas().length).toBe(0);
+  });
+
+  describe('acceso «Gestionar» del Administrador (HU-015)', () => {
+    let session: SessionService;
+
+    const iniciarSesionCon = (...roles: RolUsuario[]) =>
+      session.iniciar({
+        accessToken: 'tok',
+        expiraEn: Date.now() + 3_600_000,
+        usuario: {
+          idUsuario: 1,
+          primerNombre: 'Ana',
+          primerApellido: 'Ruiz',
+          correo: 'a@b.co',
+          roles,
+        },
+      });
+    const gestionar = () =>
+      tarjetas().map((t) =>
+        Array.from(t.querySelectorAll('a')).find((a) => a.textContent?.trim() === 'Gestionar'),
+      );
+
+    beforeEach(() => {
+      sessionStorage.removeItem(SESSION_STORAGE_KEY);
+      session = TestBed.inject(SessionService);
+    });
+
+    afterEach(() => {
+      session.cerrar();
+      sessionStorage.removeItem(SESSION_STORAGE_KEY);
+    });
+
+    it('si la sesión es de Administrador, cada tarjeta muestra «Gestionar» hacia su gestión', () => {
+      iniciarSesionCon('ADMINISTRADOR');
+
+      crear();
+
+      expect(gestionar().map((a) => a?.getAttribute('href'))).toEqual([
+        '/admin/publicaciones/2',
+        '/admin/publicaciones/1',
+      ]);
+    });
+
+    it('una cuenta con varios roles, entre ellos Administrador, también lo ve', () => {
+      iniciarSesionCon('ANFITRION', 'ADMINISTRADOR');
+
+      crear();
+
+      expect(gestionar().every((a) => a !== undefined)).toBeTrue();
+    });
+
+    for (const rol of ['HUESPED', 'ANFITRION'] as const) {
+      it(`un ${rol} no ve «Gestionar»`, () => {
+        iniciarSesionCon(rol);
+
+        crear();
+
+        expect(gestionar().every((a) => a === undefined)).toBeTrue();
+      });
+    }
+
+    it('un Visitante sin sesión no ve «Gestionar»', () => {
+      crear();
+
+      expect(gestionar().every((a) => a === undefined)).toBeTrue();
+    });
+
+    it('con «Gestionar» sigue sin abrirse un detalle público: el título no es un enlace', () => {
+      iniciarSesionCon('ADMINISTRADOR');
+
+      crear();
+
+      expect(tarjetas()[0].querySelector('.tarjeta__titulo a')).toBeNull();
+    });
   });
 
   describe('paginación', () => {
