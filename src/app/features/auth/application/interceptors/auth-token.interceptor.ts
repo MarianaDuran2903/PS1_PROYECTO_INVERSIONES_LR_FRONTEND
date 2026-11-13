@@ -3,6 +3,7 @@ import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { APP_CONFIG } from '@core/config/app-config';
 import { ApiError } from '@core/http/api-error';
+import { OMITIR_AVISO_403 } from '@core/http/http-contexts';
 import { ToastService } from '@core/notifications/toast.service';
 import { catchError, throwError } from 'rxjs';
 import { SessionService } from '../session.service';
@@ -15,7 +16,8 @@ const RUTAS_PUBLICAS = ['/auth/login', '/auth/registro', '/auth/recuperacion'];
  *   hosts), excepto login, registro y recuperación de contraseña.
  * - 401 con una sesión abierta: el token venció o no es válido; cierra la sesión y lleva a
  *   `/login?expirada=true`.
- * - 403: muestra el aviso de permisos y NO cierra la sesión.
+ * - 403: muestra el aviso de permisos y NO cierra la sesión, salvo que la petición lleve
+ *   `OMITIR_AVISO_403` porque la pantalla ya explica el motivo.
  * Debe ir antes de `httpErrorInterceptor` para ver el `ApiError` ya normalizado.
  */
 export const authTokenInterceptor: HttpInterceptorFn = (req, next) => {
@@ -38,7 +40,7 @@ export const authTokenInterceptor: HttpInterceptorFn = (req, next) => {
         if (error.status === 401 && token !== null) {
           session.cerrar();
           void router.navigate(['/login'], { queryParams: { expirada: 'true' } });
-        } else if (error.status === 403) {
+        } else if (error.status === 403 && !req.context.get(OMITIR_AVISO_403)) {
           toast.error('Sin permisos', error.message);
         }
       }

@@ -38,9 +38,15 @@ El proyecto avanza funcionalidad por funcionalidad, según la matriz de requerim
 | RF-USR-004 | Recuperar la contraseña de forma simulada (HU-004): solicitud y nueva contraseña | Hecho |
 | RF-USR-005 a 007 | Perfil y activar/desactivar cuenta | Pendiente |
 | RF-ALOJ, RF-BUS, RF-COT, RF-RES, RF-PAG | Publicaciones, búsqueda, cotización, reservas y pago simulado | Pendiente |
+| RF-USR-004 a 007 | Recuperar contraseña, perfil y activar/desactivar cuenta | Pendiente |
+| RF-ALOJ (HU-008) | Crear una publicación de alojamiento (Anfitrión), guardada como borrador | Hecho (pendiente de probar contra el backend con los endpoints de publicaciones) |
+| RF-ALOJ (HU-009) | Editar una publicación propia (Anfitrión) en BORRADOR o PAUSADA | Hecho (pendiente de probar contra el backend con GET y PUT de publicaciones) |
+| RF-ALOJ (HU-010) | Consultar mis publicaciones (Anfitrión): listado paginado con el estado de cada una | Hecho |
+| RF-ALOJ (HU-011) | Editar una publicación con autorización administrativa (Administrador), con motivo registrado | Hecho |
+| RF-ALOJ (resto), RF-BUS, RF-COT, RF-RES, RF-PAG | Listado y edición de publicaciones, búsqueda, cotización, reservas y pago simulado | Pendiente |
 | RF-NOT, RF-RSC, RF-ADM, RF-DASH, RF-REP | Notificaciones, reseñas, administración, indicadores y reportes | Pendiente |
 
-Las páginas `/marketplace`, `/anfitrion` y `/admin` son provisionales: solo muestran un mensaje hasta que se implementen sus historias.
+Las páginas `/marketplace`, `/anfitrion` (salvo la de nueva publicación) y `/admin` son provisionales: solo muestran un mensaje hasta que se implementen sus historias.
 
 ## Tecnologías
 
@@ -272,7 +278,12 @@ presentation  →  application  →  domain  ←  data
 | `/recuperar-contrasena` y `/restablecer-contrasena` (`?token=…`) | Solo quien no tiene sesión |
 | `/marketplace` | Huésped |
 | `/anfitrion` | Anfitrión |
-| `/admin` | Administrador |
+| `/anfitrion/publicaciones` | Anfitrión (Mis publicaciones: listado paginado de las suyas) |
+| `/anfitrion/publicaciones/nueva` | Anfitrión (formulario de nueva publicación) |
+| `/anfitrion/publicaciones/:id` | Anfitrión propietario (detalle de una publicación; se abre desde el listado) |
+| `/anfitrion/publicaciones/:id/editar` | Anfitrión propietario (editar una publicación; pide confirmación si hay cambios sin guardar) |
+| `/admin` | Administrador (panel con el buscador de publicaciones) |
+| `/admin/publicaciones/:id/editar` | Administrador (intervenir una publicación con un motivo; pide confirmación si hay cambios sin guardar) |
 | `/acceso-denegado` ("Sin permisos") | Se muestra cuando hay sesión pero el rol no alcanza |
 
 - Sin sesión, una ruta protegida lleva a `/login?returnUrl=…` y, tras iniciar sesión, vuelve a la página pedida.
@@ -349,6 +360,77 @@ Dos endpoints públicos: el frontend **no envía `Authorization`** y el intercep
 
 Se llama al arrancar la app si hay un token guardado (`provideAppInitializer`) para recuperar el usuario y el rol. Si responde `401` se limpia la sesión y se lleva a `/login?expirada=true`.
 
+### Publicaciones (HU-008)
+
+| Método y ruta | Acceso | Uso |
+|---|---|---|
+| `GET /ciudades` | Cualquier rol con token | Lista desplegable de ciudades (`[{ id, nombre }]`, ordenadas por nombre) |
+| `GET /tipos-alojamiento` | Cualquier rol con token | Tipos de alojamiento, que el formulario muestra como opciones |
+| `POST /publicaciones` | Solo ANFITRION | Crea la publicación en estado BORRADOR |
+
+Cuerpo del POST: `titulo`, `descripcion`, `direccionTextual`, `idCiudad`, `barrioZona` (opcional, `null` si queda vacío), `idTipo`, `capacidad` (entero) y `precioNoche` (número, máximo 2 decimales), enviados como números. **No se envían** `idAnfitrion`, `estado` ni `politica`: los fija el servidor. Un `201` devuelve la publicación (estado `BORRADOR`, política "Flexible", `tarifaLimpieza` 0) y el frontend muestra una ficha de confirmación; un `400` con `errores` se muestra bajo cada campo.
+
+Límites del formulario (iguales a los del backend): título 150, descripción 1000 (con contador), dirección 250 y barrio o zona 120 caracteres; capacidad entera mayor que 0; precio mayor que 0, con punto decimal (no coma), máximo 2 decimales y 10 enteros.
+
+### Editar una publicación (HU-009)
+
+| Método y ruta | Acceso | Uso |
+|---|---|---|
+| `GET /publicaciones/{id}` | Solo ANFITRION propietario | Cargar la publicación para precargar el formulario |
+| `PUT /publicaciones/{id}` | Solo ANFITRION propietario | Guardar los cambios (reemplaza todos los campos editables) |
+
+El cuerpo del PUT lleva **todos** los campos aunque no hayan cambiado: los de crear más `tarifaLimpieza` (obligatoria, mayor o igual a 0, máximo 2 decimales) y `reglas` (opcional, máximo 2000 caracteres). Se envían como números JSON con punto decimal, nunca `idAnfitrion`, `estado` ni `politica`. `barrioZona` y `reglas` vacíos viajan como `null`.
+
+El estado decide si se puede editar: **BORRADOR y PAUSADA** sí; **ACTIVA**, **PENDIENTE_REVISION** y **BLOQUEADA** abren el formulario en solo lectura con su aviso.
+
+| Respuesta | Qué hace el frontend |
+|---|---|
+| `200` | "Cambios guardados" y vuelve al listado "Mis publicaciones" |
+| `400` con `errores` | Cada mensaje bajo su campo; no borra lo escrito (si no trae `errores`, el mensaje va arriba del formulario) |
+| `403` | "No puedes editar esta publicación" y vuelve al listado (sin el aviso global de "Sin permisos") |
+| `404` | "La publicación no existe" y vuelve al listado |
+| `409` | Muestra el `mensaje` y pasa el formulario a solo lectura (el estado cambió mientras estaba abierto) |
+| `401` | Lo resuelve el interceptor (cierra sesión y lleva al login) |
+
+Cancelar o salir con cambios sin guardar pide confirmación. El botón "Editar" de la ficha solo está activo en BORRADOR o PAUSADA; en los demás estados explica el motivo con un tooltip. Desde HU-010 el punto de entrada habitual es el listado "Mis publicaciones"; la ficha que aparece al crear también lleva a la edición.
+
+### Consultar mis publicaciones (HU-010)
+
+| Método y ruta | Acceso | Uso |
+|---|---|---|
+| `GET /publicaciones/mias?pagina=0&tamano=10` | Solo ANFITRION | Página de las publicaciones del Anfitrión autenticado |
+
+El frontend envía siempre `tamano=10`; `pagina` empieza en 0. La respuesta es `{ contenido: [{ idPublicacion, titulo, estado, ciudad, tipo, capacidad, precioNoche }], pagina, tamano, totalElementos, totalPaginas, mensaje }`. El backend ya devuelve **solo** las del Anfitrión de la sesión y las ordena de la más reciente a la más antigua, así que el frontend **no filtra ni reordena**.
+
+- Cada tarjeta muestra el título, el tipo (con su icono), la ciudad, la capacidad, el precio en pesos y la etiqueta de color del estado vigente (Borrador, Pendiente de revisión, Activa, Pausada o Bloqueada). No hay imágenes: el resumen no trae URL.
+- Cada tarjeta es un enlace al **detalle** (`/anfitrion/publicaciones/:id`, con `GET /publicaciones/{id}`): al tocar el título o cualquier parte de la tarjeta se abre la ficha de esa publicación, con un botón para volver al listado. Si la publicación es de otro Anfitrión (403) o no existe (404), avisa y vuelve al listado.
+- "Editar" solo está activo en BORRADOR y PAUSADA; en los demás estados queda deshabilitado con un tooltip que explica el motivo.
+- Sin publicaciones, el backend responde `contenido: []` y `mensaje: "No tiene publicaciones registradas"`; se muestra ese mensaje con un botón "Crear publicación", sin información de otros Anfitriones.
+- La paginación ("Anterior", "Página X de Y", "Siguiente") se oculta si `totalPaginas` es 1 o menos.
+- Un 400 (paginación inválida) o un fallo de red muestran un aviso con "Reintentar".
+
+### Intervención administrativa de una publicación (HU-011)
+
+| Método y ruta | Acceso | Uso |
+|---|---|---|
+| `GET /admin/publicaciones/{id}` | Solo ADMINISTRADOR | Cargar cualquier publicación (de cualquier Anfitrión) para precargar el formulario |
+| `PUT /admin/publicaciones/{id}` | Solo ADMINISTRADOR | Guardar la intervención con su motivo |
+
+El cuerpo del PUT es `{ "motivo": "...", "cambios": { ...mismos campos que la edición del Anfitrión... } }`. El **motivo es obligatorio, de 10 a 500 caracteres**, y el backend lo guarda en la auditoría junto con quién interviene (el Administrador del token) y cuándo. La intervención no cambia el estado ni el propietario.
+
+El Administrador interviene en cualquier estado **salvo ACTIVA**: una activa debe pausarse antes, y el formulario queda en solo lectura con el mensaje del backend ("La publicación está activa: páusela antes de intervenirla"). En PENDIENTE_REVISION las reglas son obligatorias.
+
+| Respuesta | Qué hace el frontend |
+|---|---|
+| `200` | "Intervención registrada" y vuelve al panel `/admin` |
+| `400` con `errores` | Cada mensaje bajo su campo (las claves del backend vienen como `cambios.capacidad` y `motivo`); no borra lo escrito |
+| `403` | Lleva a "Sin permisos" (la ruta está protegida con el guard de rol Administrador) |
+| `404` | "La publicación no existe" y vuelve al panel |
+| `409` | Muestra el mensaje y pasa el formulario a solo lectura |
+| `401` | Lo resuelve el interceptor (cierra sesión y lleva al login) |
+
+Como el backend solo permite consultar por número, la entrada es un campo "Número de publicación" en `/admin` (componente `buscador-publicacion`, pensado para reemplazarse por una bandeja de publicaciones sin tocar la pantalla de intervención). La pantalla `/admin/publicaciones/:id/editar` reutiliza el formulario de publicación en su modo `intervenir`, que añade el campo del motivo con su contador.
+
 ### Errores y sesión
 
 Todos los endpoints devuelven `{ fecha, estado, error, mensaje, ruta, errores? }`. `401` en una ruta protegida: cierra la sesión y lleva a `/login?expirada=true`. `403`: aviso "Sin permisos" con el `mensaje`, sin cerrar la sesión. Un temporizador cierra la sesión sola al vencer el token (60 minutos, sin renovación).
@@ -360,6 +442,7 @@ El registro oficial de auditoría (tabla `evento_auditoria`) lo escribe el backe
 ## Pruebas y calidad
 
 - **Pruebas unitarias** con Karma y Jasmine: 194 pruebas en 23 archivos. Cada capa se prueba aislada: validadores y mappers (funciones puras), repositorio HTTP con `HttpTestingController`, facades con repositorios falsos, guards, interceptores y componentes sobre su DOM.
+- **Pruebas unitarias** con Karma y Jasmine: 599 pruebas en 51 archivos. Cada capa se prueba aislada: validadores y mappers (funciones puras), repositorio HTTP con `HttpTestingController`, facades con repositorios falsos, guards, interceptores y componentes sobre su DOM.
 - **Cobertura**: `npm run test:ci` genera `coverage/` con reporte HTML y `lcov.info` (que lee Sonar).
 - **Lint y formato**: `npm run lint` y `npm run format:check` deben quedar limpios antes de abrir un Pull Request.
 

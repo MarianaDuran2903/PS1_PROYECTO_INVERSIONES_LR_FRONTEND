@@ -1,0 +1,103 @@
+<section class="pagina" aria-labelledby="mis-titulo">
+  <header class="pagina__encabezado">
+    <div>
+      <h1 id="mis-titulo">Mis publicaciones</h1>
+      <p>Los alojamientos que gestionas y su estado actual.</p>
+    </div>
+    <a class="btn btn--primary" routerLink="/anfitrion/publicaciones/nueva">Nueva publicación</a>
+  </header>
+
+  @switch (facade.estado()) {
+    @case ('cargando') {
+      <p class="pagina__estado" role="status">
+        <span class="pagina__spinner" aria-hidden="true"></span>
+        Cargando tus publicaciones…
+      </p>
+    }
+    @case ('error') {
+      <div class="alert alert--danger pagina__error" role="alert">
+        <span>No fue posible cargar tus publicaciones.</span>
+        <button type="button" class="btn btn--outline" (click)="facade.reintentar()">
+          Reintentar
+        </button>
+      </div>
+    }
+    @default {
+      @if (facade.vacia()) {
+        <div class="vacio" role="status">
+          <app-icono-alojamiento class="vacio__icono" nombre="" />
+          <p class="vacio__mensaje">{{ facade.mensajeVacio() }}</p>
+          <a class="btn btn--primary" routerLink="/anfitrion/publicaciones/nueva"
+            >Crear publicación</a
+          >
+        </div>
+      } @else {
+        <p class="total">
+          {{ facade.totalElementos() }}
+          {{ facade.totalElementos() === 1 ? 'publicación' : 'publicaciones' }}
+        </p>
+
+        <ul class="lista">
+          @for (publicacion of facade.publicaciones(); track publicacion.idPublicacion) {
+            <li class="tarjeta">
+              <span class="tarjeta__icono">
+                <app-icono-alojamiento [nombre]="publicacion.tipo.nombre" />
+              </span>
+
+              <div class="tarjeta__datos">
+                <h2 class="tarjeta__titulo">
+                  <a
+                    class="tarjeta__enlace"
+                    [routerLink]="['/anfitrion', 'publicaciones', publicacion.idPublicacion]"
+                    >{{ publicacion.titulo }}</a
+                  >
+                </h2>
+                <p class="tarjeta__meta">
+                  {{ publicacion.tipo.nombre }} · {{ publicacion.ciudad.nombre }} ·
+                  {{ textoCapacidad(publicacion.capacidad) }}
+                </p>
+              </div>
+
+              <div class="tarjeta__lado">
+                <app-estado-publicacion [estado]="publicacion.estado" />
+                <p class="tarjeta__precio">
+                  <strong>{{ pesos(publicacion.precioNoche) }}</strong>
+                  <span>por noche</span>
+                </p>
+                <app-boton-editar-publicacion
+                  texto="Editar"
+                  [idPublicacion]="publicacion.idPublicacion"
+                  [estado]="publicacion.estado"
+                />
+              </div>
+            </li>
+          }
+        </ul>
+
+        @if (facade.hayVariasPaginas()) {
+          <nav class="paginacion" aria-label="Paginación de publicaciones">
+            <button
+              type="button"
+              class="btn btn--outline"
+              [disabled]="!facade.hayAnterior()"
+              (click)="facade.anterior()"
+            >
+              Anterior
+            </button>
+            <span class="paginacion__texto">
+              Página {{ facade.paginaActual() + 1 }} de {{ facade.totalPaginas() }}
+            </span>
+            <button
+              type="button"
+              class="btn btn--outline"
+              [disabled]="!facade.haySiguiente()"
+              (click)="facade.siguiente()"
+            >
+              Siguiente
+            </button>
+          </nav>
+        }
+      }
+    }
+  }
+</section>

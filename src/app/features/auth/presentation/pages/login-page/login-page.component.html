@@ -16,6 +16,12 @@
     </div>
   }
 
+  @if (cuentaDesactivada() === 'true') {
+    <div class="alert alert--info login__alerta" role="status">
+      Tu cuenta está desactivada. Inicia sesión para reactivarla.
+    </div>
+  }
+
   @if (facade.mensajeError(); as mensaje) {
     <div class="alert alert--danger login__alerta" role="alert">{{ mensaje }}</div>
   }
@@ -29,3 +35,36 @@
 
   <p class="login__pie">¿Aún no tienes cuenta? <a routerLink="/registro">Regístrate</a></p>
 </section>
+
+@if (facade.cuentaDesactivada()) {
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-cuenta-titulo">
+    <div class="modal__contenido">
+      <h2 id="modal-cuenta-titulo">Cuenta desactivada</h2>
+      <p>Tu cuenta está desactivada. ¿Deseas reactivarla para volver a acceder?</p>
+
+      @if (facade.mensajeError(); as mensaje) {
+        <p class="modal__error" role="alert">{{ mensaje }}</p>
+      }
+
+      <div class="modal__acciones">
+        <button
+          type="button"
+          class="modal__confirmar"
+          (click)="facade.confirmarReactivacion()"
+          [disabled]="facade.reactivando()"
+        >
+          {{ facade.reactivando() ? 'Reactivando…' : 'Activar cuenta' }}
+        </button>
+
+        <button
+          type="button"
+          class="modal__cancelar"
+          (click)="facade.cancelarReactivacion()"
+          [disabled]="facade.reactivando()"
+        >
+          Cancelar
+        </button>
+      </div>
+    </div>
+  </div>
+}
