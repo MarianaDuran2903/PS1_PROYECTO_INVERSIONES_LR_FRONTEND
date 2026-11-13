@@ -35,6 +35,9 @@ El proyecto avanza funcionalidad por funcionalidad, según la matriz de requerim
 | RNF-ARQ-001 | Frontend desacoplado que consume servicios REST | Hecho |
 | RNF-OPC-001 | Aplicación ejecutable en contenedores (Docker) | Hecho |
 | RNF-MAN-001 / 002 | Quality Gate de SonarQube Cloud y revisión de cambios | Configurado (CI y plantilla de PR) |
+| RF-USR-004 | Recuperar la contraseña de forma simulada (HU-004): solicitud y nueva contraseña | Hecho |
+| RF-USR-005 a 007 | Perfil y activar/desactivar cuenta | Pendiente |
+| RF-ALOJ, RF-BUS, RF-COT, RF-RES, RF-PAG | Publicaciones, búsqueda, cotización, reservas y pago simulado | Pendiente |
 | RF-USR-004 a 007 | Recuperar contraseña, perfil y activar/desactivar cuenta | Pendiente |
 | RF-ALOJ (HU-008) | Crear una publicación de alojamiento (Anfitrión), guardada como borrador | Hecho (pendiente de probar contra el backend con los endpoints de publicaciones) |
 | RF-ALOJ (HU-009) | Editar una publicación propia (Anfitrión) en BORRADOR o PAUSADA | Hecho (pendiente de probar contra el backend con GET y PUT de publicaciones) |
@@ -279,6 +282,8 @@ presentation  →  application  →  domain  ←  data
 | `/registro` (`?rol=anfitrion` preselecciona Anfitrión) | Solo quien no tiene sesión |
 | `/alojamientos` | Todos (listado público de alojamientos disponibles, sin sesión) |
 | `/marketplace` | Huésped (el mismo listado de alojamientos disponibles) |
+| `/recuperar-contrasena` y `/restablecer-contrasena` (`?token=…`) | Solo quien no tiene sesión |
+| `/marketplace` | Huésped |
 | `/anfitrion` | Anfitrión |
 | `/anfitrion/publicaciones` | Anfitrión (Mis publicaciones: listado paginado de las suyas) |
 | `/anfitrion/publicaciones/nueva` | Anfitrión (formulario de nueva publicación) |
@@ -334,6 +339,32 @@ Cuerpo `{ "correo": "...", "contrasena": "..." }`. En el login la contraseña so
 |---|---|
 | `200` con `{ token, tipo, expiraEn, usuario }` | Guarda la sesión (token + vencimiento `ahora + expiraEn × 1000`) y redirige según el rol |
 | `401` | Siempre el mensaje genérico que llega ("Correo o contraseña incorrectos"); nunca indica si el correo existe ni el estado de la cuenta |
+
+### Recuperación de contraseña simulada (HU-004)
+
+Dos endpoints públicos: el frontend **no envía `Authorization`** y el interceptor de autenticación los ignora.
+
+| Método y ruta | Cuerpo | Uso |
+|---|---|---|
+| `POST /auth/recuperacion/solicitud` | `{ "correo": "..." }` | Pedir las instrucciones de recuperación |
+| `POST /auth/recuperacion/restablecer` | `{ "token": "...", "contrasena": "...", "confirmarContrasena": "..." }` | Fijar la nueva contraseña con el código recibido |
+
+| Respuesta | Qué hace el frontend |
+|---|---|
+| Solicitud `202` con `{ mensaje }` | Reemplaza el formulario por ese mensaje. Es el mismo exista o no el correo (o esté la cuenta inactiva), así que la pantalla nunca revela si el correo existe |
+| Solicitud `400` con `errores.correo` | El mensaje junto al campo |
+| Restablecer `200` con `{ mensaje }` | Estado de éxito con el mensaje y el botón "Ir a iniciar sesión" |
+| Restablecer `400` con `errores` (`token`, `contrasena`, `confirmarContrasena`) | Cada mensaje junto a su campo y el foco en el primero |
+| Restablecer `400` sin `errores` | El enlace no sirve (token inexistente, vencido o ya usado, con el mismo mensaje en los tres casos): muestra el mensaje y el botón "Solicitar un nuevo enlace" |
+| Red o `5xx` | Mensaje genérico; el formulario conserva lo escrito |
+
+**Pantallas.** `/recuperar-contrasena` (correo, hasta 254 caracteres) y `/restablecer-contrasena`. El código llega en `?token=...`: se lee al abrir la pantalla, se guarda solo en memoria del componente y se quita de la URL con `replaceUrl`; si no viene, hay un campo para pegarlo. Ambas rutas son solo para quien no tiene sesión, y el login tiene el enlace "¿Olvidaste tu contraseña?".
+
+**Contraseña.** La misma regla del registro (de 8 a 64 caracteres, mayúscula, minúscula, número, carácter especial, sin espacios, máximo 72 bytes en UTF-8). El checklist en vivo y el validador usan la misma función (`analizarContrasena`), así que no hay dos versiones de la regla.
+
+**Seguridad.** El token y las contraseñas no se escriben en consola, `localStorage` ni `sessionStorage`, y no van a la traza del cliente (los eventos `RECUPERACION_SOLICITADA`, `CONTRASENA_RESTABLECIDA` y `RESTABLECIMIENTO_FALLIDO` llevan como mucho el motivo).
+
+**Modo simulado.** El correo no se envía: el backend escribe el token en su log como `CORREO_SIMULADO_RECUPERACION`. Fuera de producción, las pantallas muestran una nota que lo recuerda, y tras solicitar aparece el enlace "Ya tengo mi código de recuperación".
 
 ### `GET /auth/sesion`
 
@@ -516,6 +547,8 @@ El registro oficial de auditoría (tabla `evento_auditoria`) lo escribe el backe
 ## Pruebas y calidad
 
 - **Pruebas unitarias** con Karma y Jasmine: 1084 pruebas en 84 archivos. Cada capa se prueba aislada: validadores y mappers (funciones puras), repositorio HTTP con `HttpTestingController`, facades con repositorios falsos, guards, interceptores y componentes sobre su DOM.
+- **Pruebas unitarias** con Karma y Jasmine: 194 pruebas en 23 archivos. Cada capa se prueba aislada: validadores y mappers (funciones puras), repositorio HTTP con `HttpTestingController`, facades con repositorios falsos, guards, interceptores y componentes sobre su DOM.
+- **Pruebas unitarias** con Karma y Jasmine: 599 pruebas en 51 archivos. Cada capa se prueba aislada: validadores y mappers (funciones puras), repositorio HTTP con `HttpTestingController`, facades con repositorios falsos, guards, interceptores y componentes sobre su DOM.
 - **Cobertura**: `npm run test:ci` genera `coverage/` con reporte HTML y `lcov.info` (que lee Sonar).
 - **Lint y formato**: `npm run lint` y `npm run format:check` deben quedar limpios antes de abrir un Pull Request.
 

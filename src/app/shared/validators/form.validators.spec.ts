@@ -1,5 +1,6 @@
-import { FormControl, FormGroup } from '@angular/forms';
+import { FormControl, FormGroup, Validators } from '@angular/forms';
 import {
+  analizarContrasena,
   decimalNoNegativo,
   decimalPositivo,
   EMAIL_PATTERN,
@@ -7,6 +8,8 @@ import {
   longitudEntre,
   matchFields,
   notBlank,
+  PASSWORD_MAX_LENGTH,
+  PASSWORD_MIN_LENGTH,
   personName,
   strongPassword,
 } from './form.validators';
@@ -116,6 +119,84 @@ describe('form.validators', () => {
       expect(firstErrorMessage({ passwordStrength: true })).toBe(
         'La contraseña debe tener al menos una mayúscula, una minúscula, un número y un carácter especial, sin espacios',
       );
+    });
+  });
+
+  describe('contraseña de la recuperación (tabla del contrato HU-004)', () => {
+    const largoValido = (valor: string) =>
+      Validators.minLength(PASSWORD_MIN_LENGTH)(new FormControl(valor)) === null &&
+      Validators.maxLength(PASSWORD_MAX_LENGTH)(new FormControl(valor)) === null;
+    const errores = (valor: string) => {
+      const control = new FormControl(valor);
+      return (
+        Validators.minLength(PASSWORD_MIN_LENGTH)(control) ??
+        Validators.maxLength(PASSWORD_MAX_LENGTH)(control) ??
+        strongPassword()(control)
+      );
+    };
+
+    const casos: [string, string, boolean][] = [
+      ['sin mayúscula', 'nueva#456', false],
+      ['sin minúscula', 'NUEVA#456', false],
+      ['sin número', 'Nueva#abc', false],
+      ['sin carácter especial', 'Nueva4567', false],
+      ['con espacio', 'Nueva #456', false],
+      ['de 7 caracteres', 'Nue#4a6', false],
+      ['de 65 caracteres', 'Nueva#456' + 'a'.repeat(56), false],
+      ['de 64 caracteres', 'Nueva#456' + 'a'.repeat(55), true],
+      ['de 8 caracteres', 'Nuev#456', true],
+      ['válida del ejemplo', 'Nueva#456', true],
+    ];
+    for (const [descripcion, valor, valida] of casos) {
+      it(`${valida ? 'acepta' : 'rechaza'} una contraseña ${descripcion}`, () => {
+        expect(errores(valor) === null).toBe(valida);
+      });
+    }
+
+    it('el largo de 8 a 64 se mide en caracteres', () => {
+      expect(largoValido('1234567')).toBeFalse();
+      expect(largoValido('12345678')).toBeTrue();
+      expect(largoValido('a'.repeat(65))).toBeFalse();
+    });
+
+    it('la confirmación igual no da error y la distinta sí', () => {
+      const grupo = (a: string, b: string) =>
+        new FormGroup(
+          { contrasena: new FormControl(a), confirmarContrasena: new FormControl(b) },
+          { validators: matchFields('contrasena', 'confirmarContrasena') },
+        );
+      expect(grupo('Nueva#456', 'Nueva#456').errors).toBeNull();
+      expect(grupo('Nueva#456', 'Nueva#457').errors).toEqual({ fieldsMismatch: true });
+    });
+  });
+
+  describe('analizarContrasena', () => {
+    it('detecta cada clase de carácter', () => {
+      expect(analizarContrasena('Nueva#456')).toEqual({
+        mayuscula: true,
+        minuscula: true,
+        numero: true,
+        especial: true,
+        espacio: false,
+        bytes: 9,
+      });
+    });
+
+    it('marca el espacio y cuenta los bytes UTF-8 de las tildes', () => {
+      const resultado = analizarContrasena('Ñ a');
+      expect(resultado.espacio).toBeTrue();
+      expect(resultado.bytes).toBe(4);
+    });
+
+    it('en un texto vacío no hay nada', () => {
+      expect(analizarContrasena('')).toEqual({
+        mayuscula: false,
+        minuscula: false,
+        numero: false,
+        especial: false,
+        espacio: false,
+        bytes: 0,
+      });
     });
   });
 

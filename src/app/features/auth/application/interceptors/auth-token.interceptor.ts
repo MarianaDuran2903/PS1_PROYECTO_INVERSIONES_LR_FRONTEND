@@ -14,6 +14,11 @@ const RUTAS_PUBLICAS = ['/auth/login', '/auth/registro', '/alojamientos'];
 /**
  * - Agrega `Authorization: Bearer <token>` solo a las peticiones a nuestro API (nunca a otros
  *   hosts), excepto login, registro y el listado público de alojamientos.
+const RUTAS_PUBLICAS = ['/auth/login', '/auth/registro', '/auth/recuperacion'];
+
+/**
+ * - Agrega `Authorization: Bearer <token>` solo a las peticiones a nuestro API (nunca a otros
+ *   hosts), excepto login, registro y recuperación de contraseña.
  * - 401 con una sesión abierta: el token venció o no es válido; cierra la sesión y lleva a
  *   `/login?expirada=true`.
  * - 403: muestra el aviso de permisos y NO cierra la sesión, salvo que la petición lleve

@@ -25,7 +25,7 @@ module.exports = function (config) {
       reporters: [{ type: 'html' }, { type: 'text-summary' }, { type: 'lcovonly' }],
     },
     reporters: ['progress', 'kjhtml'],
-    browsers: ['Chrome'],
+    browsers: ['Chrome '],
     // Chrome dentro de Docker corre como root y necesita --no-sandbox.
     customLaunchers: {
       ChromeHeadlessCI: {

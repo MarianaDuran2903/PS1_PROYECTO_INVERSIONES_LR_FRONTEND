@@ -90,32 +90,51 @@ export function strongPassword(): ValidatorFn {
       return null;
     }
 
-    let mayuscula = false;
-    let minuscula = false;
-    let numero = false;
-    let especial = false;
-    let espacio = false;
-    for (const caracter of value) {
-      if (esEspacio(caracter)) {
-        espacio = true;
-      } else if (esMayuscula(caracter)) {
-        mayuscula = true;
-      } else if (esMinuscula(caracter)) {
-        minuscula = true;
-      } else if (esNumero(caracter)) {
-        numero = true;
-      } else if (!esLetra(caracter)) {
-        especial = true;
-      }
-    }
-
-    if (new TextEncoder().encode(value).length > PASSWORD_MAX_BYTES) {
+    const { mayuscula, minuscula, numero, especial, espacio, bytes } = analizarContrasena(value);
+    if (bytes > PASSWORD_MAX_BYTES) {
       return { passwordBytes: true };
     }
     return mayuscula && minuscula && numero && especial && !espacio
       ? null
       : { passwordStrength: true };
   };
+}
+
+/** Qué contiene una contraseña, carácter por carácter. Lo comparten el validador y el checklist. */
+export interface ComposicionContrasena {
+  mayuscula: boolean;
+  minuscula: boolean;
+  numero: boolean;
+  /** Cualquier carácter que no sea letra, número ni espacio. */
+  especial: boolean;
+  espacio: boolean;
+  /** Largo en bytes UTF-8 (las tildes, la ñ y los símbolos ocupan más de uno). */
+  bytes: number;
+}
+
+export function analizarContrasena(value: string): ComposicionContrasena {
+  const composicion: ComposicionContrasena = {
+    mayuscula: false,
+    minuscula: false,
+    numero: false,
+    especial: false,
+    espacio: false,
+    bytes: new TextEncoder().encode(value).length,
+  };
+  for (const caracter of value) {
+    if (esEspacio(caracter)) {
+      composicion.espacio = true;
+    } else if (esMayuscula(caracter)) {
+      composicion.mayuscula = true;
+    } else if (esMinuscula(caracter)) {
+      composicion.minuscula = true;
+    } else if (esNumero(caracter)) {
+      composicion.numero = true;
+    } else if (!esLetra(caracter)) {
+      composicion.especial = true;
+    }
+  }
+  return composicion;
 }
 
 /** Mayor valor que cabe en un `int` de Java: el backend rechazaría un entero más grande. */

@@ -80,6 +80,8 @@ describe('authTokenInterceptor', () => {
     '/api-test/auth/login',
     '/api-test/auth/registro/huesped',
     '/api-test/alojamientos',
+    '/api-test/auth/recuperacion/solicitud',
+    '/api-test/auth/recuperacion/restablecer',
   ]) {
     it(`no envía el token a ${ruta}`, () => {
       http.post(ruta, {}).subscribe();
