@@ -160,6 +160,9 @@ describe('form.validators', () => {
         espacio: false,
         bytes: 0,
       });
+    });
+  });
+
   describe('enteroPositivo', () => {
     const validar = (valor: unknown) => enteroPositivo()(new FormControl(valor));
 

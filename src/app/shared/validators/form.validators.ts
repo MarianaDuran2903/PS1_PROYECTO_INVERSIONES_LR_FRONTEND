@@ -119,6 +119,8 @@ export function analizarContrasena(value: string): ComposicionContrasena {
     }
   }
   return composicion;
+}
+
 /** Mayor valor que cabe en un `int` de Java: el backend rechazaría un entero más grande. */
 const ENTERO_MAXIMO = 2_147_483_647;
 
