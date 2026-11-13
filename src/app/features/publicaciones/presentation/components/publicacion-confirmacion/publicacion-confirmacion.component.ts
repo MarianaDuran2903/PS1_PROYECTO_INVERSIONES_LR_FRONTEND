@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 import { IconoAlojamientoComponent } from '@shared/ui/icono-alojamiento/icono-alojamiento.component';
 import { formatearPesos } from '../../../application/moneda';
 import { Publicacion } from '../../../domain/models/publicacion';
+import { AccionActivacionComponent } from '../accion-activacion/accion-activacion.component';
 import { BotonEditarPublicacionComponent } from '../boton-editar-publicacion/boton-editar-publicacion.component';
 import {
   ETIQUETA_ESTADO,
@@ -20,6 +21,7 @@ import {
     IconoAlojamientoComponent,
     EstadoPublicacionComponent,
     BotonEditarPublicacionComponent,
+    AccionActivacionComponent,
     RouterLink,
   ],
   templateUrl: './publicacion-confirmacion.component.html',
@@ -34,6 +36,10 @@ export class PublicacionConfirmacionComponent {
    */
   readonly modo = input<'confirmacion' | 'detalle'>('confirmacion');
   readonly crearOtra = output<void>();
+  /** Solo en el modo `detalle`: el Anfitrión pidió enviar el borrador a revisión. */
+  readonly enviarARevision = output<void>();
+  /** Esta publicación se está enviando a revisión ahora. */
+  readonly enviandoRevision = input(false);
 
   protected readonly estado = computed(() => ETIQUETA_ESTADO[this.publicacion().estado]);
   protected readonly esDetalle = computed(() => this.modo() === 'detalle');

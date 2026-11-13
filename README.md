@@ -40,6 +40,7 @@ El proyecto avanza funcionalidad por funcionalidad, según la matriz de requerim
 | RF-ALOJ (HU-009) | Editar una publicación propia (Anfitrión) en BORRADOR o PAUSADA | Hecho (pendiente de probar contra el backend con GET y PUT de publicaciones) |
 | RF-ALOJ (HU-010) | Consultar mis publicaciones (Anfitrión): listado paginado con el estado de cada una | Hecho |
 | RF-ALOJ (HU-011) | Editar una publicación con autorización administrativa (Administrador), con motivo registrado | Hecho |
+| RF-ALOJ (HU-012) | Solicitar la activación de una publicación (Anfitrión): envío del borrador a revisión | Hecho |
 | RF-ALOJ (resto), RF-BUS, RF-COT, RF-RES, RF-PAG | Listado y edición de publicaciones, búsqueda, cotización, reservas y pago simulado | Pendiente |
 | RF-NOT, RF-RSC, RF-ADM, RF-DASH, RF-REP | Notificaciones, reseñas, administración, indicadores y reportes | Pendiente |
 
@@ -401,6 +402,24 @@ El Administrador interviene en cualquier estado **salvo ACTIVA**: una activa deb
 
 Como el backend solo permite consultar por número, la entrada es un campo "Número de publicación" en `/admin` (componente `buscador-publicacion`, pensado para reemplazarse por una bandeja de publicaciones sin tocar la pantalla de intervención). La pantalla `/admin/publicaciones/:id/editar` reutiliza el formulario de publicación en su modo `intervenir`, que añade el campo del motivo con su contador.
 
+### Solicitar la activación de una publicación (HU-012)
+
+`POST /publicaciones/{id}/enviar-revision`, solo rol ANFITRION, sin cuerpo. Pasa un borrador propio a PENDIENTE_REVISION para que el Administrador lo revise y lo active. Solo se envía un BORRADOR.
+
+| Respuesta | Qué hace el frontend |
+|---|---|
+| `200` con la publicación (`estado: "PENDIENTE_REVISION"`) | Aviso "Publicación enviada a revisión" y recarga del listado (página actual) o del detalle |
+| `400` con `errores` (`descripcion`, `direccionTextual`, `barrioZona`, `reglas`) | Panel con el mensaje de cada campo pendiente y el enlace "Completar publicación" a `/anfitrion/publicaciones/:id/editar`; la publicación no cambia |
+| `403` (de otro Anfitrión) | Aviso con el mensaje; no se muestra el aviso global de permisos (`OMITIR_AVISO_403`) |
+| `404` | Aviso "La publicación no existe" |
+| `409` (no está en BORRADOR) | Aviso con el mensaje del backend (ya en revisión, activa, pausada o bloqueada) y recarga para refrescar el estado |
+
+**Dónde está.** Botón "Enviar a revisión" en cada fila en BORRADOR de "Mis publicaciones" y en la ficha de detalle de un borrador. Las publicaciones en PENDIENTE_REVISION muestran "En revisión del Administrador". Antes de enviar se pide confirmación ("¿Enviar la publicación a revisión? El Administrador la revisará antes de activarla."), y mientras envía el botón queda deshabilitado con indicador de carga.
+
+**Información mínima.** La creación no pide las reglas, así que normalmente el Anfitrión tendrá que completarlas editando antes de enviar. El frontend no repite la regla: decide el backend y el panel muestra lo que este responde.
+
+El caso de uso es `SolicitarActivacionFacade`, que cada página provee y escucha (`resultado$`). `TransicionNoPermitidaError` (409) queda disponible para las demás acciones del ciclo de vida.
+
 ### Errores y sesión
 
 Todos los endpoints devuelven `{ fecha, estado, error, mensaje, ruta, errores? }`. `401` en una ruta protegida: cierra la sesión y lleva a `/login?expirada=true`. `403`: aviso "Sin permisos" con el `mensaje`, sin cerrar la sesión. Un temporizador cierra la sesión sola al vencer el token (60 minutos, sin renovación).
@@ -411,7 +430,7 @@ El registro oficial de auditoría (tabla `evento_auditoria`) lo escribe el backe
 
 ## Pruebas y calidad
 
-- **Pruebas unitarias** con Karma y Jasmine: 599 pruebas en 51 archivos. Cada capa se prueba aislada: validadores y mappers (funciones puras), repositorio HTTP con `HttpTestingController`, facades con repositorios falsos, guards, interceptores y componentes sobre su DOM.
+- **Pruebas unitarias** con Karma y Jasmine: 706 pruebas en 60 archivos. Cada capa se prueba aislada: validadores y mappers (funciones puras), repositorio HTTP con `HttpTestingController`, facades con repositorios falsos, guards, interceptores y componentes sobre su DOM.
 - **Cobertura**: `npm run test:ci` genera `coverage/` con reporte HTML y `lcov.info` (que lee Sonar).
 - **Lint y formato**: `npm run lint` y `npm run format:check` deben quedar limpios antes de abrir un Pull Request.
 
