@@ -80,8 +80,14 @@
                 <app-accion-activacion
                   [estado]="publicacion.estado"
                   [enviando]="activacion.idEnviando() === publicacion.idPublicacion"
-                  [deshabilitado]="activacion.enviando()"
+                  [deshabilitado]="ocupado()"
                   (enviar)="activacion.solicitar(publicacion.idPublicacion)"
+                />
+                <app-accion-pausa
+                  [estado]="publicacion.estado"
+                  [pausando]="pausa.idPausando() === publicacion.idPublicacion"
+                  [deshabilitado]="ocupado()"
+                  (pausar)="pausa.pausar(publicacion.idPublicacion)"
                 />
               </div>
             </li>

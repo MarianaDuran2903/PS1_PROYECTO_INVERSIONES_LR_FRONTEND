@@ -114,8 +114,7 @@ describe('PublicacionConfirmacionComponent', () => {
     }
 
     const motivos = {
-      ACTIVA:
-        'Esta publicación está activa. Para editarla, solicita al Administrador que la pause.',
+      ACTIVA: 'Esta publicación está activa. Para editarla, páusala primero.',
       PENDIENTE_REVISION: 'La publicación está en revisión del Administrador.',
       BLOQUEADA: 'La publicación está bloqueada.',
     } as const;
@@ -178,6 +177,55 @@ describe('PublicacionConfirmacionComponent', () => {
     element.querySelector<HTMLButtonElement>('.ficha__resumen button')!.click();
 
     expect(veces).toBe(1);
+  });
+
+  describe('pausar (HU-014)', () => {
+    const botonPausar = () =>
+      Array.from(element.querySelectorAll<HTMLButtonElement>('button')).find((b) =>
+        b.textContent?.trim().startsWith('Pausa'),
+      );
+
+    it('en el detalle de una publicación activa muestra el botón y emite "pausar" al pulsarlo', () => {
+      crear({ ...publicacion, estado: 'ACTIVA' }, 'detalle');
+      let veces = 0;
+      fixture.componentInstance.pausar.subscribe(() => veces++);
+
+      botonPausar()!.click();
+
+      expect(veces).toBe(1);
+    });
+
+    it('en el detalle muestra el indicador de carga mientras se pausa', () => {
+      crear({ ...publicacion, estado: 'ACTIVA' }, 'detalle');
+      fixture.componentRef.setInput('pausando', true);
+      fixture.detectChanges();
+
+      const boton = Array.from(element.querySelectorAll<HTMLButtonElement>('button')).find((b) =>
+        b.textContent?.includes('Pausando'),
+      )!;
+      expect(boton.disabled).toBeTrue();
+    });
+
+    it('en el detalle de una publicación pausada muestra el texto y no el botón', () => {
+      crear({ ...publicacion, estado: 'PAUSADA' }, 'detalle');
+
+      expect(botonPausar()).toBeUndefined();
+      expect(element.querySelector('.ficha__resumen')!.textContent).toContain(
+        'El Administrador revisará tus ajustes antes de reactivarla',
+      );
+    });
+
+    it('en un borrador no ofrece pausar', () => {
+      crear(publicacion, 'detalle');
+
+      expect(botonPausar()).toBeUndefined();
+    });
+
+    it('justo después de crear (modo confirmación) no ofrece pausar', () => {
+      crear({ ...publicacion, estado: 'ACTIVA' }, 'confirmacion');
+
+      expect(botonPausar()).toBeUndefined();
+    });
   });
 
   describe('enviar a revisión (HU-012)', () => {

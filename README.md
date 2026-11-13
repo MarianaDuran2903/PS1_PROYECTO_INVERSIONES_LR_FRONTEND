@@ -42,10 +42,11 @@ El proyecto avanza funcionalidad por funcionalidad, según la matriz de requerim
 | RF-ALOJ (HU-011) | Editar una publicación con autorización administrativa (Administrador), con motivo registrado | Hecho |
 | RF-ALOJ (HU-012) | Solicitar la activación de una publicación (Anfitrión): envío del borrador a revisión | Hecho |
 | RF-ALOJ (HU-013) | Revisar una publicación pendiente (Administrador): bandeja, aprobar o rechazar con motivo | Hecho |
+| RF-ALOJ (HU-014) | Pausar una publicación activa (Anfitrión) y listado público de alojamientos disponibles | Hecho |
 | RF-ALOJ (resto), RF-BUS, RF-COT, RF-RES, RF-PAG | Listado y edición de publicaciones, búsqueda, cotización, reservas y pago simulado | Pendiente |
 | RF-NOT, RF-RSC, RF-ADM, RF-DASH, RF-REP | Notificaciones, reseñas, administración, indicadores y reportes | Pendiente |
 
-Las páginas `/marketplace`, `/anfitrion` (salvo la de nueva publicación) y `/admin` son provisionales: solo muestran un mensaje hasta que se implementen sus historias.
+Las páginas `/anfitrion` (salvo las de publicaciones) y `/admin` (salvo la bandeja y la intervención) son provisionales: solo muestran un mensaje hasta que se implementen sus historias.
 
 ## Tecnologías
 
@@ -215,7 +216,8 @@ Copia [`.env.example`](.env.example) como `.env` (no se sube a git):
 │           │   ├── application/      Facades, sesión, guards e interceptor de token
 │           │   └── presentation/     Páginas (contenedores) y componentes (formularios)
 │           ├── home/                 Portada pública
-│           ├── marketplace/          Búsqueda y reservas (provisional)
+│           ├── alojamientos/         Listado público de alojamientos disponibles
+│           ├── marketplace/          Marketplace del Huésped (reutiliza el listado de alojamientos)
 │           ├── anfitrion/            Panel del anfitrión (provisional)
 │           └── admin/                Panel de administración (provisional)
 ├── Dockerfile · docker-compose.yml · .env.example
@@ -274,7 +276,8 @@ presentation  →  application  →  domain  ←  data
 | `/` | Todos (portada) |
 | `/login` | Solo quien no tiene sesión |
 | `/registro` (`?rol=anfitrion` preselecciona Anfitrión) | Solo quien no tiene sesión |
-| `/marketplace` | Huésped |
+| `/alojamientos` | Todos (listado público de alojamientos disponibles, sin sesión) |
+| `/marketplace` | Huésped (el mismo listado de alojamientos disponibles) |
 | `/anfitrion` | Anfitrión |
 | `/anfitrion/publicaciones` | Anfitrión (Mis publicaciones: listado paginado de las suyas) |
 | `/anfitrion/publicaciones/nueva` | Anfitrión (formulario de nueva publicación) |
@@ -445,6 +448,27 @@ Aprobar pide confirmación. Rechazar abre el cuadro del motivo (`app-modal-motiv
 
 `accionesAdministrador(estado)` decide qué botones muestra cada tarjeta: Aprobar y Rechazar en PENDIENTE_REVISION y ninguno en los demás estados. Un rol distinto de Administrador no entra a la bandeja (`rolGuard`).
 
+### Pausar una publicación activa (HU-014)
+
+`POST /publicaciones/{id}/pausar`, solo rol ANFITRION, sin cuerpo. Pasa una publicación ACTIVA propia a PAUSADA: deja de aparecer en las búsquedas, conserva su información y se puede editar mientras está pausada (el Administrador la revisa para reactivarla).
+
+| Respuesta | Qué hace el frontend |
+|---|---|
+| `200` con la publicación (`estado: "PAUSADA"`) | Aviso "Publicación pausada" y recarga del listado (página actual) o del detalle |
+| `403` (de otro Anfitrión) | Aviso con el mensaje; no se muestra el aviso global de permisos (`OMITIR_AVISO_403`) |
+| `404` | Aviso "La publicación no existe" |
+| `409` (no está ACTIVA) | Aviso con el mensaje del backend (por ejemplo "La publicación ya está pausada") y recarga para refrescar el estado |
+
+**Dónde está.** Botón "Pausar" en cada fila ACTIVA de "Mis publicaciones" y en la ficha de detalle de una publicación activa; las PAUSADA muestran "El Administrador revisará tus ajustes antes de reactivarla" y tienen "Editar" activo. Antes de pausar se pide confirmación ("¿Pausar la publicación? Dejará de aparecer en las búsquedas. Podrás editarla mientras esté pausada y el Administrador la revisará para reactivarla."). El texto de una activa en la edición pasó a "Esta publicación está activa. Para editarla, páusala primero.", porque ahora es el propio Anfitrión quien pausa.
+
+### Alojamientos disponibles (HU-014)
+
+`GET /alojamientos?pagina=&tamano=`, **público**: el frontend no envía `Authorization` ni cierra la sesión por un 401 (`/alojamientos` está en `RUTAS_PUBLICAS` del interceptor). Devuelve solo publicaciones ACTIVAS, de la más reciente a la más antigua, con el mismo resumen de "Mis publicaciones" (`idPublicacion`, `titulo`, `estado`, `ciudad`, `tipo`, `capacidad`, `precioNoche`); `tamano` de 1 a 100 y, sin ninguna, `mensaje: "No hay alojamientos disponibles por el momento"`. No hay detalle público por id y el resumen no trae dirección ni datos del Anfitrión.
+
+- **Feature `features/alojamientos`** con las mismas capas: `AlojamientoRepository.listar(pagina, tamano)`, su implementación HTTP, `AlojamientosFacade` y `alojamientos-page` (tarjetas con título, ciudad, tipo, capacidad y precio por noche; paginación; estado vacío con el `mensaje` de la API; sin acciones de gestión).
+- **Paginación compartida.** `ListadoPaginado<T>` concentra los estados (cargando, listo, error, vacía) y la navegación entre páginas; la usan `MisPublicacionesFacade` y `AlojamientosFacade`.
+- **Rutas.** `/alojamientos` es pública (sin guard) y `/marketplace` (Huésped) muestra la misma página con el mismo repositorio, sin duplicar código. La portada tiene el enlace "Ver alojamientos".
+
 ### Errores y sesión
 
 Todos los endpoints devuelven `{ fecha, estado, error, mensaje, ruta, errores? }`. `401` en una ruta protegida: cierra la sesión y lleva a `/login?expirada=true`. `403`: aviso "Sin permisos" con el `mensaje`, sin cerrar la sesión. Un temporizador cierra la sesión sola al vencer el token (60 minutos, sin renovación).
@@ -455,7 +479,7 @@ El registro oficial de auditoría (tabla `evento_auditoria`) lo escribe el backe
 
 ## Pruebas y calidad
 
-- **Pruebas unitarias** con Karma y Jasmine: 805 pruebas en 65 archivos. Cada capa se prueba aislada: validadores y mappers (funciones puras), repositorio HTTP con `HttpTestingController`, facades con repositorios falsos, guards, interceptores y componentes sobre su DOM.
+- **Pruebas unitarias** con Karma y Jasmine: 890 pruebas en 74 archivos. Cada capa se prueba aislada: validadores y mappers (funciones puras), repositorio HTTP con `HttpTestingController`, facades con repositorios falsos, guards, interceptores y componentes sobre su DOM.
 - **Cobertura**: `npm run test:ci` genera `coverage/` con reporte HTML y `lcov.info` (que lee Sonar).
 - **Lint y formato**: `npm run lint` y `npm run format:check` deben quedar limpios antes de abrir un Pull Request.
 

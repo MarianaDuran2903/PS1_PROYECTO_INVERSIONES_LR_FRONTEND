@@ -148,11 +148,7 @@ describe('EditarPublicacionFacade', () => {
     const casos: [EstadoPublicacion, boolean, string | null][] = [
       ['BORRADOR', true, null],
       ['PAUSADA', true, null],
-      [
-        'ACTIVA',
-        false,
-        'Esta publicación está activa. Para editarla, solicita al Administrador que la pause.',
-      ],
+      ['ACTIVA', false, 'Esta publicación está activa. Para editarla, páusala primero.'],
       ['PENDIENTE_REVISION', false, 'La publicación está en revisión del Administrador.'],
       ['BLOQUEADA', false, 'La publicación está bloqueada.'],
     ];

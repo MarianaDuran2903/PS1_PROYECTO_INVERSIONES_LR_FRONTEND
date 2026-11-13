@@ -122,6 +122,17 @@ export class PublicacionHttpRepository extends PublicacionRepository {
       );
   }
 
+  override pausar(idPublicacion: number): Observable<Publicacion> {
+    return this.http
+      .post<PublicacionResponseDto>(`${this.apiUrl}/publicaciones/${idPublicacion}/pausar`, null, {
+        context: new HttpContext().set(OMITIR_AVISO_403, true),
+      })
+      .pipe(
+        map(PublicacionMapper.toDomain),
+        catchError((error: unknown) => throwError(() => this.errorDePausa(error))),
+      );
+  }
+
   override listarPropias(pagina: number, tamano: number): Observable<PaginaPublicaciones> {
     const params = new HttpParams().set('pagina', pagina).set('tamano', tamano);
     return this.http
@@ -141,6 +152,23 @@ export class PublicacionHttpRepository extends PublicacionRepository {
       }
     }
     return new PublicacionInvalidaError(errores);
+  }
+
+  /** Errores de pausar: 403 (ajena), 404 (no existe) y 409 (no está ACTIVA). */
+  private errorDePausa(error: unknown): unknown {
+    if (!(error instanceof ApiError)) {
+      return error;
+    }
+    if (error.status === 403) {
+      return new PublicacionAjenaError('No puedes pausar esta publicación');
+    }
+    if (error.status === 404) {
+      return new PublicacionNoEncontradaError();
+    }
+    if (error.status === 409) {
+      return new TransicionNoPermitidaError(error.message);
+    }
+    return error;
   }
 
   /**

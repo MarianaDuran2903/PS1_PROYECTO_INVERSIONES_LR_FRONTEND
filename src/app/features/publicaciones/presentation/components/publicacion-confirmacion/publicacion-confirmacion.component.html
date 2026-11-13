@@ -122,6 +122,13 @@
           [enviando]="enviandoRevision()"
           (enviar)="enviarARevision.emit()"
         />
+        <app-accion-pausa
+          variante="primary"
+          [bloque]="true"
+          [estado]="publicacion().estado"
+          [pausando]="pausando()"
+          (pausar)="pausar.emit()"
+        />
         <a class="btn btn--outline btn--block" routerLink="/anfitrion/publicaciones"
           >Volver a mis publicaciones</a
         >

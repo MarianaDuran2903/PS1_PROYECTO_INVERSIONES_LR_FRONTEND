@@ -4,6 +4,7 @@ import { IconoAlojamientoComponent } from '@shared/ui/icono-alojamiento/icono-al
 import { formatearPesos } from '../../../application/moneda';
 import { Publicacion } from '../../../domain/models/publicacion';
 import { AccionActivacionComponent } from '../accion-activacion/accion-activacion.component';
+import { AccionPausaComponent } from '../accion-pausa/accion-pausa.component';
 import { BotonEditarPublicacionComponent } from '../boton-editar-publicacion/boton-editar-publicacion.component';
 import {
   ETIQUETA_ESTADO,
@@ -22,6 +23,7 @@ import {
     EstadoPublicacionComponent,
     BotonEditarPublicacionComponent,
     AccionActivacionComponent,
+    AccionPausaComponent,
     RouterLink,
   ],
   templateUrl: './publicacion-confirmacion.component.html',
@@ -40,6 +42,10 @@ export class PublicacionConfirmacionComponent {
   readonly enviarARevision = output<void>();
   /** Esta publicación se está enviando a revisión ahora. */
   readonly enviandoRevision = input(false);
+  /** Solo en el modo `detalle`: el Anfitrión pidió pausar la publicación activa. */
+  readonly pausar = output<void>();
+  /** Esta publicación se está pausando ahora. */
+  readonly pausando = input(false);
 
   protected readonly estado = computed(() => ETIQUETA_ESTADO[this.publicacion().estado]);
   protected readonly esDetalle = computed(() => this.modo() === 'detalle');

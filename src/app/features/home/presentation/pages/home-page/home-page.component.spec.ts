@@ -16,6 +16,7 @@ describe('HomePageComponent', () => {
     );
 
     expect(hrefs['Buscar alojamiento']).toBe('/marketplace');
+    expect(hrefs['Ver alojamientos']).toBe('/alojamientos');
     expect(hrefs['Publicar alojamiento']).toBe('/registro?rol=anfitrion');
     expect(fixture.nativeElement.querySelector('h1')!.textContent).toContain('bajar el ritmo');
   });

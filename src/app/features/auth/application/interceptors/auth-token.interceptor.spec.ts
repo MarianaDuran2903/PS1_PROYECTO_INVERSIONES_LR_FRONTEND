@@ -76,7 +76,11 @@ describe('authTokenInterceptor', () => {
     req.flush({});
   });
 
-  for (const ruta of ['/api-test/auth/login', '/api-test/auth/registro/huesped']) {
+  for (const ruta of [
+    '/api-test/auth/login',
+    '/api-test/auth/registro/huesped',
+    '/api-test/alojamientos',
+  ]) {
     it(`no envía el token a ${ruta}`, () => {
       http.post(ruta, {}).subscribe();
 

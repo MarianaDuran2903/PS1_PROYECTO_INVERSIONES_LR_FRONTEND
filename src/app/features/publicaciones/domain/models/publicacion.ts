@@ -55,13 +55,18 @@ export interface Publicacion {
 const ESTADOS_EDITABLES: readonly EstadoPublicacion[] = ['BORRADOR', 'PAUSADA'];
 
 const MOTIVO_NO_EDITABLE: Partial<Record<EstadoPublicacion, string>> = {
-  ACTIVA: 'Esta publicación está activa. Para editarla, solicita al Administrador que la pause.',
+  ACTIVA: 'Esta publicación está activa. Para editarla, páusala primero.',
   PENDIENTE_REVISION: 'La publicación está en revisión del Administrador.',
   BLOQUEADA: 'La publicación está bloqueada.',
 };
 
 export function puedeEditar(estado: EstadoPublicacion): boolean {
   return ESTADOS_EDITABLES.includes(estado);
+}
+
+/** Solo una publicación activa se pausa: es el único estado desde el que se puede pausar. */
+export function puedePausar(estado: EstadoPublicacion): boolean {
+  return estado === 'ACTIVA';
 }
 
 /** Solo un borrador se envía a revisión: es el único estado desde el que se solicita la activación. */

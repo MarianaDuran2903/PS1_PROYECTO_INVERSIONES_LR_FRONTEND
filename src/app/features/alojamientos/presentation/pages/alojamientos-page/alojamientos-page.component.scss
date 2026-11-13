@@ -1,0 +1,174 @@
+:host {
+  display: block;
+  padding: var(--space-8) var(--space-4) var(--space-12);
+}
+
+.pagina {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.pagina__encabezado {
+  h1 {
+    margin: 0 0 var(--space-2);
+    font-size: 2rem;
+  }
+
+  p {
+    margin: 0;
+    color: var(--color-text-muted);
+  }
+}
+
+.pagina__error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.pagina__estado {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0;
+  padding: var(--space-8) 0;
+  color: var(--color-text-muted);
+}
+
+.pagina__spinner {
+  width: 20px;
+  height: 20px;
+  border: 3px solid var(--color-primary-soft);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: girar 0.8s linear infinite;
+}
+
+@keyframes girar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pagina__spinner {
+    animation-duration: 3s;
+  }
+}
+
+.total {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: var(--color-text-muted);
+}
+
+.lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Una tarjeta por alojamiento: icono del tipo, datos y precio. Sin acciones ni detalle. */
+.tarjeta {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.tarjeta__icono {
+  display: inline-flex;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: 1.75rem;
+  color: var(--color-primary);
+  background: var(--color-primary-soft);
+}
+
+.tarjeta__titulo {
+  margin: 0 0 var(--space-1);
+  font-size: 1.125rem;
+  overflow-wrap: anywhere;
+}
+
+.tarjeta__meta {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: var(--color-text-muted);
+}
+
+.tarjeta__precio {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin: 0;
+
+  strong {
+    font-size: 1.125rem;
+  }
+
+  span {
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+  }
+}
+
+.vacio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-12) var(--space-4);
+  text-align: center;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.vacio__icono {
+  width: 48px;
+  height: 48px;
+  color: var(--color-primary);
+}
+
+.vacio__mensaje {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+.paginacion {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+}
+
+.paginacion__texto {
+  color: var(--color-text-muted);
+}
+
+@media (max-width: 640px) {
+  .tarjeta {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .tarjeta__precio {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+}

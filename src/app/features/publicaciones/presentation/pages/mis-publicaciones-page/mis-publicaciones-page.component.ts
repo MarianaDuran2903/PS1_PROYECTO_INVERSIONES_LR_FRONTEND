@@ -4,8 +4,10 @@ import { RouterLink } from '@angular/router';
 import { IconoAlojamientoComponent } from '@shared/ui/icono-alojamiento/icono-alojamiento.component';
 import { MisPublicacionesFacade } from '../../../application/mis-publicaciones.facade';
 import { formatearPesos } from '../../../application/moneda';
+import { PausarPublicacionFacade } from '../../../application/pausar-publicacion.facade';
 import { SolicitarActivacionFacade } from '../../../application/solicitar-activacion.facade';
 import { AccionActivacionComponent } from '../../components/accion-activacion/accion-activacion.component';
+import { AccionPausaComponent } from '../../components/accion-pausa/accion-pausa.component';
 import { BotonEditarPublicacionComponent } from '../../components/boton-editar-publicacion/boton-editar-publicacion.component';
 import { EstadoPublicacionComponent } from '../../components/estado-publicacion/estado-publicacion.component';
 import { PendientesActivacionComponent } from '../../components/pendientes-activacion/pendientes-activacion.component';
@@ -23,9 +25,10 @@ import { PendientesActivacionComponent } from '../../components/pendientes-activ
     EstadoPublicacionComponent,
     BotonEditarPublicacionComponent,
     AccionActivacionComponent,
+    AccionPausaComponent,
     PendientesActivacionComponent,
   ],
-  providers: [MisPublicacionesFacade, SolicitarActivacionFacade],
+  providers: [MisPublicacionesFacade, SolicitarActivacionFacade, PausarPublicacionFacade],
   templateUrl: './mis-publicaciones-page.component.html',
   styleUrl: './mis-publicaciones-page.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -33,7 +36,11 @@ import { PendientesActivacionComponent } from '../../components/pendientes-activ
 export class MisPublicacionesPageComponent {
   protected readonly facade = inject(MisPublicacionesFacade);
   protected readonly activacion = inject(SolicitarActivacionFacade);
+  protected readonly pausa = inject(PausarPublicacionFacade);
   protected readonly pesos = formatearPesos;
+
+  /** Hay una acción en curso (enviar o pausar): los demás botones esperan. */
+  protected readonly ocupado = computed(() => this.activacion.enviando() || this.pausa.pausando());
 
   /** Título de la publicación con campos pendientes, para decir de cuál se trata. */
   protected readonly tituloPendientes = computed(
@@ -49,6 +56,12 @@ export class MisPublicacionesPageComponent {
     // Tras enviar (o si el estado real era otro) se recarga la página que se está viendo.
     this.activacion.resultado$.pipe(takeUntilDestroyed()).subscribe((resultado) => {
       if (resultado === 'enviada' || resultado === 'rechazada') {
+        this.facade.cargar(this.facade.paginaActual());
+      }
+    });
+    // Igual al pausar: se recarga la página que se estaba viendo.
+    this.pausa.resultado$.pipe(takeUntilDestroyed()).subscribe((resultado) => {
+      if (resultado === 'pausada' || resultado === 'rechazada') {
         this.facade.cargar(this.facade.paginaActual());
       }
     });
