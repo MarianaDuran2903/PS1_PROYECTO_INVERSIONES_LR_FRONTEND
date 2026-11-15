@@ -1,8 +1,21 @@
 <section class="busqueda" aria-labelledby="busqueda-titulo">
   <app-barra-busqueda-alojamientos
     [cargando]="facade.estado() === 'cargando'"
-    (buscar)="facade.cargar()"
+    [cargandoCiudades]="facade.estadoCiudades() === 'cargando'"
+    [ciudades]="facade.ciudades()"
+    [filtrosAplicados]="facade.filtrosAplicados()"
+    (buscar)="buscar($event)"
+    (limpiar)="limpiar()"
   />
+
+  @if (facade.estadoCiudades() === 'error') {
+    <div class="alert alert--danger" role="alert">
+      <p>No fue posible cargar los destinos.</p>
+      <button type="button" class="btn btn--outline" (click)="facade.reintentarCiudades()">
+        Reintentar destinos
+      </button>
+    </div>
+  }
 
   <div class="distribucion">
     <aside class="filtros" aria-labelledby="filtros-titulo">
@@ -46,7 +59,7 @@
       <header class="encabezado">
         <p class="etiqueta">Explora Inversiones LR</p>
         <h1 id="busqueda-titulo">Alojamientos para tu próxima estancia</h1>
-        <p>Publicaciones activas · Todos los destinos</p>
+        <p>Publicaciones activas · Filtros de ubicación, fechas y huéspedes</p>
       </header>
 
       @switch (facade.estado()) {

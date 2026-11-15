@@ -20,3 +20,10 @@ export interface PaginaAlojamientos {
   totalPaginas: number;
   mensaje: string | null;
 }
+
+export interface FiltrosBusquedaAlojamientos {
+  idCiudad?: number;
+  fechaLlegada?: string;
+  fechaSalida?: string;
+  huespedes?: number;
+}

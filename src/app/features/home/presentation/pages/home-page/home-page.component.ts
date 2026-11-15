@@ -1,17 +1,26 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import { BusquedaAlojamientosFacade } from '@features/marketplace/application/busqueda-alojamientos.facade';
+import { BusquedaAlojamientosHttpRepository } from '@features/marketplace/data/repositories/busqueda-alojamientos-http.repository';
+import { FiltrosBusquedaAlojamientos } from '@features/marketplace/domain/models/busqueda-alojamientos';
+import { BusquedaAlojamientosRepository } from '@features/marketplace/domain/repositories/busqueda-alojamientos.repository';
 import { BarraBusquedaAlojamientosComponent } from '@shared/ui/barra-busqueda-alojamientos/barra-busqueda-alojamientos.component';
 
 /** Portada pública: presenta la plataforma y dirige a buscar o a publicar. */
 @Component({
   selector: 'app-home-page',
   imports: [RouterLink, BarraBusquedaAlojamientosComponent],
+  providers: [
+    BusquedaAlojamientosFacade,
+    { provide: BusquedaAlojamientosRepository, useClass: BusquedaAlojamientosHttpRepository },
+  ],
   templateUrl: './home-page.component.html',
   styleUrl: './home-page.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HomePageComponent {
   private readonly router = inject(Router);
+  protected readonly facade = inject(BusquedaAlojamientosFacade);
   protected readonly paramsAnfitrion = { rol: 'anfitrion' };
 
   protected readonly categorias = [
@@ -41,7 +50,11 @@ export class HomePageComponent {
     },
   ];
 
-  protected buscar(): void {
-    void this.router.navigate(['/alojamientos']);
+  constructor() {
+    this.facade.cargarCiudades();
+  }
+
+  protected buscar(filtros: FiltrosBusquedaAlojamientos): void {
+    void this.router.navigate(['/alojamientos'], { queryParams: filtros });
   }
 }
