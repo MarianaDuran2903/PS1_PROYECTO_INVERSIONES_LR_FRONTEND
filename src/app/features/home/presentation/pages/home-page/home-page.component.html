@@ -15,7 +15,20 @@
 </section>
 
 <div class="busqueda-inicio">
-  <app-barra-busqueda-alojamientos (buscar)="buscar()" />
+  <app-barra-busqueda-alojamientos
+    [ciudades]="facade.ciudades()"
+    [cargandoCiudades]="facade.estadoCiudades() === 'cargando'"
+    (buscar)="buscar($event)"
+  />
+
+  @if (facade.estadoCiudades() === 'error') {
+    <div class="alert alert--danger" role="alert">
+      <p>No fue posible cargar los destinos.</p>
+      <button type="button" class="btn btn--outline" (click)="facade.reintentarCiudades()">
+        Reintentar destinos
+      </button>
+    </div>
+  }
 </div>
 
 <section class="seleccion" aria-labelledby="seleccion-titulo">

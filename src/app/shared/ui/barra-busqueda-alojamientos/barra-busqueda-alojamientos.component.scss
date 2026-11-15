@@ -4,7 +4,7 @@
 
 .barra {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 16px;
   padding: 16px;
   border: 1px solid var(--color-border);
@@ -51,16 +51,18 @@
     color: inherit;
     font: inherit;
     font-size: 0.8125rem;
-    opacity: 1;
-    cursor: not-allowed;
-    -webkit-text-fill-color: currentColor;
   }
 }
 
-.aviso {
-  margin: 10px 4px 0;
-  color: var(--color-text-muted);
-  font-size: 0.75rem;
+.error {
+  color: #b3261e;
+  font-size: 0.6875rem;
+}
+
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .visualmente-oculto {
@@ -90,5 +92,9 @@
     & + & {
       border-left: 0;
     }
+  }
+
+  .acciones {
+    justify-content: flex-end;
   }
 }
