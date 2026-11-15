@@ -56,6 +56,22 @@ export class BusquedaAlojamientosHttpRepository extends BusquedaAlojamientosRepo
       params = params.set('huespedes', filtros.huespedes);
     }
 
+    if (filtros.idTipo !== undefined) {
+      params = params.set('idTipo', filtros.idTipo);
+    }
+
+    if (filtros.precioMinimo !== undefined) {
+      params = params.set('precioMinimo', filtros.precioMinimo);
+    }
+
+    if (filtros.precioMaximo !== undefined) {
+      params = params.set('precioMaximo', filtros.precioMaximo);
+    }
+
+    for (const idServicio of new Set(filtros.idsServicios ?? [])) {
+      params = params.append('idsServicios', idServicio);
+    }
+
     return this.http.get<PaginaAlojamientosDto>(`${this.apiUrl}/alojamientos`, { params }).pipe(
       map((dto) => ({
         contenido: dto.contenido.map((item) => ({
@@ -77,5 +93,13 @@ export class BusquedaAlojamientosHttpRepository extends BusquedaAlojamientosRepo
 
   override listarCiudades(): Observable<CatalogoAlojamiento[]> {
     return this.http.get<CatalogoAlojamiento[]>(`${this.apiUrl}/alojamientos/ciudades`);
+  }
+
+  override listarTiposAlojamiento(): Observable<CatalogoAlojamiento[]> {
+    return this.http.get<CatalogoAlojamiento[]>(`${this.apiUrl}/catalogos/tipos-alojamiento`);
+  }
+
+  override listarServicios(): Observable<CatalogoAlojamiento[]> {
+    return this.http.get<CatalogoAlojamiento[]>(`${this.apiUrl}/catalogos/servicios`);
   }
 }

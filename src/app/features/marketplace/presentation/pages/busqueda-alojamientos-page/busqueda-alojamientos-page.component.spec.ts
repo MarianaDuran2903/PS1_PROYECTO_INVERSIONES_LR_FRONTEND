@@ -1,13 +1,13 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { APP_CONFIG } from '@core/config/app-config';
+import { BusquedaAlojamientosHttpRepository } from '../../../data/repositories/busqueda-alojamientos-http.repository';
 import { BusquedaAlojamientosRepository } from '../../../domain/repositories/busqueda-alojamientos.repository';
 import { BusquedaAlojamientosPageComponent } from './busqueda-alojamientos-page.component';
-import { BusquedaAlojamientosHttpRepository } from '@features/marketplace/data/repositories/busqueda-alojamientos-http.repository';
-import { provideRouter } from '@angular/router';
 
-describe('HU-022: búsqueda pública de alojamientos', () => {
+describe('HU-022, HU-023 y HU-024: búsqueda pública de alojamientos', () => {
   let fixture: ComponentFixture<BusquedaAlojamientosPageComponent>;
   let http: HttpTestingController;
   let element: HTMLElement;
@@ -51,15 +51,29 @@ describe('HU-022: búsqueda pública de alojamientos', () => {
     return encontrado;
   };
 
-  const responderCiudades = () =>
-    http
-      .expectOne((req) => req.url === '/api-test/alojamientos/ciudades')
-      .flush([{ id: 3, nombre: 'Cartagena' }]);
+  const seleccionar = (selector: string, valor: string, evento: 'change' | 'input'): void => {
+    const campo = element.querySelector<HTMLInputElement | HTMLSelectElement>(selector);
 
-  const seleccionar = (selector: string, valor: string, evento: 'change' | 'input') => {
-    const campo = element.querySelector<HTMLInputElement | HTMLSelectElement>(selector)!;
+    if (!campo) {
+      throw new Error(`No se encontró el campo ${selector}`);
+    }
+
     campo.value = valor;
     campo.dispatchEvent(new Event(evento));
+  };
+
+  const responderCatalogos = (): void => {
+    http.expectOne('/api-test/alojamientos/ciudades').flush([{ id: 3, nombre: 'Cartagena' }]);
+
+    http.expectOne('/api-test/catalogos/tipos-alojamiento').flush([
+      { id: 1, nombre: 'Casa' },
+      { id: 2, nombre: 'Apartamento' },
+    ]);
+
+    http.expectOne('/api-test/catalogos/servicios').flush([
+      { id: 1, nombre: 'Wi-Fi' },
+      { id: 3, nombre: 'Cocina' },
+    ]);
   };
 
   beforeEach(() => {
@@ -80,8 +94,10 @@ describe('HU-022: búsqueda pública de alojamientos', () => {
     http = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(BusquedaAlojamientosPageComponent);
     element = fixture.nativeElement as HTMLElement;
+
     fixture.detectChanges();
-    responderCiudades();
+    responderCatalogos();
+    fixture.detectChanges();
   });
 
   afterEach(() => {
@@ -206,7 +222,7 @@ describe('HU-022: búsqueda pública de alojamientos', () => {
     expect(element.querySelector('.vacio')).toBeNull();
   });
 
-  it('aplica los filtros y consulta la primera página', () => {
+  it('aplica ubicación, fechas y huéspedes desde la primera página', () => {
     peticion().flush(pagina());
     fixture.detectChanges();
 
@@ -218,20 +234,12 @@ describe('HU-022: búsqueda pública de alojamientos', () => {
 
     boton('Buscar alojamientos').click();
 
-    const consulta = http.expectOne(
-      (req) =>
-        req.url === '/api-test/alojamientos' &&
-        req.params.get('pagina') === '0' &&
-        req.params.get('tamano') === '12' &&
-        req.params.get('idCiudad') === '3' &&
-        req.params.get('fechaLlegada') === '2030-06-10' &&
-        req.params.get('fechaSalida') === '2030-06-13' &&
-        req.params.get('huespedes') === '4',
-    );
+    const consulta = peticion();
 
-    consulta.flush(pagina());
-    fixture.detectChanges();
-
+    expect(consulta.request.params.get('idCiudad')).toBe('3');
+    expect(consulta.request.params.get('fechaLlegada')).toBe('2030-06-10');
+    expect(consulta.request.params.get('fechaSalida')).toBe('2030-06-13');
+    expect(consulta.request.params.get('huespedes')).toBe('4');
     expect(consulta.request.params.keys().sort()).toEqual([
       'fechaLlegada',
       'fechaSalida',
@@ -240,6 +248,8 @@ describe('HU-022: búsqueda pública de alojamientos', () => {
       'pagina',
       'tamano',
     ]);
+
+    consulta.flush(pagina());
   });
 
   it('no consulta cuando el rango de fechas es inválido', () => {
@@ -254,9 +264,10 @@ describe('HU-022: búsqueda pública de alojamientos', () => {
     fixture.detectChanges();
 
     expect(element.textContent).toContain('La salida debe ser posterior a la llegada');
+    http.expectNone((request) => request.url === '/api-test/alojamientos');
   });
 
-  it('conserva los filtros al paginar', () => {
+  it('conserva los filtros de ubicación al paginar', () => {
     peticion().flush(pagina(0, 13, 2));
     fixture.detectChanges();
 
@@ -265,26 +276,16 @@ describe('HU-022: búsqueda pública de alojamientos', () => {
 
     boton('Buscar alojamientos').click();
 
-    http
-      .expectOne(
-        (req) =>
-          req.url === '/api-test/alojamientos' &&
-          req.params.get('pagina') === '0' &&
-          req.params.get('idCiudad') === '3',
-      )
-      .flush(pagina(0, 13, 2));
+    const primera = peticion();
+    expect(primera.request.params.get('idCiudad')).toBe('3');
+    primera.flush(pagina(0, 13, 2));
     fixture.detectChanges();
 
     boton('Siguiente').click();
 
-    http
-      .expectOne(
-        (req) =>
-          req.url === '/api-test/alojamientos' &&
-          req.params.get('pagina') === '1' &&
-          req.params.get('idCiudad') === '3',
-      )
-      .flush(pagina(1, 13, 2));
+    const segunda = peticion('1');
+    expect(segunda.request.params.get('idCiudad')).toBe('3');
+    segunda.flush(pagina(1, 13, 2));
     fixture.detectChanges();
 
     expect(element.textContent).toContain('Página 2 de 2');
@@ -299,18 +300,191 @@ describe('HU-022: búsqueda pública de alojamientos', () => {
 
     boton('Buscar alojamientos').click();
 
-    http
-      .expectOne(
-        (req) => req.url === '/api-test/alojamientos' && req.params.get('idCiudad') === '3',
-      )
-      .flush(pagina());
+    const filtrada = peticion();
+    expect(filtrada.request.params.get('idCiudad')).toBe('3');
+    filtrada.flush(pagina());
+    fixture.detectChanges();
 
     boton('Limpiar').click();
 
     const consulta = peticion();
+    expect(consulta.request.params.keys().sort()).toEqual(['pagina', 'tamano']);
     consulta.flush(pagina());
     fixture.detectChanges();
+  });
 
-    expect(consulta.request.params.keys().sort()).toEqual(['pagina', 'tamano']);
+  it('aplica tipo, precios y todos los servicios seleccionados', () => {
+    peticion().flush(pagina());
+    fixture.detectChanges();
+
+    seleccionar('select[formcontrolname="idTipo"]', '2', 'change');
+    seleccionar('input[formcontrolname="precioMinimo"]', '100000', 'input');
+    seleccionar('input[formcontrolname="precioMaximo"]', '300000', 'input');
+
+    for (const id of [1, 3]) {
+      const checkbox = element.querySelector<HTMLInputElement>(`[data-servicio-id="${id}"]`)!;
+      checkbox.checked = true;
+      checkbox.dispatchEvent(new Event('change'));
+    }
+
+    fixture.detectChanges();
+    boton('Aplicar características').click();
+
+    const req = peticion();
+
+    expect(req.request.params.get('idTipo')).toBe('2');
+    expect(req.request.params.get('precioMinimo')).toBe('100000');
+    expect(req.request.params.get('precioMaximo')).toBe('300000');
+    expect(req.request.params.getAll('idsServicios')).toEqual(['1', '3']);
+
+    req.flush(pagina());
+  });
+
+  it('no consulta con un rango de precios invertido', () => {
+    peticion().flush(pagina());
+    fixture.detectChanges();
+
+    seleccionar('input[formcontrolname="precioMinimo"]', '300000', 'input');
+    seleccionar('input[formcontrolname="precioMaximo"]', '100000', 'input');
+    fixture.detectChanges();
+
+    boton('Aplicar características').click();
+    fixture.detectChanges();
+
+    expect(element.textContent).toContain('El precio máximo debe ser mayor o igual al mínimo');
+    http.expectNone((request) => request.url === '/api-test/alojamientos');
+  });
+
+  it('conserva ciudad al aplicar características y conserva tipo al buscar', () => {
+    peticion().flush(pagina());
+    fixture.detectChanges();
+
+    seleccionar('select[formcontrolname="idCiudad"]', '3', 'change');
+    fixture.detectChanges();
+    boton('Buscar alojamientos').click();
+
+    peticion().flush(pagina());
+    fixture.detectChanges();
+
+    seleccionar('select[formcontrolname="idTipo"]', '2', 'change');
+    fixture.detectChanges();
+    boton('Aplicar características').click();
+
+    const conCaracteristicas = peticion();
+    expect(conCaracteristicas.request.params.get('idCiudad')).toBe('3');
+    expect(conCaracteristicas.request.params.get('idTipo')).toBe('2');
+    conCaracteristicas.flush(pagina());
+    fixture.detectChanges();
+
+    seleccionar('select[formcontrolname="huespedes"]', '4', 'change');
+    fixture.detectChanges();
+    boton('Buscar alojamientos').click();
+
+    const combinada = peticion();
+    expect(combinada.request.params.get('idCiudad')).toBe('3');
+    expect(combinada.request.params.get('huespedes')).toBe('4');
+    expect(combinada.request.params.get('idTipo')).toBe('2');
+    combinada.flush(pagina());
+  });
+
+  it('conserva las características al paginar y reintentar', () => {
+    peticion().flush(pagina());
+    fixture.detectChanges();
+
+    seleccionar('select[formcontrolname="idTipo"]', '2', 'change');
+    fixture.detectChanges();
+    boton('Aplicar características').click();
+
+    peticion().flush(pagina(0, 13, 2));
+    fixture.detectChanges();
+
+    boton('Siguiente').click();
+
+    const siguiente = peticion('1');
+    expect(siguiente.request.params.get('idTipo')).toBe('2');
+    siguiente.flush({}, { status: 500, statusText: 'Error' });
+    fixture.detectChanges();
+
+    boton('Reintentar').click();
+
+    const reintento = peticion('1');
+    expect(reintento.request.params.get('idTipo')).toBe('2');
+    reintento.flush(pagina(1, 13, 2));
+  });
+
+  it('limpiar características conserva la ciudad', () => {
+    peticion().flush(pagina());
+    fixture.detectChanges();
+
+    seleccionar('select[formcontrolname="idCiudad"]', '3', 'change');
+    fixture.detectChanges();
+    boton('Buscar alojamientos').click();
+    peticion().flush(pagina());
+    fixture.detectChanges();
+
+    seleccionar('select[formcontrolname="idTipo"]', '2', 'change');
+    fixture.detectChanges();
+    boton('Aplicar características').click();
+    peticion().flush(pagina());
+    fixture.detectChanges();
+
+    boton('Limpiar características').click();
+
+    const req = peticion();
+
+    expect(req.request.params.get('idCiudad')).toBe('3');
+    expect(req.request.params.has('idTipo')).toBeFalse();
+    expect(req.request.params.has('precioMinimo')).toBeFalse();
+    expect(req.request.params.has('precioMaximo')).toBeFalse();
+    expect(req.request.params.has('idsServicios')).toBeFalse();
+
+    req.flush(pagina());
+  });
+
+  it('muestra el mensaje de ausencia de coincidencias con características', () => {
+    peticion().flush(pagina());
+    fixture.detectChanges();
+
+    seleccionar('input[formcontrolname="precioMaximo"]', '100', 'input');
+    fixture.detectChanges();
+    boton('Aplicar características').click();
+
+    peticion().flush({
+      ...pagina(0, 0, 0),
+      contenido: [],
+      mensaje: 'No hay alojamientos que coincidan con los filtros seleccionados',
+    });
+    fixture.detectChanges();
+
+    expect(element.querySelector('.vacio')?.textContent).toContain(
+      'No hay alojamientos que coincidan con los filtros seleccionados',
+    );
+  });
+
+  it('muestra una imagen de referencia según el tipo de alojamiento', () => {
+    peticion().flush(pagina());
+    fixture.detectChanges();
+
+    const imagen = element.querySelector<HTMLImageElement>('.tarjeta__imagen');
+
+    expect(imagen?.getAttribute('src')).toBe('/img/imgCasas.jpg');
+    expect(element.querySelector('.tarjeta__referencia')?.textContent).toContain(
+      'Imagen de referencia',
+    );
+  });
+
+  it('usa la imagen general si falla la imagen del tipo', () => {
+    peticion().flush(pagina());
+    fixture.detectChanges();
+
+    const imagen = element.querySelector<HTMLImageElement>('.tarjeta__imagen')!;
+
+    imagen.dispatchEvent(new Event('error'));
+
+    expect(imagen.getAttribute('src')).toBe('/img/imgHero.jpg');
+
+    imagen.dispatchEvent(new Event('error'));
+
+    expect(imagen.hidden).toBeTrue();
   });
 });

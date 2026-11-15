@@ -26,4 +26,8 @@ export interface FiltrosBusquedaAlojamientos {
   fechaLlegada?: string;
   fechaSalida?: string;
   huespedes?: number;
+  idTipo?: number;
+  precioMinimo?: number;
+  precioMaximo?: number;
+  idsServicios?: number[];
 }

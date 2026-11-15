@@ -13,10 +13,20 @@ describe('HomePageComponent', () => {
   beforeEach(() => {
     repository = jasmine.createSpyObj<BusquedaAlojamientosRepository>(
       'BusquedaAlojamientosRepository',
-      ['listar', 'listarCiudades'],
+      ['listar', 'listarCiudades', 'listarTiposAlojamiento', 'listarServicios'],
     );
 
     repository.listarCiudades.and.returnValue(of([{ id: 3, nombre: 'Cartagena' }]));
+    repository.listarTiposAlojamiento.and.returnValue(
+      of([
+        { id: 21, nombre: 'Cabaña' },
+        { id: 42, nombre: 'Casa' },
+        { id: 63, nombre: 'Apartamento' },
+        { id: 84, nombre: 'Habitación' },
+      ]),
+    );
+
+    repository.listarServicios.and.returnValue(of([]));
 
     TestBed.configureTestingModule({
       imports: [HomePageComponent],
@@ -91,5 +101,26 @@ describe('HomePageComponent', () => {
     expect(navegar).toHaveBeenCalledWith(['/alojamientos'], {
       queryParams: filtros,
     });
+  });
+
+  it('genera enlaces de categorías con los identificadores reales del catálogo', () => {
+    const fixture = TestBed.createComponent(HomePageComponent);
+    fixture.detectChanges();
+
+    const enlaces = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLAnchorElement>(
+        '.categoria__enlace',
+      ),
+    );
+
+    expect(enlaces.map((enlace) => enlace.getAttribute('href'))).toEqual([
+      '/alojamientos?idTipo=21',
+      '/alojamientos?idTipo=42',
+      '/alojamientos?idTipo=63',
+      '/alojamientos?idTipo=84',
+    ]);
+
+    expect(repository.listarTiposAlojamiento).toHaveBeenCalledTimes(1);
+    expect(repository.listar).not.toHaveBeenCalled();
   });
 });

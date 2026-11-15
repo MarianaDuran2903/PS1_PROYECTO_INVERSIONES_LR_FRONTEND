@@ -1,6 +1,6 @@
 import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Subscription } from 'rxjs';
+import { forkJoin, Subscription } from 'rxjs';
 import {
   CatalogoAlojamiento,
   FiltrosBusquedaAlojamientos,
@@ -22,6 +22,12 @@ interface CiudadesState {
   ciudades: CatalogoAlojamiento[];
 }
 
+interface CaracteristicasState {
+  estado: 'cargando' | 'listo' | 'error';
+  tipos: CatalogoAlojamiento[];
+  servicios: CatalogoAlojamiento[];
+}
+
 @Injectable()
 export class BusquedaAlojamientosFacade {
   private readonly repository = inject(BusquedaAlojamientosRepository);
@@ -39,6 +45,13 @@ export class BusquedaAlojamientosFacade {
     ciudades: [],
   });
 
+  private readonly caracteristicasState = signal<CaracteristicasState>({
+    estado: 'cargando',
+    tipos: [],
+    servicios: [],
+  });
+
+  private peticionCaracteristicas?: Subscription;
   private peticion?: Subscription;
   private peticionCiudades?: Subscription;
 
@@ -68,6 +81,9 @@ export class BusquedaAlojamientosFacade {
 
   readonly estadoCiudades = computed(() => this.ciudadesState().estado);
   readonly ciudades = computed(() => this.ciudadesState().ciudades);
+  readonly estadoCaracteristicas = computed(() => this.caracteristicasState().estado);
+  readonly tiposAlojamiento = computed(() => this.caracteristicasState().tipos);
+  readonly servicios = computed(() => this.caracteristicasState().servicios);
 
   cargar(pagina = 0, filtros?: FiltrosBusquedaAlojamientos): void {
     const filtrosAplicados = filtros ?? this.state().filtros;
@@ -126,6 +142,42 @@ export class BusquedaAlojamientosFacade {
 
   reintentarCiudades(): void {
     this.cargarCiudades();
+  }
+
+  cargarCaracteristicas(): void {
+    this.peticionCaracteristicas?.unsubscribe();
+
+    this.caracteristicasState.set({
+      estado: 'cargando',
+      tipos: [],
+      servicios: [],
+    });
+
+    this.peticionCaracteristicas = forkJoin({
+      tipos: this.repository.listarTiposAlojamiento(),
+      servicios: this.repository.listarServicios(),
+    })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: ({ tipos, servicios }) => {
+          this.caracteristicasState.set({
+            estado: 'listo',
+            tipos,
+            servicios,
+          });
+        },
+        error: () => {
+          this.caracteristicasState.set({
+            estado: 'error',
+            tipos: [],
+            servicios: [],
+          });
+        },
+      });
+  }
+
+  reintentarCaracteristicas(): void {
+    this.cargarCaracteristicas();
   }
 
   anterior(): void {
