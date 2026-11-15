@@ -15,6 +15,16 @@
     </ol>
   </nav>
 
+  @if (esDetalle() && estaBloqueada()) {
+    <div class="ficha__bloqueo" role="note">
+      <p class="ficha__bloqueo-titulo">El Administrador bloqueó esta publicación</p>
+      <p class="ficha__bloqueo-motivo">
+        <strong>Motivo:</strong>
+        {{ publicacion().motivoBloqueo ?? 'No se indicó un motivo.' }}
+      </p>
+    </div>
+  }
+
   <div class="ficha__galeria" role="img" aria-label="Esta publicación todavía no tiene fotos">
     <app-icono-alojamiento class="ficha__galeria-icono" [nombre]="publicacion().tipo.nombre" />
     <p class="ficha__galeria-titulo">{{ publicacion().tipo.nombre }}</p>
@@ -115,6 +125,20 @@
         [bloque]="true"
       />
       @if (esDetalle()) {
+        <app-accion-activacion
+          variante="primary"
+          [bloque]="true"
+          [estado]="publicacion().estado"
+          [enviando]="enviandoRevision()"
+          (enviar)="enviarARevision.emit()"
+        />
+        <app-accion-pausa
+          variante="primary"
+          [bloque]="true"
+          [estado]="publicacion().estado"
+          [pausando]="pausando()"
+          (pausar)="pausar.emit()"
+        />
         <a class="btn btn--outline btn--block" routerLink="/anfitrion/publicaciones"
           >Volver a mis publicaciones</a
         >

@@ -9,11 +9,12 @@ import { catchError, throwError } from 'rxjs';
 import { SessionService } from '../session.service';
 
 /** Endpoints públicos: no llevan token y su 401/403 no significa "sesión vencida". */
-const RUTAS_PUBLICAS = ['/auth/login', '/auth/registro', '/auth/recuperacion'];
+const RUTAS_PUBLICAS = ['/auth/login', '/auth/registro', '/auth/recuperacion', '/alojamientos'];
 
 /**
  * - Agrega `Authorization: Bearer <token>` solo a las peticiones a nuestro API (nunca a otros
- *   hosts), excepto login, registro y recuperación de contraseña.
+ *   hosts), excepto login, registro, recuperación de contraseña y el listado público de
+ *   alojamientos.
  * - 401 con una sesión abierta: el token venció o no es válido; cierra la sesión y lleva a
  *   `/login?expirada=true`.
  * - 403: muestra el aviso de permisos y NO cierra la sesión, salvo que la petición lleve

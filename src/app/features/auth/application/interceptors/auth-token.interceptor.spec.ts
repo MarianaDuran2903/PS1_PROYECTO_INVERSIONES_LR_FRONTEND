@@ -79,6 +79,7 @@ describe('authTokenInterceptor', () => {
   for (const ruta of [
     '/api-test/auth/login',
     '/api-test/auth/registro/huesped',
+    '/api-test/alojamientos',
     '/api-test/auth/recuperacion/solicitud',
     '/api-test/auth/recuperacion/restablecer',
   ]) {

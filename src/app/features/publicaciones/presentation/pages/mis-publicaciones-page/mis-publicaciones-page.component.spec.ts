@@ -263,7 +263,7 @@ describe('MisPublicacionesPageComponent', () => {
       );
       expect(botones.map((b) => b.getAttribute('aria-disabled'))).toEqual(['true', 'true', 'true']);
       expect(botones.map((b) => b.getAttribute('title'))).toEqual([
-        'Esta publicación está activa. Para editarla, solicita al Administrador que la pause.',
+        'Esta publicación está activa. Para editarla, páusala primero.',
         'La publicación está en revisión del Administrador.',
         'La publicación está bloqueada.',
       ]);
