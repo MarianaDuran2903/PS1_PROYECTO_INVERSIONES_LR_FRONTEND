@@ -9,6 +9,7 @@ import { Credenciales, Sesion } from '../domain/models/sesion';
 import { AuthRepository } from '../domain/repositories/auth.repository';
 import { EVENTO_INICIO_SESION_FALLIDO, EVENTO_SESION_INICIADA, LoginFacade } from './login.facade';
 import { SESSION_STORAGE_KEY, SessionService } from './session.service';
+import { CuentaDesactivadaError } from '@features/auth/domain/errors/cuenta-desactivada.error';
 
 describe('LoginFacade', () => {
   const credenciales: Credenciales = { correo: 'ana@correo.com', contrasena: 'Segura#2026' };
@@ -35,8 +36,12 @@ describe('LoginFacade', () => {
   beforeEach(() => {
     sessionStorage.removeItem(SESSION_STORAGE_KEY);
     respuesta = new Subject<Sesion>();
-    repository = jasmine.createSpyObj<AuthRepository>('AuthRepository', ['iniciarSesion']);
+    repository = jasmine.createSpyObj<AuthRepository>('AuthRepository', [
+      'iniciarSesion',
+      'reactivarCuenta',
+    ]);
     repository.iniciarSesion.and.returnValue(respuesta);
+    repository.reactivarCuenta.and.returnValue(respuesta);
     tracker = jasmine.createSpyObj<EventTrackerService>('EventTrackerService', ['track']);
     toast = jasmine.createSpyObj<ToastService>('ToastService', ['success']);
     router = jasmine.createSpyObj<Router>('Router', ['navigateByUrl']);
@@ -120,5 +125,84 @@ describe('LoginFacade', () => {
     facade.iniciarSesion(credenciales);
 
     expect(repository.iniciarSesion).toHaveBeenCalledTimes(1);
+  });
+
+  describe('cuenta desactivada', () => {
+    it('muestra el modal de reactivación sin crear sesión ni redirigir', () => {
+      facade.iniciarSesion(credenciales);
+      respuesta.error(new CuentaDesactivadaError());
+
+      expect(facade.cuentaDesactivada()).toBeTrue();
+      expect(facade.mensajeError()).toBeNull();
+      expect(facade.enviando()).toBeFalse();
+      expect(session.autenticado()).toBeFalse();
+      expect(router.navigateByUrl).not.toHaveBeenCalled();
+      expect(toast.success).not.toHaveBeenCalled();
+      expect(tracker.track).toHaveBeenCalledOnceWith(EVENTO_INICIO_SESION_FALLIDO, {
+        motivo: 'CUENTA_DESACTIVADA',
+      });
+    });
+
+    it('reactiva con las mismas credenciales, inicia sesión y navega', () => {
+      facade.iniciarSesion(credenciales, '/marketplace?ciudad=Cali');
+      respuesta.error(new CuentaDesactivadaError());
+
+      const respuestaReactivacion = new Subject<Sesion>();
+      repository.reactivarCuenta.and.returnValue(respuestaReactivacion);
+
+      facade.confirmarReactivacion();
+      expect(repository.reactivarCuenta).toHaveBeenCalledOnceWith(credenciales);
+      expect(facade.reactivando()).toBeTrue();
+
+      respuestaReactivacion.next(sesionCon('HUESPED'));
+
+      expect(session.autenticado()).toBeTrue();
+      expect(facade.cuentaDesactivada()).toBeFalse();
+      expect(facade.reactivando()).toBeFalse();
+      expect(router.navigateByUrl).toHaveBeenCalledOnceWith('/marketplace?ciudad=Cali');
+      expect(toast.success).toHaveBeenCalledOnceWith('¡Hola de nuevo, Ana!');
+    });
+
+    it('cancelar cierra el modal, limpia credenciales y no reactiva', () => {
+      facade.iniciarSesion(credenciales);
+      respuesta.error(new CuentaDesactivadaError());
+
+      facade.cancelarReactivacion();
+
+      expect(facade.cuentaDesactivada()).toBeFalse();
+      expect(facade.mensajeError()).toBeNull();
+      expect(facade.reactivando()).toBeFalse();
+
+      facade.confirmarReactivacion();
+      expect(repository.reactivarCuenta).not.toHaveBeenCalled();
+    });
+
+    it('si la reactivación falla, mantiene el modal y muestra el error', () => {
+      facade.iniciarSesion(credenciales);
+      respuesta.error(new CuentaDesactivadaError());
+
+      const respuestaReactivacion = new Subject<Sesion>();
+      repository.reactivarCuenta.and.returnValue(respuestaReactivacion);
+
+      facade.confirmarReactivacion();
+      respuestaReactivacion.error(new ApiError(0, 'NETWORK_ERROR', 'Sin conexión'));
+
+      expect(facade.cuentaDesactivada()).toBeTrue();
+      expect(facade.reactivando()).toBeFalse();
+      expect(facade.mensajeError()).toBe('Sin conexión');
+    });
+
+    it('ignora una segunda reactivación mientras la primera está en curso', () => {
+      facade.iniciarSesion(credenciales);
+      respuesta.error(new CuentaDesactivadaError());
+
+      const respuestaReactivacion = new Subject<Sesion>();
+      repository.reactivarCuenta.and.returnValue(respuestaReactivacion);
+
+      facade.confirmarReactivacion();
+      facade.confirmarReactivacion();
+
+      expect(repository.reactivarCuenta).toHaveBeenCalledTimes(1);
+    });
   });
 });

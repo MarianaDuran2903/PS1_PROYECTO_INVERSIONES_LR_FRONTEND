@@ -1,0 +1,57 @@
+<section class="pagina" aria-labelledby="intervenir-titulo">
+  <nav class="pagina__ruta" aria-label="Ruta">
+    <a routerLink="/admin">Administración</a>
+    <span aria-hidden="true">›</span>
+    <span aria-current="page">Intervenir publicación</span>
+  </nav>
+
+  <header class="pagina__encabezado">
+    <div class="pagina__titulo">
+      <h1 id="intervenir-titulo">Intervenir publicación</h1>
+      @if (facade.publicacion(); as publicacion) {
+        <app-estado-publicacion [estado]="publicacion.estado" />
+        <span class="pagina__propietario">Anfitrión n.º {{ publicacion.idAnfitrion }}</span>
+      }
+    </div>
+    <p>
+      Corrige la información de la publicación. Queda registrado quién la modifica, cuándo y el
+      motivo.
+    </p>
+  </header>
+
+  @switch (facade.carga()) {
+    @case ('cargando') {
+      <p class="pagina__estado" role="status">
+        <span class="pagina__spinner" aria-hidden="true"></span>
+        Cargando la publicación…
+      </p>
+    }
+    @case ('error') {
+      <div class="alert alert--danger pagina__error" role="alert">
+        <span>No fue posible cargar la publicación.</span>
+        <button type="button" class="btn btn--outline" (click)="reintentar()">Reintentar</button>
+      </div>
+    }
+    @default {
+      @if (facade.avisoNoEditable(); as aviso) {
+        <div class="alert alert--info pagina__alerta" role="status">{{ aviso }}</div>
+      }
+      @if (facade.mensajeError(); as mensaje) {
+        <div class="alert alert--danger pagina__alerta" role="alert">{{ mensaje }}</div>
+      }
+
+      <app-publicacion-form
+        modo="intervenir"
+        [ciudades]="facade.ciudades()"
+        [tipos]="facade.tipos()"
+        [valoresIniciales]="facade.publicacion()"
+        [soloLectura]="!facade.editable()"
+        [reglasObligatorias]="facade.reglasObligatorias()"
+        [enviando]="facade.enviando()"
+        [erroresServidor]="facade.erroresCampo()"
+        (guardarIntervencion)="facade.guardar($event)"
+        (cancelar)="cancelar()"
+      />
+    }
+  }
+</section>

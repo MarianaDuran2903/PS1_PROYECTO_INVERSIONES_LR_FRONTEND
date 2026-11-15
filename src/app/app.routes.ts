@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { rolGuard } from '@features/auth/application/guards/access.guards';
+import { rolGuard, autenticadoGuard } from '@features/auth/application/guards/access.guards';
 import { RolUsuario } from '@features/auth/domain/models/rol-usuario';
 
 export const routes: Routes = [
@@ -15,6 +15,12 @@ export const routes: Routes = [
   {
     path: '',
     loadChildren: () => import('@features/auth/auth.routes').then((m) => m.AUTH_ROUTES),
+  },
+  // Listado público de alojamientos disponibles: sin guard, lo ve cualquier visitante.
+  {
+    path: 'alojamientos',
+    loadChildren: () =>
+      import('@features/alojamientos/alojamientos.routes').then((m) => m.ALOJAMIENTOS_ROUTES),
   },
   {
     path: 'acceso-denegado',
@@ -42,6 +48,15 @@ export const routes: Routes = [
     path: 'admin',
     canActivate: [rolGuard([RolUsuario.Administrador])],
     loadChildren: () => import('@features/admin/admin.routes').then((m) => m.ADMIN_ROUTES),
+  },
+  {
+    path: 'perfil',
+    title: 'Mi perfil | Inversiones LR',
+    canActivate: [autenticadoGuard],
+    loadComponent: () =>
+      import('@features/perfil/presentation/pages/perfil-page/perfil-page.component').then(
+        (m) => m.PerfilPageComponent,
+      ),
   },
 
   { path: '**', redirectTo: '' },

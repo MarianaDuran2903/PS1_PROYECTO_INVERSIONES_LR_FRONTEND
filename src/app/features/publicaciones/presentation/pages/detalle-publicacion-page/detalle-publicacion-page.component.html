@@ -1,0 +1,34 @@
+<section class="pagina" aria-label="Detalle de la publicación">
+  @switch (facade.estado()) {
+    @case ('cargando') {
+      <p class="pagina__estado" role="status">
+        <span class="pagina__spinner" aria-hidden="true"></span>
+        Cargando la publicación…
+      </p>
+    }
+    @case ('error') {
+      <div class="alert alert--danger pagina__error" role="alert">
+        <span>No fue posible cargar la publicación.</span>
+        <button type="button" class="btn btn--outline" (click)="reintentar()">Reintentar</button>
+      </div>
+    }
+    @default {
+      @if (facade.publicacion(); as publicacion) {
+        @if (activacion.idPendientes() === publicacion.idPublicacion) {
+          <app-pendientes-activacion
+            [idPublicacion]="publicacion.idPublicacion"
+            [pendientes]="activacion.pendientes()"
+          />
+        }
+        <app-publicacion-confirmacion
+          [publicacion]="publicacion"
+          modo="detalle"
+          [enviandoRevision]="activacion.idEnviando() === publicacion.idPublicacion"
+          (enviarARevision)="enviarARevision(publicacion.idPublicacion)"
+          [pausando]="pausa.idPausando() === publicacion.idPublicacion"
+          (pausar)="pausar(publicacion.idPublicacion)"
+        />
+      }
+    }
+  }
+</section>

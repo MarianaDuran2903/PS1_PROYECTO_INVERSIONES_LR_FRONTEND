@@ -2,5 +2,8 @@
   "editor.formatOnSave": true,
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "typescript.preferences.importModuleSpecifier": "non-relative",
-  "files.eol": "\n"
+  "files.eol": "\n",
+  "[html]": {
+    "editor.defaultFormatter": "vscode.html-language-features"
+  }
 }

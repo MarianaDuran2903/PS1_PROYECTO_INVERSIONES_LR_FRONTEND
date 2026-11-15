@@ -2,7 +2,7 @@ import { DOCUMENT } from '@angular/common';
 import { computed, inject, Injectable, Injector, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { RolUsuario } from '../domain/models/rol-usuario';
-import { Sesion, SesionActiva } from '../domain/models/sesion';
+import { Sesion, SesionActiva, UsuarioSesion } from '../domain/models/sesion';
 
 export const SESSION_STORAGE_KEY = 'ilr.sesion';
 
@@ -41,6 +41,29 @@ export class SessionService {
     if (actual) {
       this.iniciar({ ...actual, usuario, expiraEn });
     }
+  }
+
+  /** Sincroniza los nombres tras actualizar el perfil de la misma cuenta. */
+  actualizarNombrePerfil(
+    perfil: Pick<UsuarioSesion, 'idUsuario' | 'primerNombre' | 'primerApellido'>,
+  ): void {
+    const actual = this.state();
+
+    if (!actual || actual.usuario.idUsuario !== perfil.idUsuario) {
+      return;
+    }
+
+    const sesion: Sesion = {
+      ...actual,
+      usuario: {
+        ...actual.usuario,
+        primerNombre: perfil.primerNombre,
+        primerApellido: perfil.primerApellido,
+      },
+    };
+
+    this.state.set(sesion);
+    this.guardar(sesion);
   }
 
   cerrar(): void {

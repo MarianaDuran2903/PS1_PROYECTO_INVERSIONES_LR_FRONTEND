@@ -1,7 +1,11 @@
 import { FormControl, FormGroup, Validators } from '@angular/forms';
 import {
   analizarContrasena,
+  decimalNoNegativo,
+  decimalPositivo,
   EMAIL_PATTERN,
+  enteroPositivo,
+  longitudEntre,
   matchFields,
   notBlank,
   PASSWORD_MAX_LENGTH,
@@ -12,6 +16,42 @@ import {
 import { firstErrorMessage } from './validation-messages';
 
 describe('form.validators', () => {
+  describe('longitudEntre', () => {
+    const validar = (valor: unknown) => longitudEntre(10, 500)(new FormControl(valor));
+
+    it('acepta de 10 a 500 caracteres, los dos límites incluidos', () => {
+      expect(validar('1234567890')).toBeNull();
+      expect(validar('a'.repeat(500))).toBeNull();
+      expect(validar('Las fotos no corresponden')).toBeNull();
+    });
+
+    it('rechaza menos de 10 y más de 500', () => {
+      expect(validar('123456789')).not.toBeNull();
+      expect(validar('a'.repeat(501))).not.toBeNull();
+    });
+
+    it('mide el texto recortado: los espacios de los lados no cuentan', () => {
+      expect(validar('   123456789   ')).not.toBeNull();
+      expect(validar('   1234567890   ')).toBeNull();
+      expect(validar(' ' + 'a'.repeat(500) + ' ')).toBeNull();
+    });
+
+    it('un texto vacío o solo de espacios no cumple', () => {
+      expect(validar('')).not.toBeNull();
+      expect(validar(' '.repeat(30))).not.toBeNull();
+    });
+
+    it('el error lleva los límites y el largo real para armar el mensaje', () => {
+      expect(validar('abc')).toEqual({ longitudEntre: { min: 10, max: 500, actual: 3 } });
+      expect(firstErrorMessage(validar('abc'))).toBe('Debe tener entre 10 y 500 caracteres.');
+    });
+
+    it('ignora un valor que no es texto', () => {
+      expect(validar(null)).toBeNull();
+      expect(validar(undefined)).toBeNull();
+    });
+  });
+
   describe('notBlank', () => {
     it('rechaza valores con solo espacios', () => {
       expect(notBlank()(new FormControl('   '))).toEqual({ blank: true });
@@ -157,6 +197,93 @@ describe('form.validators', () => {
         espacio: false,
         bytes: 0,
       });
+    });
+  });
+
+  describe('enteroPositivo', () => {
+    const validar = (valor: unknown) => enteroPositivo()(new FormControl(valor));
+
+    for (const valido of ['4', '1', ' 12 ', '2147483647']) {
+      it(`acepta "${valido}"`, () => {
+        expect(validar(valido)).toBeNull();
+      });
+    }
+
+    for (const invalido of ['0', '-1', '2.5', '2,5', 'abc', '1e3', '+3', '2147483648', '00']) {
+      it(`rechaza "${invalido}"`, () => {
+        expect(validar(invalido)).toEqual({ enteroPositivo: true });
+      });
+    }
+
+    it('trata el vacío como válido (eso lo valida required)', () => {
+      expect(validar('')).toBeNull();
+      expect(validar('   ')).toBeNull();
+      expect(validar(null)).toBeNull();
+    });
+  });
+
+  describe('decimalPositivo', () => {
+    const validar = (valor: unknown, decimales?: number, enteros?: number) =>
+      decimalPositivo(decimales, enteros)(new FormControl(valor));
+
+    for (const valido of ['250000.50', '250000', '0.01', '1.5', ' 99.99 ', '9999999999', '0.5']) {
+      it(`acepta "${valido}"`, () => {
+        expect(validar(valido)).toBeNull();
+      });
+    }
+
+    for (const invalido of [
+      '0',
+      '0.00',
+      '-5000',
+      '100.555',
+      '12345678901',
+      '250000,50',
+      '1.2.3',
+      '.5',
+      '5.',
+      'abc',
+      '1e5',
+    ]) {
+      it(`rechaza "${invalido}"`, () => {
+        expect(validar(invalido)).toEqual({ decimalPositivo: true });
+      });
+    }
+
+    it('respeta los máximos de decimales y de enteros recibidos', () => {
+      expect(validar('1.5', 0)).toEqual({ decimalPositivo: true });
+      expect(validar('123', 2, 2)).toEqual({ decimalPositivo: true });
+      expect(validar('12.34', 2, 2)).toBeNull();
+    });
+
+    it('no cuenta los ceros a la izquierda como dígitos enteros', () => {
+      expect(validar('00000000001')).toBeNull();
+    });
+
+    it('trata el vacío como válido (eso lo valida required)', () => {
+      expect(validar('')).toBeNull();
+      expect(validar(null)).toBeNull();
+    });
+  });
+
+  describe('decimalNoNegativo', () => {
+    const validar = (valor: unknown) => decimalNoNegativo()(new FormControl(valor));
+
+    for (const valido of ['0', '0.00', '0.5', '15000', '15000.50', ' 20 ', '9999999999']) {
+      it(`acepta "${valido}"`, () => {
+        expect(validar(valido)).toBeNull();
+      });
+    }
+
+    for (const invalido of ['-1', '-0.5', '100.555', '12345678901', '15000,50', '1.2.3', 'abc']) {
+      it(`rechaza "${invalido}"`, () => {
+        expect(validar(invalido)).toEqual({ decimalNoNegativo: true });
+      });
+    }
+
+    it('trata el vacío como válido (eso lo valida required)', () => {
+      expect(validar('')).toBeNull();
+      expect(validar(null)).toBeNull();
     });
   });
 

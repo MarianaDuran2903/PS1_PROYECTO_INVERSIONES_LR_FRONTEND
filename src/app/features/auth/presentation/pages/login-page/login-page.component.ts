@@ -19,4 +19,6 @@ export class LoginPageComponent {
   readonly registrado = input<string>();
   /** `?expirada=true`: la sesión venció o dejó de ser válida. */
   readonly expirada = input<string>();
+  /** `?cuentaDesactivada=true`: la persona desactivó su propia cuenta. */
+  readonly cuentaDesactivada = input<string>();
 }

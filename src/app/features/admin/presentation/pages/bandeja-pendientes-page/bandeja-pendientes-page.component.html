@@ -1,0 +1,93 @@
+<section class="pagina" aria-labelledby="bandeja-titulo">
+  <header class="pagina__encabezado">
+    <div>
+      <p class="pagina__ruta"><a routerLink="/admin">← Administración</a></p>
+      <h1 id="bandeja-titulo">Publicaciones pendientes de revisión</h1>
+      <p>
+        De la más antigua a la más reciente. Aprueba las que cumplen o recházalas con un motivo.
+      </p>
+    </div>
+  </header>
+
+  @switch (facade.estado()) {
+    @case ('cargando') {
+      <p class="pagina__estado" role="status">
+        <span class="pagina__spinner" aria-hidden="true"></span>
+        Cargando las publicaciones pendientes…
+      </p>
+    }
+    @case ('error') {
+      <div class="alert alert--danger pagina__error" role="alert">
+        <span>No fue posible cargar las publicaciones pendientes.</span>
+        <button type="button" class="btn btn--outline" (click)="facade.reintentar()">
+          Reintentar
+        </button>
+      </div>
+    }
+    @default {
+      @if (facade.vacia()) {
+        <div class="vacio" role="status">
+          <p class="vacio__mensaje">{{ facade.mensajeVacio() }}</p>
+          <a class="btn btn--outline" routerLink="/admin">Volver al panel</a>
+        </div>
+      } @else {
+        <p class="total">
+          {{ facade.totalElementos() }}
+          {{ facade.totalElementos() === 1 ? 'publicación pendiente' : 'publicaciones pendientes' }}
+        </p>
+
+        <ul class="lista">
+          @for (publicacion of facade.publicaciones(); track publicacion.idPublicacion) {
+            <li>
+              <app-tarjeta-publicacion-admin
+                [publicacion]="publicacion"
+                [completa]="true"
+                [acciones]="acciones"
+                [aviso]="facade.avisoDe(publicacion.idPublicacion)"
+                [accionEnCurso]="accionEnCurso(publicacion.idPublicacion)"
+                [ocupado]="facade.ocupado()"
+                (accionar)="accionar(publicacion.idPublicacion, $event)"
+              />
+            </li>
+          }
+        </ul>
+
+        @if (facade.hayVariasPaginas()) {
+          <nav class="paginacion" aria-label="Paginación de publicaciones pendientes">
+            <button
+              type="button"
+              class="btn btn--outline"
+              [disabled]="!facade.hayAnterior()"
+              (click)="facade.anterior()"
+            >
+              Anterior
+            </button>
+            <span class="paginacion__texto">
+              Página {{ facade.paginaActual() + 1 }} de {{ facade.totalPaginas() }}
+            </span>
+            <button
+              type="button"
+              class="btn btn--outline"
+              [disabled]="!facade.haySiguiente()"
+              (click)="facade.siguiente()"
+            >
+              Siguiente
+            </button>
+          </nav>
+        }
+      }
+    }
+  }
+
+  <app-modal-motivo
+    [abierto]="facade.idARechazar() !== null"
+    [titulo]="tituloModal()"
+    ayuda="Explica qué debe corregir el Anfitrión. La publicación volverá a borrador y el motivo queda registrado."
+    etiqueta="Motivo del rechazo"
+    textoConfirmar="Rechazar publicación"
+    [enviando]="facade.accionEnCurso() === 'rechazar'"
+    [error]="facade.errorMotivo()"
+    (confirmar)="facade.confirmarRechazo($event)"
+    (cancelar)="facade.cancelarRechazo()"
+  />
+</section>

@@ -1,0 +1,55 @@
+<dialog
+  #dialogo
+  class="modal"
+  aria-labelledby="modal-motivo-titulo"
+  [attr.aria-describedby]="ayuda() ? 'modal-motivo-ayuda' : null"
+  (cancel)="alPresionarEscape($event)"
+>
+  <form class="modal__formulario" (submit)="enviar($event)" novalidate>
+    <h2 id="modal-motivo-titulo" class="modal__titulo">{{ titulo() }}</h2>
+    @if (ayuda()) {
+      <p id="modal-motivo-ayuda" class="modal__ayuda">{{ ayuda() }}</p>
+    }
+
+    <div class="field">
+      <label for="modal-motivo-campo">{{ etiqueta() }} <span aria-hidden="true">*</span></label>
+      <textarea
+        #campo
+        id="modal-motivo-campo"
+        rows="5"
+        [formControl]="motivo"
+        [attr.aria-invalid]="errorLocal() !== null || error() !== null"
+        [attr.aria-describedby]="
+          errorLocal() || error()
+            ? 'modal-motivo-contador modal-motivo-error'
+            : 'modal-motivo-contador'
+        "
+        required
+      ></textarea>
+      <p
+        id="modal-motivo-contador"
+        class="modal__contador"
+        [class.modal__contador--excedido]="largo() > maximo"
+      >
+        {{ largo() }}/{{ maximo }}
+      </p>
+      @if (errorLocal() || error(); as mensaje) {
+        <p class="field__error" id="modal-motivo-error" role="alert">{{ mensaje }}</p>
+      }
+    </div>
+
+    <div class="modal__acciones">
+      <button type="button" class="btn btn--outline" [disabled]="enviando()" (click)="alCancelar()">
+        Cancelar
+      </button>
+      <button
+        type="submit"
+        class="btn btn--primary"
+        [disabled]="motivo.invalid || enviando()"
+        [attr.aria-busy]="enviando()"
+      >
+        {{ enviando() ? 'Enviando…' : textoConfirmar() }}
+      </button>
+    </div>
+  </form>
+</dialog>
