@@ -45,6 +45,8 @@ export interface PublicacionResponseDto {
   tarifaLimpieza: number;
   /** Puede faltar en respuestas de versiones del backend anteriores a la edición. */
   reglas?: string | null;
+  /** Solo tiene valor si la publicación está BLOQUEADA; puede faltar en backends anteriores. */
+  motivoBloqueo?: string | null;
 }
 
 /** Elemento de GET {apiUrl}/publicaciones/mias. */
@@ -61,6 +63,16 @@ export interface PublicacionResumenResponseDto {
 /** Respuesta de GET {apiUrl}/publicaciones/mias?pagina=&tamano=. */
 export interface PaginaPublicacionesResponseDto {
   contenido: PublicacionResumenResponseDto[];
+  pagina: number;
+  tamano: number;
+  totalElementos: number;
+  totalPaginas: number;
+  mensaje: string | null;
+}
+
+/** Respuesta de GET {apiUrl}/admin/publicaciones/pendientes: publicaciones completas, no resumen. */
+export interface PaginaPublicacionesCompletasResponseDto {
+  contenido: PublicacionResponseDto[];
   pagina: number;
   tamano: number;
   totalElementos: number;

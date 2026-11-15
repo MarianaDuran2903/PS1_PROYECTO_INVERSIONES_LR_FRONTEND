@@ -2,6 +2,7 @@ import {
   ActualizarPublicacion,
   CatalogoItem,
   NuevaPublicacion,
+  Pagina,
   PaginaPublicaciones,
   Publicacion,
   PublicacionResumen,
@@ -10,6 +11,7 @@ import {
   ActualizarPublicacionRequestDto,
   CatalogoItemDto,
   CrearPublicacionRequestDto,
+  PaginaPublicacionesCompletasResponseDto,
   PaginaPublicacionesResponseDto,
   PublicacionResponseDto,
   PublicacionResumenResponseDto,
@@ -74,6 +76,18 @@ export const PublicacionMapper = {
     };
   },
 
+  /** Página de publicaciones completas (bandeja del Administrador), en el orden en que llega. */
+  toPaginaCompleta(dto: PaginaPublicacionesCompletasResponseDto): Pagina<Publicacion> {
+    return {
+      contenido: dto.contenido.map(PublicacionMapper.toDomain),
+      pagina: dto.pagina,
+      tamano: dto.tamano,
+      totalElementos: dto.totalElementos,
+      totalPaginas: dto.totalPaginas,
+      mensaje: dto.mensaje ?? null,
+    };
+  },
+
   toDomain(dto: PublicacionResponseDto): Publicacion {
     return {
       idPublicacion: dto.idPublicacion,
@@ -90,6 +104,7 @@ export const PublicacionMapper = {
       precioNoche: dto.precioNoche,
       tarifaLimpieza: dto.tarifaLimpieza,
       reglas: dto.reglas ?? null,
+      motivoBloqueo: dto.motivoBloqueo ?? null,
     };
   },
 };

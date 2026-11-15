@@ -16,6 +16,12 @@ export const routes: Routes = [
     path: '',
     loadChildren: () => import('@features/auth/auth.routes').then((m) => m.AUTH_ROUTES),
   },
+  // Listado público de alojamientos disponibles: sin guard, lo ve cualquier visitante.
+  {
+    path: 'alojamientos',
+    loadChildren: () =>
+      import('@features/alojamientos/alojamientos.routes').then((m) => m.ALOJAMIENTOS_ROUTES),
+  },
   {
     path: 'acceso-denegado',
     title: 'Acceso denegado | Inversiones LR',

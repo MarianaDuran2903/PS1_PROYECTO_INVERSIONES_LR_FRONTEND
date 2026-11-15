@@ -19,6 +19,7 @@ describe('PublicacionConfirmacionComponent', () => {
     precioNoche: 250000,
     tarifaLimpieza: 0,
     reglas: null,
+    motivoBloqueo: null,
   };
 
   let fixture: ComponentFixture<PublicacionConfirmacionComponent>;
@@ -114,8 +115,7 @@ describe('PublicacionConfirmacionComponent', () => {
     }
 
     const motivos = {
-      ACTIVA:
-        'Esta publicación está activa. Para editarla, solicita al Administrador que la pause.',
+      ACTIVA: 'Esta publicación está activa. Para editarla, páusala primero.',
       PENDIENTE_REVISION: 'La publicación está en revisión del Administrador.',
       BLOQUEADA: 'La publicación está bloqueada.',
     } as const;
@@ -178,6 +178,150 @@ describe('PublicacionConfirmacionComponent', () => {
     element.querySelector<HTMLButtonElement>('.ficha__resumen button')!.click();
 
     expect(veces).toBe(1);
+  });
+
+  describe('motivo del bloqueo (HU-015)', () => {
+    const bloqueada: Publicacion = {
+      ...publicacion,
+      estado: 'BLOQUEADA',
+      motivoBloqueo: 'Las fotos no corresponden al alojamiento',
+    };
+
+    it('en el detalle de una publicación bloqueada muestra un recuadro con el motivo', () => {
+      crear(bloqueada, 'detalle');
+
+      const recuadro = element.querySelector('.ficha__bloqueo')!;
+      expect(recuadro.textContent).toContain('El Administrador bloqueó esta publicación');
+      expect(recuadro.textContent).toContain('Las fotos no corresponden al alojamiento');
+      expect(recuadro.getAttribute('role')).toBe('note');
+    });
+
+    it('si por algún motivo no llegó el texto, lo dice en vez de dejar el recuadro vacío', () => {
+      crear({ ...bloqueada, motivoBloqueo: null }, 'detalle');
+
+      expect(element.querySelector('.ficha__bloqueo')!.textContent).toContain(
+        'No se indicó un motivo.',
+      );
+    });
+
+    it('en otros estados no hay recuadro', () => {
+      for (const estado of ['BORRADOR', 'PENDIENTE_REVISION', 'ACTIVA', 'PAUSADA'] as const) {
+        TestBed.resetTestingModule();
+        crear({ ...publicacion, estado }, 'detalle');
+
+        expect(element.querySelector('.ficha__bloqueo')).withContext(estado).toBeNull();
+      }
+    });
+
+    it('fuera del detalle (modo confirmación) tampoco aparece', () => {
+      crear(bloqueada, 'confirmacion');
+
+      expect(element.querySelector('.ficha__bloqueo')).toBeNull();
+    });
+
+    it('una publicación bloqueada sigue sin poder editarse ni pausarse', () => {
+      crear(bloqueada, 'detalle');
+
+      const acciones = Array.from(
+        element.querySelectorAll('.ficha__resumen button, .ficha__resumen a'),
+      )
+        .map((e) => e.textContent!.trim())
+        .join('|');
+      expect(acciones).not.toContain('Pausar');
+      expect(acciones).not.toContain('Enviar a revisión');
+    });
+  });
+
+  describe('pausar (HU-014)', () => {
+    const botonPausar = () =>
+      Array.from(element.querySelectorAll<HTMLButtonElement>('button')).find((b) =>
+        b.textContent?.trim().startsWith('Pausa'),
+      );
+
+    it('en el detalle de una publicación activa muestra el botón y emite "pausar" al pulsarlo', () => {
+      crear({ ...publicacion, estado: 'ACTIVA' }, 'detalle');
+      let veces = 0;
+      fixture.componentInstance.pausar.subscribe(() => veces++);
+
+      botonPausar()!.click();
+
+      expect(veces).toBe(1);
+    });
+
+    it('en el detalle muestra el indicador de carga mientras se pausa', () => {
+      crear({ ...publicacion, estado: 'ACTIVA' }, 'detalle');
+      fixture.componentRef.setInput('pausando', true);
+      fixture.detectChanges();
+
+      const boton = Array.from(element.querySelectorAll<HTMLButtonElement>('button')).find((b) =>
+        b.textContent?.includes('Pausando'),
+      )!;
+      expect(boton.disabled).toBeTrue();
+    });
+
+    it('en el detalle de una publicación pausada muestra el texto y no el botón', () => {
+      crear({ ...publicacion, estado: 'PAUSADA' }, 'detalle');
+
+      expect(botonPausar()).toBeUndefined();
+      expect(element.querySelector('.ficha__resumen')!.textContent).toContain(
+        'El Administrador revisará tus ajustes antes de reactivarla',
+      );
+    });
+
+    it('en un borrador no ofrece pausar', () => {
+      crear(publicacion, 'detalle');
+
+      expect(botonPausar()).toBeUndefined();
+    });
+
+    it('justo después de crear (modo confirmación) no ofrece pausar', () => {
+      crear({ ...publicacion, estado: 'ACTIVA' }, 'confirmacion');
+
+      expect(botonPausar()).toBeUndefined();
+    });
+  });
+
+  describe('enviar a revisión (HU-012)', () => {
+    const botonEnviar = () =>
+      Array.from(element.querySelectorAll<HTMLButtonElement>('button')).find((b) =>
+        b.textContent?.includes('Enviar a revisión'),
+      );
+
+    it('en el detalle de un borrador muestra el botón y emite "enviarARevision" al pulsarlo', () => {
+      crear(publicacion, 'detalle');
+      let veces = 0;
+      fixture.componentInstance.enviarARevision.subscribe(() => veces++);
+
+      botonEnviar()!.click();
+
+      expect(veces).toBe(1);
+    });
+
+    it('en el detalle muestra el indicador de carga mientras se envía', () => {
+      crear(publicacion, 'detalle');
+      fixture.componentRef.setInput('enviandoRevision', true);
+      fixture.detectChanges();
+
+      const boton = Array.from(element.querySelectorAll<HTMLButtonElement>('button')).find((b) =>
+        b.textContent?.includes('Enviando'),
+      )!;
+      expect(boton.disabled).toBeTrue();
+    });
+
+    it('en el detalle de una publicación en revisión muestra el texto y no el botón', () => {
+      crear({ ...publicacion, estado: 'PENDIENTE_REVISION' }, 'detalle');
+
+      expect(botonEnviar()).toBeUndefined();
+      expect(element.querySelector('.ficha__resumen')!.textContent).toContain(
+        'En revisión del Administrador',
+      );
+    });
+
+    it('justo después de crear (modo confirmación) no ofrece enviar a revisión', () => {
+      crear(publicacion, 'confirmacion');
+
+      expect(botonEnviar()).toBeUndefined();
+    });
   });
 
   it('no dice que es un borrador si el estado es otro', () => {

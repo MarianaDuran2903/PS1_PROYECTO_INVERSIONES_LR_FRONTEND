@@ -30,6 +30,7 @@ describe('PublicacionFormComponent (modo intervenir)', () => {
     precioNoche: 250000.5,
     tarifaLimpieza: 30000,
     reglas: 'No fumar',
+    motivoBloqueo: null,
   };
 
   let fixture: ComponentFixture<PublicacionFormComponent>;

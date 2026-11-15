@@ -36,6 +36,7 @@ describe('IntervenirPublicacionFacade', () => {
     precioNoche: 100000,
     tarifaLimpieza: 0,
     reglas: null,
+    motivoBloqueo: null,
   });
   const intervencion: IntervencionPublicacion = {
     motivo: 'Corrección de la dirección reportada',
