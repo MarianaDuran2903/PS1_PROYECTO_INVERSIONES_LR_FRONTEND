@@ -16,6 +16,7 @@ import {
 } from '@angular/router';
 import { APP_CONFIG } from '@core/config/app-config';
 import { ToastService } from '@core/notifications/toast.service';
+import { rutaInicialPorRol } from '@features/auth/application/rutas';
 import { SessionService } from '@features/auth/application/session.service';
 import { RolUsuario } from '@features/auth/domain/models/rol-usuario';
 import { ToastContainerComponent } from '@shared/ui/toast-container/toast-container.component';
@@ -53,6 +54,16 @@ export class AppComponent {
   protected readonly esAdministrador = computed(
     () => this.usuario()?.roles.includes(RolUsuario.Administrador) ?? false,
   );
+  protected readonly puedeExplorar = computed(() => {
+    const usuario = this.usuario();
+
+    return (
+      !usuario ||
+      (!this.esAdministrador() && !this.esAnfitrion() && usuario.roles.includes(RolUsuario.Huesped))
+    );
+  });
+
+  protected readonly rutaInicio = computed(() => rutaInicialPorRol(this.usuario()?.roles ?? []));
 
   protected cerrarSesion(): void {
     this.cerrarMenuCuenta();

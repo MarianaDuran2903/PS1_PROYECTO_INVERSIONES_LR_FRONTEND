@@ -3,8 +3,8 @@ import { RolUsuario } from '../domain/models/rol-usuario';
 /** Primera pantalla tras iniciar sesión; si la persona tiene varios roles gana el de mayor alcance. */
 const RUTA_POR_ROL: readonly (readonly [RolUsuario, string])[] = [
   [RolUsuario.Administrador, '/admin'],
-  [RolUsuario.Anfitrion, '/anfitrion'],
-  [RolUsuario.Huesped, '/marketplace'],
+  [RolUsuario.Anfitrion, '/anfitrion/publicaciones'],
+  [RolUsuario.Huesped, '/'],
 ];
 
 export function rutaInicialPorRol(roles: readonly RolUsuario[]): string {

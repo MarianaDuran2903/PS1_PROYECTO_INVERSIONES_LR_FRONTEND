@@ -166,4 +166,80 @@ describe('authTokenInterceptor', () => {
 
     expect(recibido).toEqual(jasmine.objectContaining({ status: 500 }));
   });
+
+  it('no envía el token al listado público aunque exista una sesión', () => {
+    http
+      .get('/api-test/alojamientos', {
+        params: { pagina: 0, tamano: 12 },
+      })
+      .subscribe();
+
+    const req = controller.expectOne(
+      (request) =>
+        request.url === '/api-test/alojamientos' &&
+        request.params.get('pagina') === '0' &&
+        request.params.get('tamano') === '12',
+    );
+
+    expect(req.request.method).toBe('GET');
+    expect(req.request.headers.has('Authorization')).toBeFalse();
+    req.flush({});
+    expect(session.autenticado()).toBeTrue();
+  });
+
+  it('permite consultar alojamientos sin sesión ni token', () => {
+    session.cerrar();
+
+    http.get('/api-test/alojamientos').subscribe();
+
+    const req = controller.expectOne('/api-test/alojamientos');
+
+    expect(req.request.headers.has('Authorization')).toBeFalse();
+    req.flush({});
+    expect(router.navigate).not.toHaveBeenCalled();
+  });
+
+  for (const estado of [401, 403]) {
+    it(`un ${estado} del listado público propaga el error sin cerrar la sesión`, () => {
+      let recibido: unknown;
+      const aviso = spyOn(toast, 'error');
+
+      http
+        .get('/api-test/alojamientos?pagina=0&tamano=12')
+        .subscribe({ error: (error: unknown) => (recibido = error) });
+
+      const { body, opts } = errorDelBackend(
+        estado,
+        estado === 401 ? 'Unauthorized' : 'Forbidden',
+        'Error de consulta pública',
+      );
+
+      const req = controller.expectOne('/api-test/alojamientos?pagina=0&tamano=12');
+      expect(req.request.headers.has('Authorization')).toBeFalse();
+      req.flush(body, opts);
+
+      expect(recibido).toEqual(jasmine.objectContaining({ status: estado }));
+      expect(session.autenticado()).toBeTrue();
+      expect(router.navigate).not.toHaveBeenCalled();
+      expect(aviso).not.toHaveBeenCalled();
+    });
+  }
+
+  it('no considera pública una escritura en /alojamientos', () => {
+    http.post('/api-test/alojamientos', {}).subscribe();
+
+    const req = controller.expectOne('/api-test/alojamientos');
+
+    expect(req.request.headers.get('Authorization')).toBe('Bearer abc');
+    req.flush({});
+  });
+
+  it('no extiende la excepción pública a rutas con un prefijo parecido', () => {
+    http.get('/api-test/alojamientos-privados').subscribe();
+
+    const req = controller.expectOne('/api-test/alojamientos-privados');
+
+    expect(req.request.headers.get('Authorization')).toBe('Bearer abc');
+    req.flush({});
+  });
 });

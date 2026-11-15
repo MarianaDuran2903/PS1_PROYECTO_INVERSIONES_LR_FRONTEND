@@ -87,7 +87,7 @@ describe('access guards', () => {
     it('manda a su pantalla a quien ya tiene sesión', () => {
       session.iniciar(sesionCon('ANFITRION'));
 
-      expect(ejecutar(invitadoGuard)).toBe('/anfitrion');
+      expect(ejecutar(invitadoGuard)).toBe('/anfitrion/publicaciones');
     });
   });
 });

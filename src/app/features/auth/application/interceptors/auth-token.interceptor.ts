@@ -27,7 +27,11 @@ export const authTokenInterceptor: HttpInterceptorFn = (req, next) => {
   const apiUrl = inject(APP_CONFIG).apiUrl;
 
   const esApi = req.url.startsWith(apiUrl);
-  const esPublica = RUTAS_PUBLICAS.some((ruta) => req.url.startsWith(`${apiUrl}${ruta}`));
+  const rutaSinConsulta = req.url.split('?')[0];
+  const esConsultaAlojamientos =
+    req.method === 'GET' && rutaSinConsulta === `${apiUrl}/alojamientos`;
+  const esPublica =
+    esConsultaAlojamientos || RUTAS_PUBLICAS.some((ruta) => req.url.startsWith(`${apiUrl}${ruta}`));
   const token = session.token();
   const request =
     esApi && !esPublica && token
