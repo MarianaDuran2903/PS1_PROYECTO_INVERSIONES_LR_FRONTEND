@@ -1,0 +1,131 @@
+<section class="busqueda" aria-labelledby="busqueda-titulo">
+  <app-barra-busqueda-alojamientos
+    [cargando]="facade.estado() === 'cargando'"
+    (buscar)="facade.cargar()"
+  />
+
+  <div class="distribucion">
+    <aside class="filtros" aria-labelledby="filtros-titulo">
+      <h2 id="filtros-titulo">Filtros</h2>
+
+      <fieldset disabled>
+        <legend class="visualmente-oculto">Filtros disponibles próximamente</legend>
+
+        <label class="filtro">
+          <span>Tipo de alojamiento</span>
+          <select>
+            <option>Todos los tipos</option>
+            <option>Apartamento</option>
+            <option>Casa</option>
+            <option>Habitación</option>
+            <option>Cabaña</option>
+          </select>
+        </label>
+
+        <label class="filtro">
+          <span>Precio por noche</span>
+          <input type="range" min="0" max="1000000" value="1000000" />
+          <small>Sin límite aplicado</small>
+        </label>
+
+        <div class="servicios">
+          <p>Servicios gratuitos</p>
+          <label><input type="checkbox" /> Wifi</label>
+          <label><input type="checkbox" /> Cocina</label>
+          <label><input type="checkbox" /> Parqueadero</label>
+        </div>
+      </fieldset>
+
+      <p class="nota">
+        Los filtros estarán disponibles próximamente. Por ahora se muestran todas las publicaciones
+        activas.
+      </p>
+    </aside>
+
+    <div class="contenido">
+      <header class="encabezado">
+        <p class="etiqueta">Explora Inversiones LR</p>
+        <h1 id="busqueda-titulo">Alojamientos para tu próxima estancia</h1>
+        <p>Publicaciones activas · Todos los destinos</p>
+      </header>
+
+      @switch (facade.estado()) {
+        @case ('cargando') {
+          <p class="estado" role="status">Cargando alojamientos...</p>
+        }
+        @case ('error') {
+          <div class="alert alert--danger" role="alert">
+            <p>No fue posible cargar los alojamientos. Inténtalo de nuevo.</p>
+            <button type="button" class="btn btn--outline" (click)="facade.reintentar()">
+              Reintentar
+            </button>
+          </div>
+        }
+        @case ('listo') {
+          @if (facade.totalElementos() === 0) {
+            <p class="vacio" role="status">{{ facade.mensajeVacio() }}</p>
+          } @else {
+            <p class="total" role="status">
+              {{ facade.totalElementos() }}
+              {{
+                facade.totalElementos() === 1
+                  ? 'alojamiento encontrado'
+                  : 'alojamientos encontrados'
+              }}
+            </p>
+
+            <ul class="resultados">
+              @for (alojamiento of facade.alojamientos(); track alojamiento.idPublicacion) {
+                <li class="tarjeta">
+                  <div class="tarjeta__portada" aria-hidden="true">
+                    <span class="insignia">Activa</span>
+                    <span class="tarjeta__tipo">{{ alojamiento.tipo.nombre }}</span>
+                    <span class="tarjeta__sin-foto">Sin fotografía disponible</span>
+                  </div>
+
+                  <div class="tarjeta__contenido">
+                    <p class="tarjeta__ciudad">{{ alojamiento.ciudad.nombre }}</p>
+                    <h2>{{ alojamiento.titulo }}</h2>
+                    <p class="tarjeta__meta">
+                      {{ alojamiento.tipo.nombre }} · {{ alojamiento.capacidad }}
+                      {{ alojamiento.capacidad === 1 ? 'huésped' : 'huéspedes' }}
+                    </p>
+                    <p class="precio">
+                      <strong>
+                        {{ alojamiento.precioNoche | currency: 'COP' : 'symbol-narrow' : '1.0-2' }}
+                        COP
+                      </strong>
+                      <span>/ noche</span>
+                    </p>
+                  </div>
+                </li>
+              }
+            </ul>
+
+            @if (facade.totalPaginas() > 1) {
+              <nav class="paginacion" aria-label="Paginación de alojamientos">
+                <button
+                  type="button"
+                  class="btn btn--outline"
+                  [disabled]="!facade.hayAnterior()"
+                  (click)="facade.anterior()"
+                >
+                  Anterior
+                </button>
+                <span> Página {{ facade.paginaActual() + 1 }} de {{ facade.totalPaginas() }} </span>
+                <button
+                  type="button"
+                  class="btn btn--outline"
+                  [disabled]="!facade.haySiguiente()"
+                  (click)="facade.siguiente()"
+                >
+                  Siguiente
+                </button>
+              </nav>
+            }
+          }
+        }
+      }
+    </div>
+  </div>
+</section>

@@ -3,13 +3,13 @@ import { rutaInicialPorRol, urlInternaSegura } from './rutas';
 describe('rutas', () => {
   describe('rutaInicialPorRol', () => {
     it('lleva a cada rol a su pantalla', () => {
-      expect(rutaInicialPorRol(['HUESPED'])).toBe('/marketplace');
-      expect(rutaInicialPorRol(['ANFITRION'])).toBe('/anfitrion');
+      expect(rutaInicialPorRol(['HUESPED'])).toBe('/');
+      expect(rutaInicialPorRol(['ANFITRION'])).toBe('/anfitrion/publicaciones');
       expect(rutaInicialPorRol(['ADMINISTRADOR'])).toBe('/admin');
     });
 
     it('con varios roles gana el de mayor alcance', () => {
-      expect(rutaInicialPorRol(['HUESPED', 'ANFITRION'])).toBe('/anfitrion');
+      expect(rutaInicialPorRol(['HUESPED', 'ANFITRION'])).toBe('/anfitrion/publicaciones');
       expect(rutaInicialPorRol(['HUESPED', 'ADMINISTRADOR'])).toBe('/admin');
     });
 

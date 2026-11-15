@@ -91,7 +91,7 @@ describe('LoginFacade', () => {
     facade.iniciarSesion(credenciales, '//evil.com');
     respuesta.next(sesionCon('ANFITRION'));
 
-    expect(router.navigateByUrl).toHaveBeenCalledOnceWith('/anfitrion');
+    expect(router.navigateByUrl).toHaveBeenCalledOnceWith('/anfitrion/publicaciones');
   });
 
   it('credenciales incorrectas: mensaje genérico, sin sesión y con traza sin datos personales', () => {

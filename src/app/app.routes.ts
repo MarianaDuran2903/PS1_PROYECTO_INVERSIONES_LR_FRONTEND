@@ -1,11 +1,15 @@
 import { Routes } from '@angular/router';
 import { rolGuard, autenticadoGuard } from '@features/auth/application/guards/access.guards';
+import { exploracionGuard } from '@features/auth/application/guards/exploracion.guard';
 import { RolUsuario } from '@features/auth/domain/models/rol-usuario';
+import { BusquedaAlojamientosHttpRepository } from '@features/marketplace/data/repositories/busqueda-alojamientos-http.repository';
+import { BusquedaAlojamientosRepository } from '@features/marketplace/domain/repositories/busqueda-alojamientos.repository';
 
 export const routes: Routes = [
   {
     path: '',
     pathMatch: 'full',
+    canActivate: [exploracionGuard],
     title: 'Inversiones LR | Alojamientos con identidad',
     loadComponent: () =>
       import('@features/home/presentation/pages/home-page/home-page.component').then(
@@ -50,6 +54,21 @@ export const routes: Routes = [
     loadComponent: () =>
       import('@features/perfil/presentation/pages/perfil-page/perfil-page.component').then(
         (m) => m.PerfilPageComponent,
+      ),
+  },
+  {
+    path: 'alojamientos',
+    canActivate: [exploracionGuard],
+    title: 'Buscar alojamientos | Inversiones LR',
+    providers: [
+      {
+        provide: BusquedaAlojamientosRepository,
+        useClass: BusquedaAlojamientosHttpRepository,
+      },
+    ],
+    loadComponent: () =>
+      import('./features/marketplace/presentation/pages/busqueda-alojamientos-page/busqueda-alojamientos-page.component').then(
+        (m) => m.BusquedaAlojamientosPageComponent,
       ),
   },
 

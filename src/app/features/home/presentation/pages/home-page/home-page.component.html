@@ -6,10 +6,36 @@
       Encuentra estancias únicas en los destinos más especiales de Colombia.
     </p>
     <div class="hero__acciones">
-      <a class="btn btn--primary btn--lg" routerLink="/marketplace">Buscar alojamiento</a>
-      <a class="btn btn--outline btn--lg" routerLink="/registro" [queryParams]="paramsAnfitrion"
-        >Publicar alojamiento</a
-      >
+      <a class="btn btn--primary btn--lg" routerLink="/alojamientos"> Buscar alojamiento </a>
+      <a class="btn btn--outline btn--lg" routerLink="/registro" [queryParams]="paramsAnfitrion">
+        Publicar alojamiento
+      </a>
     </div>
+  </div>
+</section>
+
+<div class="busqueda-inicio">
+  <app-barra-busqueda-alojamientos (buscar)="buscar()" />
+</div>
+
+<section class="seleccion" aria-labelledby="seleccion-titulo">
+  <header class="seleccion__encabezado">
+    <div>
+      <p class="seleccion__etiqueta">Selección LR</p>
+      <h2 id="seleccion-titulo">Estancias para recordar</h2>
+    </div>
+    <p>Descubre diferentes maneras de alojarte en Colombia.</p>
+  </header>
+
+  <div class="categorias">
+    @for (categoria of categorias; track categoria.nombre) {
+      <article class="categoria">
+        <img [src]="categoria.imagen" alt="" loading="lazy" />
+        <div class="categoria__texto">
+          <h3>{{ categoria.titulo }}</h3>
+          <p>{{ categoria.descripcion }}</p>
+        </div>
+      </article>
+    }
   </div>
 </section>

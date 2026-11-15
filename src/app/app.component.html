@@ -1,17 +1,19 @@
 <header class="app-header">
-  <a class="brand" routerLink="/" aria-label="{{ appName }}, ir al inicio">
+  <a class="brand" [routerLink]="rutaInicio()" aria-label="{{ appName }}, ir al inicio">
     <span class="brand__logo" aria-hidden="true">LR</span>
     <span class="brand__name">{{ appName }}</span>
   </a>
 
   <nav class="nav" aria-label="Principal">
-    <a
-      class="nav__link"
-      routerLink="/"
-      routerLinkActive="nav__link--active"
-      [routerLinkActiveOptions]="soloRuta"
-      >Explorar</a
-    >
+    @if (puedeExplorar()) {
+      <a
+        class="nav__link"
+        routerLink="/"
+        routerLinkActive="nav__link--active"
+        [routerLinkActiveOptions]="soloRuta"
+        >Explorar</a
+      >
+    }
 
     @if (esAnfitrion()) {
       <a

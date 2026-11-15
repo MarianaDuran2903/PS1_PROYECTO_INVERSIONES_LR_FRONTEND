@@ -1,0 +1,38 @@
+<div class="barra">
+  <fieldset disabled class="campos">
+    <legend class="visualmente-oculto">Próximos filtros de búsqueda</legend>
+
+    <label class="campo">
+      <span>Destino</span>
+      <select>
+        <option value="">Todos los destinos</option>
+      </select>
+    </label>
+
+    <label class="campo">
+      <span>Llegada</span>
+      <input type="date" />
+    </label>
+
+    <label class="campo">
+      <span>Salida</span>
+      <input type="date" />
+    </label>
+
+    <label class="campo">
+      <span>Huéspedes</span>
+      <select>
+        <option value="">Cualquier capacidad</option>
+      </select>
+    </label>
+  </fieldset>
+
+  <button type="button" class="btn btn--primary" [disabled]="cargando()" (click)="buscar.emit()">
+    Buscar alojamientos
+  </button>
+</div>
+
+<p class="aviso">
+  Por ahora puedes explorar todas las publicaciones activas. Los filtros estarán disponibles
+  próximamente.
+</p>
