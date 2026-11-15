@@ -12,4 +12,6 @@ export abstract class BusquedaAlojamientosRepository {
     filtros?: FiltrosBusquedaAlojamientos,
   ): Observable<PaginaAlojamientos>;
   abstract listarCiudades(): Observable<CatalogoAlojamiento[]>;
+  abstract listarTiposAlojamiento(): Observable<CatalogoAlojamiento[]>;
+  abstract listarServicios(): Observable<CatalogoAlojamiento[]>;
 }

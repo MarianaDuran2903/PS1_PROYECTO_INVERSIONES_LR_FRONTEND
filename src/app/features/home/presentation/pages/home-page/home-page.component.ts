@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { BusquedaAlojamientosFacade } from '@features/marketplace/application/busqueda-alojamientos.facade';
 import { BusquedaAlojamientosHttpRepository } from '@features/marketplace/data/repositories/busqueda-alojamientos-http.repository';
@@ -23,7 +23,7 @@ export class HomePageComponent {
   protected readonly facade = inject(BusquedaAlojamientosFacade);
   protected readonly paramsAnfitrion = { rol: 'anfitrion' };
 
-  protected readonly categorias = [
+  protected readonly categoriasBase = [
     {
       nombre: 'Cabaña',
       titulo: 'Cabañas',
@@ -50,8 +50,16 @@ export class HomePageComponent {
     },
   ];
 
+  protected readonly categorias = computed(() =>
+    this.categoriasBase.map((categoria) => ({
+      ...categoria,
+      idTipo: this.facade.tiposAlojamiento().find((tipo) => tipo.nombre === categoria.nombre)?.id,
+    })),
+  );
+
   constructor() {
     this.facade.cargarCiudades();
+    this.facade.cargarCaracteristicas();
   }
 
   protected buscar(filtros: FiltrosBusquedaAlojamientos): void {

@@ -5,7 +5,7 @@ import {
   CatalogoAlojamiento,
   PaginaAlojamientos,
 } from '@features/marketplace/domain/models/busqueda-alojamientos';
-import { Subject } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 
 describe('BusquedaAlojamientosFacade', () => {
   const preparar = () => {
@@ -15,12 +15,18 @@ describe('BusquedaAlojamientosFacade', () => {
       .createSpy('listarCiudades')
       .and.returnValue(new Subject<CatalogoAlojamiento[]>());
 
+    const listarTiposAlojamiento = jasmine
+      .createSpy('listarTiposAlojamiento')
+      .and.returnValue(of([]));
+
+    const listarServicios = jasmine.createSpy('listarServicios').and.returnValue(of([]));
+
     TestBed.configureTestingModule({
       providers: [
         BusquedaAlojamientosFacade,
         {
           provide: BusquedaAlojamientosRepository,
-          useValue: { listar, listarCiudades },
+          useValue: { listar, listarCiudades, listarTiposAlojamiento, listarServicios },
         },
       ],
     });
@@ -29,6 +35,8 @@ describe('BusquedaAlojamientosFacade', () => {
       facade: TestBed.inject(BusquedaAlojamientosFacade),
       listar,
       listarCiudades,
+      listarTiposAlojamiento,
+      listarServicios,
     };
   };
 
@@ -68,5 +76,34 @@ describe('BusquedaAlojamientosFacade', () => {
 
     expect(listarCiudades).toHaveBeenCalledTimes(1);
     expect(facade.estadoCiudades()).toBe('cargando');
+  });
+
+  it('carga tipos y servicios para el panel', () => {
+    const { facade, listarTiposAlojamiento, listarServicios } = preparar();
+
+    listarTiposAlojamiento.and.returnValue(of([{ id: 2, nombre: 'Casa' }]));
+    listarServicios.and.returnValue(of([{ id: 1, nombre: 'Wi-Fi' }]));
+
+    facade.cargarCaracteristicas();
+
+    expect(facade.estadoCaracteristicas()).toBe('listo');
+    expect(facade.tiposAlojamiento()).toEqual([{ id: 2, nombre: 'Casa' }]);
+    expect(facade.servicios()).toEqual([{ id: 1, nombre: 'Wi-Fi' }]);
+  });
+
+  it('permite reintentar si falla un catálogo de características', () => {
+    const { facade, listarServicios } = preparar();
+
+    listarServicios.and.returnValue(throwError(() => new Error('Error de catálogo')));
+
+    facade.cargarCaracteristicas();
+
+    expect(facade.estadoCaracteristicas()).toBe('error');
+
+    listarServicios.and.returnValue(of([]));
+    facade.reintentarCaracteristicas();
+
+    expect(facade.estadoCaracteristicas()).toBe('listo');
+    expect(listarServicios).toHaveBeenCalledTimes(2);
   });
 });

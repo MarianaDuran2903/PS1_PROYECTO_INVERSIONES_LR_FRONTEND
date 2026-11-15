@@ -40,14 +40,37 @@
     <p>Descubre diferentes maneras de alojarte en Colombia.</p>
   </header>
 
+  @if (facade.estadoCaracteristicas() === 'cargando') {
+    <p role="status">Cargando categorías...</p>
+  }
+
+  @if (facade.estadoCaracteristicas() === 'error') {
+    <div class="alert alert--danger" role="alert">
+      <p>No fue posible habilitar la búsqueda por categorías.</p>
+      <button type="button" class="btn btn--outline" (click)="facade.reintentarCaracteristicas()">
+        Reintentar categorías
+      </button>
+    </div>
+  }
+
   <div class="categorias">
-    @for (categoria of categorias; track categoria.nombre) {
+    @for (categoria of categorias(); track categoria.nombre) {
       <article class="categoria">
         <img [src]="categoria.imagen" alt="" loading="lazy" />
+
         <div class="categoria__texto">
           <h3>{{ categoria.titulo }}</h3>
           <p>{{ categoria.descripcion }}</p>
         </div>
+
+        @if (categoria.idTipo !== undefined) {
+          <a
+            class="categoria__enlace"
+            routerLink="/alojamientos"
+            [queryParams]="{ idTipo: categoria.idTipo }"
+            [attr.aria-label]="'Buscar alojamientos de tipo ' + categoria.nombre"
+          ></a>
+        }
       </article>
     }
   </div>

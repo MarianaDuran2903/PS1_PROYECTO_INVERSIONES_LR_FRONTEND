@@ -242,4 +242,42 @@ describe('authTokenInterceptor', () => {
     expect(req.request.headers.get('Authorization')).toBe('Bearer abc');
     req.flush({});
   });
+
+  for (const ruta of [
+    '/api-test/alojamientos/ciudades',
+    '/api-test/catalogos/tipos-alojamiento',
+    '/api-test/catalogos/servicios',
+  ]) {
+    it(`no envía token al catálogo público ${ruta}`, () => {
+      http.get(ruta).subscribe();
+
+      const req = controller.expectOne(ruta);
+
+      expect(req.request.headers.has('Authorization')).toBeFalse();
+      req.flush([]);
+      expect(session.autenticado()).toBeTrue();
+    });
+
+    it(`un 401 de ${ruta} no cierra la sesión`, () => {
+      const aviso = spyOn(toast, 'error');
+      http.get(ruta).subscribe({ error: () => undefined });
+
+      const { body, opts } = errorDelBackend(401, 'Unauthorized', 'Error del catálogo');
+
+      controller.expectOne(ruta).flush(body, opts);
+
+      expect(session.autenticado()).toBeTrue();
+      expect(router.navigate).not.toHaveBeenCalled();
+      expect(aviso).not.toHaveBeenCalled();
+    });
+  }
+
+  it('mantiene autenticado el catálogo privado de tipos', () => {
+    http.get('/api-test/tipos-alojamiento').subscribe();
+
+    const req = controller.expectOne('/api-test/tipos-alojamiento');
+
+    expect(req.request.headers.get('Authorization')).toBe('Bearer abc');
+    req.flush([]);
+  });
 });

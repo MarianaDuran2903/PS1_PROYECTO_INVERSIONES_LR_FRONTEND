@@ -19,47 +19,135 @@
 
   <div class="distribucion">
     <aside class="filtros" aria-labelledby="filtros-titulo">
-      <h2 id="filtros-titulo">Filtros</h2>
+      <h2 id="filtros-titulo">Características</h2>
 
-      <fieldset disabled>
-        <legend class="visualmente-oculto">Filtros disponibles próximamente</legend>
+      @switch (facade.estadoCaracteristicas()) {
+        @case ('cargando') {
+          <p role="status">Cargando tipos y servicios...</p>
+        }
 
-        <label class="filtro">
-          <span>Tipo de alojamiento</span>
-          <select>
-            <option>Todos los tipos</option>
-            <option>Apartamento</option>
-            <option>Casa</option>
-            <option>Habitación</option>
-            <option>Cabaña</option>
-          </select>
-        </label>
+        @case ('error') {
+          <div class="alert alert--danger" role="alert">
+            <p>No fue posible cargar los filtros de características.</p>
+            <button
+              type="button"
+              class="btn btn--outline"
+              (click)="facade.reintentarCaracteristicas()"
+            >
+              Reintentar características
+            </button>
+          </div>
+        }
 
-        <label class="filtro">
-          <span>Precio por noche</span>
-          <input type="range" min="0" max="1000000" value="1000000" />
-          <small>Sin límite aplicado</small>
-        </label>
+        @case ('listo') {
+          <form
+            class="form-caracteristicas"
+            [formGroup]="caracteristicas"
+            (ngSubmit)="aplicarCaracteristicas()"
+          >
+            <label class="filtro">
+              <span>Tipo de alojamiento</span>
+              <select formControlName="idTipo">
+                <option value="">Todos los tipos</option>
+                @for (tipo of facade.tiposAlojamiento(); track tipo.id) {
+                  <option [value]="tipo.id">{{ tipo.nombre }}</option>
+                }
+              </select>
+            </label>
 
-        <div class="servicios">
-          <p>Servicios gratuitos</p>
-          <label><input type="checkbox" /> Wifi</label>
-          <label><input type="checkbox" /> Cocina</label>
-          <label><input type="checkbox" /> Parqueadero</label>
-        </div>
-      </fieldset>
+            <label class="filtro">
+              <span>Precio mínimo por noche (COP)</span>
+              <input
+                type="text"
+                inputmode="decimal"
+                formControlName="precioMinimo"
+                placeholder="Sin mínimo"
+              />
+              @if (
+                caracteristicas.controls.precioMinimo.touched &&
+                caracteristicas.controls.precioMinimo.invalid
+              ) {
+                <small class="error-campo">
+                  Ingresa un precio no negativo, con hasta 10 enteros y 2 decimales.
+                </small>
+              }
+            </label>
 
-      <p class="nota">
-        Los filtros estarán disponibles próximamente. Por ahora se muestran todas las publicaciones
-        activas.
-      </p>
+            <label class="filtro">
+              <span>Precio máximo por noche (COP)</span>
+              <input
+                type="text"
+                inputmode="decimal"
+                formControlName="precioMaximo"
+                placeholder="Sin máximo"
+              />
+              @if (
+                caracteristicas.controls.precioMaximo.touched &&
+                caracteristicas.controls.precioMaximo.invalid
+              ) {
+                <small class="error-campo">
+                  Ingresa un precio no negativo, con hasta 10 enteros y 2 decimales.
+                </small>
+              }
+            </label>
+
+            @if (caracteristicas.hasError('rangoPrecios') && caracteristicas.touched) {
+              <p class="error-campo" role="alert">
+                El precio máximo debe ser mayor o igual al mínimo.
+              </p>
+            }
+
+            <fieldset class="servicios">
+              <legend>Servicios requeridos</legend>
+
+              @for (servicio of facade.servicios(); track servicio.id) {
+                <label>
+                  <input
+                    type="checkbox"
+                    [attr.data-servicio-id]="servicio.id"
+                    [checked]="caracteristicas.controls.idsServicios.value.includes(servicio.id)"
+                    (change)="cambiarServicio(servicio.id, $event)"
+                  />
+                  {{ servicio.nombre }}
+                </label>
+              } @empty {
+                <p>No hay servicios registrados en el catálogo.</p>
+              }
+            </fieldset>
+
+            <p class="nota">
+              Se exigirán todos los servicios seleccionados. Los precios corresponden a una noche;
+              usa punto para los decimales y no uses separadores de miles.
+            </p>
+
+            <div class="acciones-caracteristicas">
+              <button
+                type="submit"
+                class="btn btn--primary"
+                [disabled]="facade.estado() === 'cargando'"
+              >
+                Aplicar características
+              </button>
+
+              <button
+                type="button"
+                class="btn btn--outline"
+                [disabled]="facade.estado() === 'cargando'"
+                (click)="limpiarCaracteristicas()"
+              >
+                Limpiar características
+              </button>
+            </div>
+          </form>
+        }
+      }
     </aside>
 
     <div class="contenido">
       <header class="encabezado">
         <p class="etiqueta">Explora Inversiones LR</p>
         <h1 id="busqueda-titulo">Alojamientos para tu próxima estancia</h1>
-        <p>Publicaciones activas · Filtros de ubicación, fechas y huéspedes</p>
+        <p>Publicaciones activas · Ubicación, fechas, capacidad y características</p>
       </header>
 
       @switch (facade.estado()) {
@@ -90,10 +178,18 @@
             <ul class="resultados">
               @for (alojamiento of facade.alojamientos(); track alojamiento.idPublicacion) {
                 <li class="tarjeta">
-                  <div class="tarjeta__portada" aria-hidden="true">
+                  <div class="tarjeta__portada">
+                    <img
+                      class="tarjeta__imagen"
+                      [src]="imagenReferencia(alojamiento.tipo.nombre)"
+                      alt=""
+                      loading="lazy"
+                      decoding="async"
+                      (error)="usarImagenAlternativa($event)"
+                    />
+
                     <span class="insignia">Activa</span>
-                    <span class="tarjeta__tipo">{{ alojamiento.tipo.nombre }}</span>
-                    <span class="tarjeta__sin-foto">Sin fotografía disponible</span>
+                    <span class="tarjeta__referencia">Imagen de referencia</span>
                   </div>
 
                   <div class="tarjeta__contenido">

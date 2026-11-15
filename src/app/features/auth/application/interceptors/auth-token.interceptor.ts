@@ -28,10 +28,17 @@ export const authTokenInterceptor: HttpInterceptorFn = (req, next) => {
 
   const esApi = req.url.startsWith(apiUrl);
   const rutaSinConsulta = req.url.split('?')[0];
-  const esConsultaAlojamientos =
-    req.method === 'GET' && rutaSinConsulta === `${apiUrl}/alojamientos`;
+  const esConsultaPublica =
+    req.method === 'GET' &&
+    [
+      '/alojamientos',
+      '/alojamientos/ciudades',
+      '/catalogos/tipos-alojamiento',
+      '/catalogos/servicios',
+    ].some((ruta) => rutaSinConsulta === `${apiUrl}${ruta}`);
+
   const esPublica =
-    esConsultaAlojamientos || RUTAS_PUBLICAS.some((ruta) => req.url.startsWith(`${apiUrl}${ruta}`));
+    esConsultaPublica || RUTAS_PUBLICAS.some((ruta) => req.url.startsWith(`${apiUrl}${ruta}`));
   const token = session.token();
   const request =
     esApi && !esPublica && token
