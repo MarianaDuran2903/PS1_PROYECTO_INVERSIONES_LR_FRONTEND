@@ -308,5 +308,48 @@ describe('PerfilPageComponent', () => {
       expect(session.cerrar).not.toHaveBeenCalled();
       expect(router.navigate).not.toHaveBeenCalled();
     });
+    for (const campo of ['primerNombre', 'segundoNombre', 'primerApellido', 'segundoApellido']) {
+      it(`rechaza números en ${campo} sin enviar la actualización`, () => {
+        const element = abrirEdicion();
+
+        escribir(element, campo, 'Ana123');
+        enviar(element);
+
+        expect(repository.actualizar).not.toHaveBeenCalled();
+        expect(element.querySelector(`#${campo}-error`)?.textContent).toContain(
+          'solo admite letras y espacios',
+        );
+        expect(toast.success).not.toHaveBeenCalled();
+      });
+    }
+
+    for (const campo of ['primerNombre', 'primerApellido']) {
+      it(`rechaza solo espacios en ${campo}`, () => {
+        const element = abrirEdicion();
+
+        escribir(element, campo, '   ');
+        enviar(element);
+
+        expect(repository.actualizar).not.toHaveBeenCalled();
+        expect(element.querySelector(`#${campo}-error`)?.textContent).toContain('es obligatorio');
+      });
+    }
+
+    it('acepta tildes, ñ y nombres compuestos', () => {
+      const element = abrirEdicion();
+
+      escribir(element, 'primerNombre', 'María José');
+      escribir(element, 'segundoNombre', 'Andrés');
+      escribir(element, 'primerApellido', 'Muñoz');
+      escribir(element, 'segundoApellido', 'Gómez');
+      enviar(element);
+
+      expect(repository.actualizar).toHaveBeenCalledOnceWith({
+        primerNombre: 'María José',
+        segundoNombre: 'Andrés',
+        primerApellido: 'Muñoz',
+        segundoApellido: 'Gómez',
+      });
+    });
   });
 });

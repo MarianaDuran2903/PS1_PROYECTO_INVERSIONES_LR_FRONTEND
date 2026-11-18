@@ -9,17 +9,15 @@ import { catchError, throwError } from 'rxjs';
 import { SessionService } from '../session.service';
 
 /** Endpoints públicos: no llevan token y su 401/403 no significa "sesión vencida". */
-const RUTAS_PUBLICAS = ['/auth/login', '/auth/registro', '/auth/recuperacion', '/alojamientos'];
+const RUTAS_PUBLICAS = ['/auth/login', '/auth/registro', '/auth/recuperacion'];
 
 /**
- * - Agrega `Authorization: Bearer <token>` solo a las peticiones a nuestro API (nunca a otros
- *   hosts), excepto login, registro, recuperación de contraseña y el listado público de
- *   alojamientos.
- * - 401 con una sesión abierta: el token venció o no es válido; cierra la sesión y lleva a
- *   `/login?expirada=true`.
- * - 403: muestra el aviso de permisos y NO cierra la sesión, salvo que la petición lleve
- *   `OMITIR_AVISO_403` porque la pantalla ya explica el motivo.
- * Debe ir antes de `httpErrorInterceptor` para ver el `ApiError` ya normalizado.
+ * - Agrega el token a peticiones privadas de nuestro API.
+ * - No añade token a autenticación pública ni a los GET públicos
+ *   explícitos de alojamientos y catálogos.
+ * - Un 401 privado con sesión abierta cierra la sesión.
+ * - Un 403 privado muestra el aviso de permisos, salvo OMITIR_AVISO_403.
+ * Debe ir antes de httpErrorInterceptor.
  */
 export const authTokenInterceptor: HttpInterceptorFn = (req, next) => {
   const session = inject(SessionService);
@@ -28,7 +26,24 @@ export const authTokenInterceptor: HttpInterceptorFn = (req, next) => {
   const apiUrl = inject(APP_CONFIG).apiUrl;
 
   const esApi = req.url.startsWith(apiUrl);
-  const esPublica = RUTAS_PUBLICAS.some((ruta) => req.url.startsWith(`${apiUrl}${ruta}`));
+  const rutaSinConsulta = req.url.split('?')[0];
+  const rutaRelativa = rutaSinConsulta.startsWith(apiUrl)
+    ? rutaSinConsulta.slice(apiUrl.length)
+    : null;
+
+  const esConsultaPublica =
+    req.method === 'GET' &&
+    rutaRelativa !== null &&
+    ([
+      '/alojamientos',
+      '/alojamientos/ciudades',
+      '/catalogos/tipos-alojamiento',
+      '/catalogos/servicios',
+    ].includes(rutaRelativa) ||
+      /^\/alojamientos\/[1-9]\d*$/.test(rutaRelativa));
+
+  const esPublica =
+    esConsultaPublica || RUTAS_PUBLICAS.some((ruta) => req.url.startsWith(`${apiUrl}${ruta}`));
   const token = session.token();
   const request =
     esApi && !esPublica && token

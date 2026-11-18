@@ -4,14 +4,14 @@ import { AlojamientoHttpRepository } from './data/repositories/alojamiento-http.
 import { AlojamientoRepository } from './domain/repositories/alojamiento.repository';
 
 /**
- * Repositorio con alcance de la ruta. Lo comparten `/alojamientos` (público) y `/marketplace`
- * (Huésped), que muestran la misma página.
+ * Proveedores del listado existente utilizado por el área del Huésped
+ * en /marketplace.
  */
 export const PROVEEDORES_DE_ALOJAMIENTOS: Provider[] = [
   { provide: AlojamientoRepository, useClass: AlojamientoHttpRepository },
 ];
 
-/** Se monta en `/alojamientos`: pública, sin guard. */
+/** Configuración del listado anterior, no montada en app.routes.ts. */
 export const ALOJAMIENTOS_ROUTES: Routes = [
   {
     path: '',

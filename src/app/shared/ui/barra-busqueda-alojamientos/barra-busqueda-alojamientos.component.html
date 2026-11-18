@@ -1,0 +1,57 @@
+<form class="barra" [formGroup]="formulario" (ngSubmit)="buscarFiltros()">
+  <fieldset class="campos">
+    <legend class="visualmente-oculto">Filtros de búsqueda</legend>
+
+    <label class="campo">
+      <span>Destino</span>
+      <select formControlName="idCiudad">
+        <option value="">Todos los destinos</option>
+        @for (ciudad of ciudades(); track ciudad.id) {
+          <option [value]="ciudad.id">{{ ciudad.nombre }}</option>
+        }
+      </select>
+      @if (formulario.controls.idCiudad.touched && formulario.controls.idCiudad.invalid) {
+        <small class="error">Selecciona una ciudad válida</small>
+      }
+    </label>
+
+    <label class="campo">
+      <span>Llegada</span>
+      <input type="date" formControlName="fechaLlegada" />
+      @if (formulario.hasError('fechasCompletas') && formulario.touched) {
+        <small class="error">Indica llegada y salida</small>
+      }
+    </label>
+
+    <label class="campo">
+      <span>Salida</span>
+      <input type="date" formControlName="fechaSalida" />
+      @if (formulario.hasError('rangoFechasValido') && formulario.touched) {
+        <small class="error">La salida debe ser posterior a la llegada</small>
+      }
+    </label>
+
+    <label class="campo">
+      <span>Huéspedes</span>
+      <select formControlName="huespedes">
+        <option value="">Cualquier capacidad</option>
+        @for (cantidad of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]; track cantidad) {
+          <option [value]="cantidad">
+            {{ cantidad }} {{ cantidad === 1 ? 'huésped' : 'huéspedes' }}
+          </option>
+        }
+      </select>
+      @if (formulario.controls.huespedes.touched && formulario.controls.huespedes.invalid) {
+        <small class="error">Selecciona una cantidad válida</small>
+      }
+    </label>
+  </fieldset>
+
+  <div class="acciones">
+    <button type="button" class="btn btn--outline" (click)="limpiarFiltros()">Limpiar</button>
+
+    <button type="submit" class="btn btn--primary" [disabled]="cargando()">
+      Buscar alojamientos
+    </button>
+  </div>
+</form>
