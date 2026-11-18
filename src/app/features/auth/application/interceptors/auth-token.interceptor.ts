@@ -12,13 +12,12 @@ import { SessionService } from '../session.service';
 const RUTAS_PUBLICAS = ['/auth/login', '/auth/registro', '/auth/recuperacion'];
 
 /**
- * - Agrega `Authorization: Bearer <token>` solo a las peticiones a nuestro API (nunca a otros
- *   hosts), excepto login, registro y recuperación de contraseña.
- * - 401 con una sesión abierta: el token venció o no es válido; cierra la sesión y lleva a
- *   `/login?expirada=true`.
- * - 403: muestra el aviso de permisos y NO cierra la sesión, salvo que la petición lleve
- *   `OMITIR_AVISO_403` porque la pantalla ya explica el motivo.
- * Debe ir antes de `httpErrorInterceptor` para ver el `ApiError` ya normalizado.
+ * - Agrega el token a peticiones privadas de nuestro API.
+ * - No añade token a autenticación pública ni a los GET públicos
+ *   explícitos de alojamientos y catálogos.
+ * - Un 401 privado con sesión abierta cierra la sesión.
+ * - Un 403 privado muestra el aviso de permisos, salvo OMITIR_AVISO_403.
+ * Debe ir antes de httpErrorInterceptor.
  */
 export const authTokenInterceptor: HttpInterceptorFn = (req, next) => {
   const session = inject(SessionService);

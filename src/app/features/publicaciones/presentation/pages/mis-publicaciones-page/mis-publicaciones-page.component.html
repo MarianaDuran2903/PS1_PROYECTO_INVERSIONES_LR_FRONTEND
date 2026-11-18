@@ -32,6 +32,14 @@
           >
         </div>
       } @else {
+        @if (activacion.idPendientes(); as idPendientes) {
+          <app-pendientes-activacion
+            [idPublicacion]="idPendientes"
+            [pendientes]="activacion.pendientes()"
+            [tituloPublicacion]="tituloPendientes()"
+          />
+        }
+
         <p class="total">
           {{ facade.totalElementos() }}
           {{ facade.totalElementos() === 1 ? 'publicación' : 'publicaciones' }}
@@ -68,6 +76,25 @@
                   texto="Editar"
                   [idPublicacion]="publicacion.idPublicacion"
                   [estado]="publicacion.estado"
+                />
+                <app-accion-activacion
+                  [estado]="publicacion.estado"
+                  [enviando]="activacion.idEnviando() === publicacion.idPublicacion"
+                  [deshabilitado]="ocupado()"
+                  (enviar)="activacion.solicitar(publicacion.idPublicacion)"
+                />
+                @if (publicacion.estado === 'BLOQUEADA') {
+                  <a
+                    class="btn btn--outline"
+                    [routerLink]="['/anfitrion', 'publicaciones', publicacion.idPublicacion]"
+                    >Ver motivo</a
+                  >
+                }
+                <app-accion-pausa
+                  [estado]="publicacion.estado"
+                  [pausando]="pausa.idPausando() === publicacion.idPublicacion"
+                  [deshabilitado]="ocupado()"
+                  (pausar)="pausa.pausar(publicacion.idPublicacion)"
                 />
               </div>
             </li>
