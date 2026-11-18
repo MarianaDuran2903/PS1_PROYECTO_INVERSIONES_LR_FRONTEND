@@ -7,10 +7,14 @@ import {
   ValidationErrors,
   Validators,
 } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { BusquedaAlojamientosFacade } from '../../../application/busqueda-alojamientos.facade';
 import { FiltrosBusquedaAlojamientos } from '../../../domain/models/busqueda-alojamientos';
 import { BarraBusquedaAlojamientosComponent } from '@shared/ui/barra-busqueda-alojamientos/barra-busqueda-alojamientos.component';
+import {
+  leerContextoBusqueda,
+  parametrosBusqueda,
+} from '@features/marketplace/application/contexto-busqueda';
 
 function rangoPreciosValido(grupo: AbstractControl): ValidationErrors | null {
   const minimo = grupo.get('precioMinimo')?.value as string;
@@ -25,7 +29,7 @@ function rangoPreciosValido(grupo: AbstractControl): ValidationErrors | null {
 
 @Component({
   selector: 'app-busqueda-alojamientos-page',
-  imports: [CurrencyPipe, ReactiveFormsModule, BarraBusquedaAlojamientosComponent],
+  imports: [CurrencyPipe, ReactiveFormsModule, BarraBusquedaAlojamientosComponent, RouterLink],
   providers: [BusquedaAlojamientosFacade],
   templateUrl: './busqueda-alojamientos-page.component.html',
   styleUrl: './busqueda-alojamientos-page.component.scss',
@@ -68,7 +72,9 @@ export class BusquedaAlojamientosPageComponent {
       );
     });
 
-    this.facade.cargar(0, this.filtrosDesdeQueryParams());
+    const contexto = leerContextoBusqueda(this.route.snapshot.queryParamMap);
+
+    this.facade.cargar(contexto.pagina, contexto.filtros);
     this.facade.cargarCiudades();
     this.facade.cargarCaracteristicas();
   }
@@ -172,40 +178,7 @@ export class BusquedaAlojamientosPageComponent {
     return filtros;
   }
 
-  private filtrosDesdeQueryParams(): FiltrosBusquedaAlojamientos | undefined {
-    const params = this.route.snapshot.queryParamMap;
-    const idCiudad = params.get('idCiudad');
-    const fechaLlegada = params.get('fechaLlegada');
-    const fechaSalida = params.get('fechaSalida');
-    const huespedes = params.get('huespedes');
-    const idTipo = params.get('idTipo');
-
-    if (!idCiudad && !fechaLlegada && !fechaSalida && !huespedes && !idTipo) {
-      return undefined;
-    }
-
-    const filtros: FiltrosBusquedaAlojamientos = {};
-
-    if (idCiudad) {
-      filtros.idCiudad = Number(idCiudad);
-    }
-
-    if (fechaLlegada) {
-      filtros.fechaLlegada = fechaLlegada;
-    }
-
-    if (fechaSalida) {
-      filtros.fechaSalida = fechaSalida;
-    }
-
-    if (huespedes) {
-      filtros.huespedes = Number(huespedes);
-    }
-
-    if (idTipo && /^[1-9]\d*$/.test(idTipo) && Number.isSafeInteger(Number(idTipo))) {
-      filtros.idTipo = Number(idTipo);
-    }
-
-    return filtros;
+  protected parametrosDetalle() {
+    return parametrosBusqueda(this.facade.paginaActual(), this.facade.filtrosAplicados());
   }
 }

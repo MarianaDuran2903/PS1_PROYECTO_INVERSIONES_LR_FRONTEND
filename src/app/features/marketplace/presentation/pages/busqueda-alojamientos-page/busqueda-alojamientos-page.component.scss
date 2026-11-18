@@ -125,6 +125,8 @@
   border: 1px solid var(--color-border);
   background: var(--color-surface, #fff);
   overflow-wrap: anywhere;
+  display: flex;
+  flex-direction: column;
 }
 
 .tarjeta__portada {
@@ -161,6 +163,9 @@
 
 .tarjeta__contenido {
   padding: 20px;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
 
   h2 {
     margin: 8px 0;
@@ -181,10 +186,13 @@
   flex-wrap: wrap;
   align-items: baseline;
   gap: 4px;
-  margin: 24px 0 0;
-  padding-top: 16px;
-  border-top: 1px solid var(--color-border);
+  margin: 0;
   color: #17382f;
+  line-height: 1.5;
+
+  strong {
+    font-size: 0.9375rem;
+  }
 
   span {
     color: var(--color-text-muted);
@@ -263,6 +271,7 @@
 
 .tarjeta__portada .insignia {
   z-index: 1;
+  flex-shrink: 0;
 }
 
 .tarjeta__referencia {
@@ -274,4 +283,62 @@
   background: rgb(255 255 255 / 94%);
   color: #17382f;
   font-size: 0.6875rem;
+}
+
+.tarjeta__servicios {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding: 0;
+  list-style: none;
+
+  li {
+    padding: 0.3rem 0.5rem;
+    background: #f3f1ea;
+    color: #254f43;
+    font-size: 0.75rem;
+  }
+}
+
+.tarjeta__enlace {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  margin: 0;
+  color: #245b49;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+
+  &:hover {
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #285b4b;
+    outline-offset: 4px;
+    border-radius: 2px;
+  }
+}
+
+.tarjeta__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px 12px;
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+}
+
+.tarjeta__meta {
+  margin-bottom: 16px;
+}
+
+.tarjeta__servicios {
+  margin-top: 0;
+  margin-bottom: 16px;
 }

@@ -280,4 +280,74 @@ describe('authTokenInterceptor', () => {
     expect(req.request.headers.get('Authorization')).toBe('Bearer abc');
     req.flush([]);
   });
+
+  it('no envía token al detalle público aunque exista una sesión', () => {
+    http.get('/api-test/alojamientos/9').subscribe();
+
+    const req = controller.expectOne('/api-test/alojamientos/9');
+
+    expect(req.request.headers.has('Authorization')).toBeFalse();
+
+    req.flush({});
+    expect(session.autenticado()).toBeTrue();
+  });
+
+  it('permite consultar el detalle sin sesión', () => {
+    session.cerrar();
+
+    http.get('/api-test/alojamientos/9').subscribe();
+
+    const req = controller.expectOne('/api-test/alojamientos/9');
+
+    expect(req.request.headers.has('Authorization')).toBeFalse();
+
+    req.flush({});
+    expect(router.navigate).not.toHaveBeenCalled();
+  });
+
+  for (const estado of [401, 403]) {
+    it(`un ${estado} del detalle público no cierra la sesión ni muestra aviso global`, () => {
+      const aviso = spyOn(toast, 'error');
+      const recibido = jasmine.createSpy('recibido');
+
+      http.get('/api-test/alojamientos/9?origen=busqueda').subscribe({ error: recibido });
+
+      const { body, opts } = errorDelBackend(
+        estado,
+        estado === 401 ? 'Unauthorized' : 'Forbidden',
+        'Error de consulta pública',
+      );
+
+      const req = controller.expectOne('/api-test/alojamientos/9?origen=busqueda');
+
+      expect(req.request.headers.has('Authorization')).toBeFalse();
+
+      req.flush(body, opts);
+
+      expect(recibido).toHaveBeenCalledWith(jasmine.objectContaining({ status: estado }));
+      expect(session.autenticado()).toBeTrue();
+      expect(router.navigate).not.toHaveBeenCalled();
+      expect(aviso).not.toHaveBeenCalled();
+    });
+  }
+
+  it('no considera pública una escritura sobre el detalle', () => {
+    http.post('/api-test/alojamientos/9', {}).subscribe();
+
+    const req = controller.expectOne('/api-test/alojamientos/9');
+
+    expect(req.request.headers.get('Authorization')).toBe('Bearer abc');
+
+    req.flush({});
+  });
+
+  it('no extiende el detalle público a subrutas privadas', () => {
+    http.get('/api-test/alojamientos/9/editar').subscribe();
+
+    const req = controller.expectOne('/api-test/alojamientos/9/editar');
+
+    expect(req.request.headers.get('Authorization')).toBe('Bearer abc');
+
+    req.flush({});
+  });
 });

@@ -4,6 +4,7 @@ import {
   FiltrosBusquedaAlojamientos,
   PaginaAlojamientos,
 } from '../models/busqueda-alojamientos';
+import { AlojamientoDetalle } from '@features/marketplace/domain/models/alojamiento-detalle';
 
 export abstract class BusquedaAlojamientosRepository {
   abstract listar(
@@ -11,6 +12,7 @@ export abstract class BusquedaAlojamientosRepository {
     tamano: number,
     filtros?: FiltrosBusquedaAlojamientos,
   ): Observable<PaginaAlojamientos>;
+  abstract obtenerDetalle(idPublicacion: number): Observable<AlojamientoDetalle>;
   abstract listarCiudades(): Observable<CatalogoAlojamiento[]>;
   abstract listarTiposAlojamiento(): Observable<CatalogoAlojamiento[]>;
   abstract listarServicios(): Observable<CatalogoAlojamiento[]>;

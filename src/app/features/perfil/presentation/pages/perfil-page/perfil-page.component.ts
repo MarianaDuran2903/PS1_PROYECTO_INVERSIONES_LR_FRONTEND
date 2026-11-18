@@ -7,8 +7,29 @@ import {
 } from '../../../domain/models/perfil';
 import { PerfilRepository } from '../../../domain/repositories/perfil.repository';
 import { PerfilHttpRepository } from '@features/perfil/domain/repositories/perfil-http.repository';
-import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  FormControl,
+  FormGroup,
+  ReactiveFormsModule,
+  ValidatorFn,
+  Validators,
+} from '@angular/forms';
 import { ToastService } from '@core/notifications/toast.service';
+
+function validarNombre(obligatorio: boolean): ValidatorFn {
+  return (control) => {
+    const valor = String(control.value ?? '')
+      .trim()
+      .normalize('NFC');
+
+    if (valor.length === 0) {
+      return obligatorio ? { required: true } : null;
+    }
+
+    const valido = /^\p{L}[\p{L}\p{M}]*(?: +\p{L}[\p{L}\p{M}]*)*$/u.test(valor);
+    return valido ? null : { nombre: true };
+  };
+}
 
 @Component({
   selector: 'app-perfil-page',
@@ -28,19 +49,19 @@ export class PerfilPageComponent implements OnInit {
   protected formulario = new FormGroup({
     primerNombre: new FormControl('', {
       nonNullable: true,
-      validators: [Validators.required, Validators.maxLength(50)],
+      validators: [validarNombre(true), Validators.maxLength(50)],
     }),
     segundoNombre: new FormControl('', {
       nonNullable: true,
-      validators: [Validators.maxLength(50)],
+      validators: [validarNombre(false), Validators.maxLength(50)],
     }),
     primerApellido: new FormControl('', {
       nonNullable: true,
-      validators: [Validators.required, Validators.maxLength(50)],
+      validators: [validarNombre(true), Validators.maxLength(50)],
     }),
     segundoApellido: new FormControl('', {
       nonNullable: true,
-      validators: [Validators.maxLength(50)],
+      validators: [validarNombre(false), Validators.maxLength(50)],
     }),
   });
 

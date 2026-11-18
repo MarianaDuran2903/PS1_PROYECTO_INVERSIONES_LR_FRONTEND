@@ -199,13 +199,32 @@
                       {{ alojamiento.tipo.nombre }} · {{ alojamiento.capacidad }}
                       {{ alojamiento.capacidad === 1 ? 'huésped' : 'huéspedes' }}
                     </p>
-                    <p class="precio">
-                      <strong>
-                        {{ alojamiento.precioNoche | currency: 'COP' : 'symbol-narrow' : '1.0-2' }}
-                        COP
-                      </strong>
-                      <span>/ noche</span>
-                    </p>
+                    @if ((alojamiento.servicios ?? []).length > 0) {
+                      <ul class="tarjeta__servicios" aria-label="Servicios del alojamiento">
+                        @for (servicio of alojamiento.servicios ?? []; track servicio.id) {
+                          <li>{{ servicio.nombre }}</li>
+                        }
+                      </ul>
+                    }
+                    <div class="tarjeta__acciones">
+                      <p class="precio">
+                        <strong>
+                          {{
+                            alojamiento.precioNoche | currency: 'COP' : 'symbol-narrow' : '1.0-2'
+                          }}
+                          COP
+                        </strong>
+                        <span>/ noche</span>
+                      </p>
+                      <a
+                        class="tarjeta__enlace"
+                        [routerLink]="['/alojamientos', alojamiento.idPublicacion]"
+                        [queryParams]="parametrosDetalle()"
+                        [attr.aria-label]="'Ver alojamiento: ' + alojamiento.titulo"
+                      >
+                        Ver alojamiento →
+                      </a>
+                    </div>
                   </div>
                 </li>
               }

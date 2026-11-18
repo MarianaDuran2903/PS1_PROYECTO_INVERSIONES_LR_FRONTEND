@@ -1,6 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { APP_CONFIG } from '@core/config/app-config';
+import { AlojamientoDetalle } from '@features/marketplace/domain/models/alojamiento-detalle';
 import {
   CatalogoAlojamiento,
   FiltrosBusquedaAlojamientos,
@@ -17,6 +18,7 @@ interface AlojamientoResumenDto {
   tipo: CatalogoAlojamiento;
   capacidad: number;
   precioNoche: number;
+  servicios?: CatalogoAlojamiento[] | null;
 }
 
 interface PaginaAlojamientosDto {
@@ -26,6 +28,22 @@ interface PaginaAlojamientosDto {
   totalElementos: number;
   totalPaginas: number;
   mensaje?: string | null;
+}
+
+interface AlojamientoDetalleDto {
+  idPublicacion: number;
+  titulo: string;
+  descripcion?: string | null;
+  estado: 'ACTIVA';
+  ciudad: CatalogoAlojamiento;
+  barrioZona?: string | null;
+  tipo: CatalogoAlojamiento;
+  capacidad: number;
+  precioNoche: number;
+  reglas?: string | null;
+  politica: AlojamientoDetalle['politica'];
+  servicios?: CatalogoAlojamiento[] | null;
+  imagenes?: AlojamientoDetalle['imagenes'] | null;
 }
 
 @Injectable()
@@ -81,6 +99,7 @@ export class BusquedaAlojamientosHttpRepository extends BusquedaAlojamientosRepo
           tipo: { ...item.tipo },
           capacidad: item.capacidad,
           precioNoche: item.precioNoche,
+          servicios: (item.servicios ?? []).map((servicio) => ({ ...servicio })),
         })),
         pagina: dto.pagina,
         tamano: dto.tamano,
@@ -89,6 +108,30 @@ export class BusquedaAlojamientosHttpRepository extends BusquedaAlojamientosRepo
         mensaje: dto.mensaje ?? null,
       })),
     );
+  }
+
+  override obtenerDetalle(idPublicacion: number): Observable<AlojamientoDetalle> {
+    return this.http
+      .get<AlojamientoDetalleDto>(`${this.apiUrl}/alojamientos/${idPublicacion}`)
+      .pipe(
+        map((dto) => ({
+          idPublicacion: dto.idPublicacion,
+          titulo: dto.titulo,
+          descripcion: dto.descripcion ?? null,
+          estado: dto.estado,
+          ciudad: { ...dto.ciudad },
+          barrioZona: dto.barrioZona ?? null,
+          tipo: { ...dto.tipo },
+          capacidad: dto.capacidad,
+          precioNoche: dto.precioNoche,
+          reglas: dto.reglas ?? null,
+          politica: { ...dto.politica },
+          servicios: (dto.servicios ?? []).map((servicio) => ({ ...servicio })),
+          imagenes: (dto.imagenes ?? [])
+            .map((imagen) => ({ ...imagen }))
+            .sort((primera, segunda) => primera.orden - segunda.orden),
+        })),
+      );
   }
 
   override listarCiudades(): Observable<CatalogoAlojamiento[]> {

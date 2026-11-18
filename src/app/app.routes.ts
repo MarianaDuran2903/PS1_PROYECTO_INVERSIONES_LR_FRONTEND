@@ -57,6 +57,21 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'alojamientos/:idPublicacion',
+    canActivate: [exploracionGuard],
+    title: 'Detalle del alojamiento | Inversiones LR',
+    providers: [
+      {
+        provide: BusquedaAlojamientosRepository,
+        useClass: BusquedaAlojamientosHttpRepository,
+      },
+    ],
+    loadComponent: () =>
+      import('./features/marketplace/presentation/pages/alojamiento-detalle-page/alojamiento-detalle-page.component').then(
+        (m) => m.AlojamientoDetallePageComponent,
+      ),
+  },
+  {
     path: 'alojamientos',
     canActivate: [exploracionGuard],
     title: 'Buscar alojamientos | Inversiones LR',

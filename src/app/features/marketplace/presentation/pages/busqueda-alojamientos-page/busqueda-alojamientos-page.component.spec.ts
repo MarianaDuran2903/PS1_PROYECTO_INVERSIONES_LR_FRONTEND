@@ -487,4 +487,57 @@ describe('HU-022, HU-023 y HU-024: búsqueda pública de alojamientos', () => {
 
     expect(imagen.hidden).toBeTrue();
   });
+
+  it('muestra los servicios asociados y enlaza al detalle público', () => {
+    peticion().flush({
+      ...pagina(),
+      contenido: [
+        {
+          ...alojamiento,
+          servicios: [
+            { id: 3, nombre: 'Cocina' },
+            { id: 1, nombre: 'Wi-Fi' },
+          ],
+        },
+      ],
+    });
+    fixture.detectChanges();
+
+    const servicios = element.querySelector('.tarjeta__servicios');
+    const enlace = element.querySelector<HTMLAnchorElement>('.tarjeta__enlace')!;
+
+    expect(servicios?.textContent).toContain('Cocina');
+    expect(servicios?.textContent).toContain('Wi-Fi');
+
+    const url = new URL(enlace.href);
+
+    expect(url.pathname).toBe('/alojamientos/9');
+    expect(url.searchParams.get('pagina')).toBe('0');
+    expect(enlace.textContent).toContain('Ver alojamiento');
+  });
+
+  it('el enlace al detalle conserva los filtros aplicados', () => {
+    peticion().flush(pagina());
+    fixture.detectChanges();
+
+    seleccionar('select[formcontrolname="idCiudad"]', '3', 'change');
+    fixture.detectChanges();
+
+    boton('Buscar alojamientos').click();
+    peticion().flush(pagina());
+    fixture.detectChanges();
+
+    seleccionar('select[formcontrolname="idTipo"]', '2', 'change');
+    fixture.detectChanges();
+
+    boton('Aplicar características').click();
+    peticion().flush(pagina());
+    fixture.detectChanges();
+
+    const enlace = element.querySelector<HTMLAnchorElement>('.tarjeta__enlace')!;
+    const url = new URL(enlace.href);
+
+    expect(url.searchParams.get('idCiudad')).toBe('3');
+    expect(url.searchParams.get('idTipo')).toBe('2');
+  });
 });
