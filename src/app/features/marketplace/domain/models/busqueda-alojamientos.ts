@@ -10,6 +10,7 @@ export interface AlojamientoResumen {
   tipo: CatalogoAlojamiento;
   capacidad: number;
   precioNoche: number;
+  servicios?: CatalogoAlojamiento[];
 }
 
 export interface PaginaAlojamientos {
