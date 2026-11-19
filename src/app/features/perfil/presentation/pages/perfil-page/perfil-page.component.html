@@ -92,26 +92,89 @@
       <form class="perfil__formulario" [formGroup]="formulario" (ngSubmit)="guardarCambios()">
         <div class="campo">
           <label for="primerNombre">Primer nombre</label>
-          <input id="primerNombre" type="text" formControlName="primerNombre" maxlength="50" />
-          @if (
-            formulario.controls.primerNombre.touched && formulario.controls.primerNombre.invalid
-          ) {
-            <p class="campo__error">El primer nombre es obligatorio.</p>
+          <input
+            id="primerNombre"
+            type="text"
+            formControlName="primerNombre"
+            maxlength="50"
+            autocomplete="given-name"
+            [attr.aria-invalid]="
+              formulario.controls.primerNombre.touched && formulario.controls.primerNombre.invalid
+            "
+            aria-describedby="primerNombre-error"
+          />
+
+          @if (formulario.controls.primerNombre.touched) {
+            @if (formulario.controls.primerNombre.hasError('required')) {
+              <p id="primerNombre-error" class="campo__error">El primer nombre es obligatorio.</p>
+            } @else if (formulario.controls.primerNombre.hasError('nombre')) {
+              <p id="primerNombre-error" class="campo__error">
+                El primer nombre solo admite letras y espacios.
+              </p>
+            } @else if (formulario.controls.primerNombre.hasError('maxlength')) {
+              <p id="primerNombre-error" class="campo__error">
+                El primer nombre admite máximo 50 caracteres.
+              </p>
+            }
           }
         </div>
 
         <div class="campo">
           <label for="segundoNombre">Segundo nombre</label>
-          <input id="segundoNombre" type="text" formControlName="segundoNombre" maxlength="50" />
+          <input
+            id="segundoNombre"
+            type="text"
+            formControlName="segundoNombre"
+            maxlength="50"
+            autocomplete="additional-name"
+            [attr.aria-invalid]="
+              formulario.controls.segundoNombre.touched && formulario.controls.segundoNombre.invalid
+            "
+            aria-describedby="segundoNombre-error"
+          />
+
+          @if (formulario.controls.segundoNombre.touched) {
+            @if (formulario.controls.segundoNombre.hasError('nombre')) {
+              <p id="segundoNombre-error" class="campo__error">
+                El segundo nombre solo admite letras y espacios.
+              </p>
+            } @else if (formulario.controls.segundoNombre.hasError('maxlength')) {
+              <p id="segundoNombre-error" class="campo__error">
+                El segundo nombre admite máximo 50 caracteres.
+              </p>
+            }
+          }
         </div>
 
         <div class="campo">
           <label for="primerApellido">Primer apellido</label>
-          <input id="primerApellido" type="text" formControlName="primerApellido" maxlength="50" />
-          @if (
-            formulario.controls.primerApellido.touched && formulario.controls.primerApellido.invalid
-          ) {
-            <p class="campo__error">El primer apellido es obligatorio.</p>
+          <input
+            id="primerApellido"
+            type="text"
+            formControlName="primerApellido"
+            maxlength="50"
+            autocomplete="family-name"
+            [attr.aria-invalid]="
+              formulario.controls.primerApellido.touched &&
+              formulario.controls.primerApellido.invalid
+            "
+            aria-describedby="primerApellido-error"
+          />
+
+          @if (formulario.controls.primerApellido.touched) {
+            @if (formulario.controls.primerApellido.hasError('required')) {
+              <p id="primerApellido-error" class="campo__error">
+                El primer apellido es obligatorio.
+              </p>
+            } @else if (formulario.controls.primerApellido.hasError('nombre')) {
+              <p id="primerApellido-error" class="campo__error">
+                El primer apellido solo admite letras y espacios.
+              </p>
+            } @else if (formulario.controls.primerApellido.hasError('maxlength')) {
+              <p id="primerApellido-error" class="campo__error">
+                El primer apellido admite máximo 50 caracteres.
+              </p>
+            }
           }
         </div>
 
@@ -122,7 +185,24 @@
             type="text"
             formControlName="segundoApellido"
             maxlength="50"
+            [attr.aria-invalid]="
+              formulario.controls.segundoApellido.touched &&
+              formulario.controls.segundoApellido.invalid
+            "
+            aria-describedby="segundoApellido-error"
           />
+
+          @if (formulario.controls.segundoApellido.touched) {
+            @if (formulario.controls.segundoApellido.hasError('nombre')) {
+              <p id="segundoApellido-error" class="campo__error">
+                El segundo apellido solo admite letras y espacios.
+              </p>
+            } @else if (formulario.controls.segundoApellido.hasError('maxlength')) {
+              <p id="segundoApellido-error" class="campo__error">
+                El segundo apellido admite máximo 50 caracteres.
+              </p>
+            }
+          }
         </div>
 
         @if (facade.errorGuardado(); as error) {
