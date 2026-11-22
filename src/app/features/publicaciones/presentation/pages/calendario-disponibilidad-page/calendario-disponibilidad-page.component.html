@@ -30,6 +30,39 @@
       </div>
     }
     @default {
+      <form
+        class="formulario-periodo"
+        [formGroup]="formulario"
+        (ngSubmit)="abrirPeriodo()"
+        aria-labelledby="abrir-periodo-titulo"
+      >
+        <h2 id="abrir-periodo-titulo">Abrir periodo disponible</h2>
+        <p>La fecha final no se incluye en el periodo.</p>
+        <div class="campos-periodo">
+          <label
+            >Fecha de inicio
+            <input type="date" formControlName="fechaInicio" required />
+          </label>
+          <label
+            >Fecha de fin
+            <input type="date" formControlName="fechaFin" required />
+          </label>
+        </div>
+        @if (
+          formulario.controls.fechaFin.touched &&
+          formulario.controls.fechaFin.hasError('rangoInvalido')
+        ) {
+          <p class="mensaje-error" role="alert">
+            La fecha de fin debe ser posterior a la fecha de inicio.
+          </p>
+        }
+        @if (facade.errorApertura(); as error) {
+          <p class="mensaje-error" role="alert">{{ error }}</p>
+        }
+        <button class="btn btn--primary" type="submit" [disabled]="facade.guardando()">
+          {{ facade.guardando() ? 'Guardando…' : 'Abrir disponibilidad' }}
+        </button>
+      </form>
       @if (facade.sinPeriodos()) {
         <p class="vacio" role="status">Aún no hay periodos registrados para esta publicación.</p>
       } @else if (facade.calendario(); as calendario) {
