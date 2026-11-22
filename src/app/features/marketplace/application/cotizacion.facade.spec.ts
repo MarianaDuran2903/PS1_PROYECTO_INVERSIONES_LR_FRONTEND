@@ -225,6 +225,54 @@ describe('CotizacionFacade', () => {
     });
   });
 
+  describe('solicitudCotizada (lo que se puede reservar)', () => {
+    it('no hay nada cotizado al empezar', () => {
+      expect(facade.solicitudCotizada()).toBeNull();
+    });
+
+    it('con la cotización lista devuelve exactamente lo que se cotizó', () => {
+      facade.cotizar(solicitud);
+      repositorio.ultima.next(cotizacionDe(1015000));
+
+      expect(facade.solicitudCotizada()).toEqual(solicitud);
+    });
+
+    it('mientras se vuelve a cotizar no hay nada que reservar', () => {
+      facade.cotizar(solicitud);
+      repositorio.ultima.next(cotizacionDe(1015000));
+
+      facade.alCambiar({ ...solicitud, huespedes: 3 });
+
+      expect(facade.solicitudCotizada()).toBeNull();
+    });
+
+    it('tras la nueva cotización devuelve los datos nuevos', () => {
+      facade.cotizar(solicitud);
+      repositorio.ultima.next(cotizacionDe(1015000));
+
+      facade.alCambiar({ ...solicitud, huespedes: 3 });
+      repositorio.ultima.next(cotizacionDe(1015000));
+
+      expect(facade.solicitudCotizada()?.huespedes).toBe(3);
+    });
+
+    it('si la cotización falla no hay nada que reservar', () => {
+      facade.cotizar(solicitud);
+      repositorio.ultima.error(new FechasNoDisponiblesError());
+
+      expect(facade.solicitudCotizada()).toBeNull();
+    });
+
+    it('si los datos dejan de ser válidos no hay nada que reservar', () => {
+      facade.cotizar(solicitud);
+      repositorio.ultima.next(cotizacionDe(1015000));
+
+      facade.alCambiar(null);
+
+      expect(facade.solicitudCotizada()).toBeNull();
+    });
+  });
+
   describe('reiniciar', () => {
     it('vuelve al comienzo: sin desglose y sin recotizar los cambios siguientes', () => {
       facade.cotizar(solicitud);
