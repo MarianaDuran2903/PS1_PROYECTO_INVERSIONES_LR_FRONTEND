@@ -46,6 +46,19 @@ export class IntentosDePagoAgotadosError extends Error {
   }
 }
 
+/**
+ * El total de la reserva es menor al mínimo que acepta la pasarela de pagos (422). Reintentar no
+ * sirve, porque el monto no cambia: hay que reservar más noches.
+ */
+export class MontoBajoMinimoDePagoError extends Error {
+  constructor(
+    message = 'El monto de la reserva es menor al mínimo que acepta la pasarela de pagos',
+  ) {
+    super(message);
+    this.name = 'MontoBajoMinimoDePagoError';
+  }
+}
+
 /** No se pudo comunicar con la pasarela de pagos (502). Reintentar en unos minutos. */
 export class PasarelaDePagoNoDisponibleError extends Error {
   constructor(message = 'No se pudo comunicar con la pasarela de pagos') {

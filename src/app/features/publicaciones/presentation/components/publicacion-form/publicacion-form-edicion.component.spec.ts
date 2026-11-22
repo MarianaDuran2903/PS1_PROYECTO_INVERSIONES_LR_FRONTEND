@@ -219,6 +219,27 @@ describe('PublicacionFormComponent (modo editar)', () => {
 
       expect(textoError('precioNoche')).toBe('El precio por noche debe ser mayor que 0');
     });
+
+    it('el precio por noche rechaza valores por debajo del mínimo de pago', () => {
+      escribir('precioNoche', '1100');
+
+      expect(textoError('precioNoche')).toContain('el mínimo que acepta la pasarela de pagos');
+      expect(botonGuardar()!.disabled).toBeTrue();
+    });
+
+    it('una publicación guardada por debajo del mínimo pide subir el precio para guardar', () => {
+      crear({ valoresIniciales: { ...PUBLICACION, precioNoche: 1100 } });
+
+      // El aviso aparece de entrada, sin tocar el campo.
+      expect(textoError('precioNoche')).toContain('el mínimo que acepta la pasarela de pagos');
+      expect(element.querySelector('#precioNoche-ayuda')!.textContent).toContain('1.100');
+      expect(botonGuardar()!.disabled).toBeTrue();
+
+      escribir('precioNoche', '10000');
+
+      expect(textoError('precioNoche')).toBeUndefined();
+      expect(botonGuardar()!.disabled).toBeFalse();
+    });
   });
 
   describe('guardar', () => {

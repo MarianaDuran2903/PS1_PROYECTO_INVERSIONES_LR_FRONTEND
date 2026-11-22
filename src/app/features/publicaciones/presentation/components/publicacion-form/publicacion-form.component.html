@@ -193,10 +193,11 @@
           />
           <p class="field__ayuda" id="precioNoche-ayuda">
             @if (precioFormateado(); as precio) {
-              {{ precio }} por noche
+              {{ precio }} por noche.
             } @else {
-              Por ejemplo 250000.50
+              Por ejemplo 250000.50.
             }
+            Mínimo {{ montoMinimo }}: es lo menos que acepta la pasarela de pagos.
           </p>
           @if (errorDe('precioNoche'); as error) {
             <p class="field__error" id="precioNoche-error">{{ error }}</p>

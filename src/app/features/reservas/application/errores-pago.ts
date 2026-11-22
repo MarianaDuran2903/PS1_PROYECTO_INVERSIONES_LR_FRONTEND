@@ -1,5 +1,7 @@
+import { MONTO_MINIMO_PAGO_TEXTO } from '@shared/pagos/monto-minimo-pago';
 import {
   IntentosDePagoAgotadosError,
+  MontoBajoMinimoDePagoError,
   PagoNoIniciadoError,
   PasarelaDePagoNoDisponibleError,
   ReservaNoAdmitePagoError,
@@ -18,6 +20,8 @@ export type TipoErrorPago =
   | 'intentos-agotados'
   /** La pasarela no respondió: se puede reintentar en unos minutos. */
   | 'pasarela'
+  /** El total no alcanza el mínimo de la pasarela: hay que reservar más noches. */
+  | 'monto-minimo'
   | 'no-encontrada'
   /** La reserva existe, pero todavía no tiene un pago iniciado (solo al consultar). */
   | 'sin-pago'
@@ -30,6 +34,9 @@ export interface ErrorPago {
 }
 
 export const MENSAJE_PASARELA = 'No pudimos iniciar el pago, intenta de nuevo en unos minutos.';
+export const MENSAJE_MONTO_MINIMO =
+  `El total de la reserva es menor que ${MONTO_MINIMO_PAGO_TEXTO} COP, el mínimo que acepta la ` +
+  'pasarela de pagos. Reserva más noches para poder pagar.';
 export const MENSAJE_RESERVA_INEXISTENTE = 'La reserva no existe';
 export const MENSAJE_SIN_PAGINA_DE_PAGO = 'No pudimos abrir la página de pago. Inténtalo de nuevo.';
 const MENSAJE_GENERICO = 'No fue posible completar la operación. Inténtalo de nuevo.';
@@ -47,6 +54,10 @@ export function clasificarErrorPago(error: unknown): ErrorPago {
   }
   if (error instanceof PasarelaDePagoNoDisponibleError) {
     return { tipo: 'pasarela', mensaje: MENSAJE_PASARELA };
+  }
+  if (error instanceof MontoBajoMinimoDePagoError) {
+    // Mensaje propio: dice cuál es el mínimo y qué hacer, además de por qué falló.
+    return { tipo: 'monto-minimo', mensaje: MENSAJE_MONTO_MINIMO };
   }
   if (error instanceof ReservaNoEncontradaError) {
     return { tipo: 'no-encontrada', mensaje: error.message };

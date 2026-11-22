@@ -62,7 +62,7 @@ describe('ErrorPagoComponent', () => {
     });
   }
 
-  for (const tipo of ['no-admite-pago', 'intentos-agotados'] as const) {
+  for (const tipo of ['no-admite-pago', 'intentos-agotados', 'monto-minimo'] as const) {
     it(`${tipo}: lleva a reservar de nuevo y no ofrece reintentar`, () => {
       mostrar(tipo);
 
@@ -70,6 +70,12 @@ describe('ErrorPagoComponent', () => {
       expect(enlaces()).toEqual([{ texto: 'Reservar de nuevo', ruta: '/alojamientos' }]);
     });
   }
+
+  it('monto bajo el mínimo: lo dice en el título, no como un fallo de la pasarela', () => {
+    mostrar('monto-minimo');
+
+    expect(element.querySelector('h2')!.textContent).toContain('no alcanza el pago mínimo');
+  });
 
   it('sin pago iniciado: ofrece pagar esa reserva', () => {
     mostrar('sin-pago', { idReserva: 31 });

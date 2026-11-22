@@ -8,6 +8,7 @@ import { SESSION_STORAGE_KEY, SessionService } from '@features/auth/application/
 import { RolUsuario } from '@features/auth/domain/models/rol-usuario';
 import { ReservaHttpRepository } from '@features/reservas/data/repositories/reserva-http.repository';
 import { ReservaRepository } from '@features/reservas/domain/repositories/reserva.repository';
+import { MONTO_MINIMO_PAGO_TEXTO } from '@shared/pagos/monto-minimo-pago';
 import { BehaviorSubject } from 'rxjs';
 import { BusquedaAlojamientosHttpRepository } from '../../../data/repositories/busqueda-alojamientos-http.repository';
 import { CotizacionHttpRepository } from '../../../data/repositories/cotizacion-http.repository';
@@ -654,6 +655,73 @@ describe('HU-025: detalle público de alojamiento', () => {
         expect(element.querySelector('app-accion-reservar [role="alert"]')!.textContent).toContain(
           'Solo los Huéspedes pueden reservar',
         );
+      });
+    });
+
+    describe('monto mínimo de pago (MAR-611)', () => {
+      // 1 noche a $ 1.100 + 10 % de servicio = $ 1.210: la pasarela rechazaría el cobro.
+      const cotizacionBajoMinimo = {
+        ...respuestaCotizacion,
+        fechaSalida: '2030-06-11',
+        noches: 1,
+        precio: {
+          ...respuestaCotizacion.precio,
+          precioNoche: 1100,
+          precioBase: 1100,
+          tarifaLimpieza: 0,
+          tarifaServicio: 110,
+          total: 1210,
+        },
+      };
+      const cargarBarato = () => {
+        http.expectOne('/api-test/alojamientos/9').flush({ ...detalle, precioNoche: 1100 });
+        fixture.detectChanges();
+      };
+      const alertaMinimo = () => element.querySelector('.monto-minimo');
+
+      it('con un precio por noche menor al mínimo avisa antes de cotizar', () => {
+        cargarBarato();
+
+        expect(element.querySelector('#aviso-monto-minimo')!.textContent).toContain(
+          `El pago mínimo de una reserva es de ${MONTO_MINIMO_PAGO_TEXTO} COP`,
+        );
+      });
+
+      it('con un precio por noche normal no muestra ese aviso', () => {
+        cargarDetalle();
+
+        expect(element.querySelector('#aviso-monto-minimo')).toBeNull();
+      });
+
+      it('si el total no alcanza el mínimo, no ofrece reservar y dice cuántas noches elegir', () => {
+        cargarBarato();
+        iniciarSesion([RolUsuario.Huesped]);
+        llenarEstancia('2030-06-10', '2030-06-11');
+        pedirCotizacion();
+        http.expectOne('/api-test/cotizaciones').flush(cotizacionBajoMinimo);
+        fixture.detectChanges();
+
+        expect(element.querySelector('app-accion-reservar')).toBeNull();
+        expect(alertaMinimo()!.getAttribute('role')).toBe('alert');
+        expect(alertaMinimo()!.textContent).toContain(
+          `menor que ${MONTO_MINIMO_PAGO_TEXTO} COP, el mínimo que acepta la pasarela de pagos`,
+        );
+        // 9 noches × $ 1.100 × 1,1 = $ 10.890; con 8 serían $ 9.680.
+        expect(alertaMinimo()!.textContent).toContain('9 noches');
+        // El desglose se sigue mostrando: la persona ve por qué no alcanza.
+        expect(element.querySelector('.desglose')).not.toBeNull();
+      });
+
+      it('si el total alcanza el mínimo, ofrece reservar sin la alerta', () => {
+        cargarDetalle();
+        iniciarSesion([RolUsuario.Huesped]);
+        llenarEstancia();
+        pedirCotizacion();
+        http.expectOne('/api-test/cotizaciones').flush(respuestaCotizacion);
+        fixture.detectChanges();
+
+        expect(alertaMinimo()).toBeNull();
+        expect(element.querySelector('app-accion-reservar')).not.toBeNull();
       });
     });
 

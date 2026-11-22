@@ -23,6 +23,11 @@ import { debounceTime } from 'rxjs';
 import { AlojamientoDetalleFacade } from '../../../application/alojamiento-detalle.facade';
 import { leerContextoBusqueda, parametrosBusqueda } from '../../../application/contexto-busqueda';
 import { CotizacionFacade } from '../../../application/cotizacion.facade';
+import {
+  estanciaBajoMinimoDePago,
+  nochesMinimasParaPagar,
+} from '../../../application/monto-minimo-estancia';
+import { MONTO_MINIMO_PAGO_COP, MONTO_MINIMO_PAGO_TEXTO } from '@shared/pagos/monto-minimo-pago';
 import { SolicitudCotizacion } from '../../../domain/models/cotizacion';
 import { SolicitudReserva } from '@features/reservas/domain/models/reserva';
 import { AccionReservarComponent } from '@features/reservas/presentation/components/accion-reservar/accion-reservar.component';
@@ -106,6 +111,25 @@ export class AlojamientoDetallePageComponent {
     this.session.tieneAlgunRol([RolUsuario.Huesped]),
   );
   protected readonly hoy = fechaLocalActual();
+  /** Mínimo que acepta la pasarela de pagos, ya formateado para los avisos. */
+  protected readonly montoMinimo = MONTO_MINIMO_PAGO_TEXTO;
+
+  /** El total cotizado no alcanza el mínimo de pago: no se ofrece reservar, se explica por qué. */
+  protected readonly estanciaBajoMinimo = computed(() => {
+    const cotizada = this.cotizacion.cotizacion();
+    return cotizada !== null && estanciaBajoMinimoDePago(cotizada);
+  });
+
+  /** Noches que, estimadas con el desglose, alcanzarían el mínimo de pago. */
+  protected readonly nochesMinimas = computed(() => {
+    const cotizada = this.cotizacion.cotizacion();
+    return cotizada ? nochesMinimasParaPagar(cotizada) : null;
+  });
+
+  /** Con un precio por noche menor al mínimo, una sola noche nunca se podría pagar. */
+  protected precioBajoMinimo(precioNoche: number): boolean {
+    return precioNoche < MONTO_MINIMO_PAGO_COP;
+  }
 
   protected readonly estancia = this.fb.group(
     {
