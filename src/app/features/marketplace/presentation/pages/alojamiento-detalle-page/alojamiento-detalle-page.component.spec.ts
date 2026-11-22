@@ -1,12 +1,20 @@
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { APP_CONFIG } from '@core/config/app-config';
+import { httpErrorInterceptor } from '@core/http/interceptors/http-error.interceptor';
+import { SESSION_STORAGE_KEY, SessionService } from '@features/auth/application/session.service';
+import { RolUsuario } from '@features/auth/domain/models/rol-usuario';
 import { BehaviorSubject } from 'rxjs';
 import { BusquedaAlojamientosHttpRepository } from '../../../data/repositories/busqueda-alojamientos-http.repository';
+import { CotizacionHttpRepository } from '../../../data/repositories/cotizacion-http.repository';
 import { BusquedaAlojamientosRepository } from '../../../domain/repositories/busqueda-alojamientos.repository';
-import { AlojamientoDetallePageComponent } from './alojamiento-detalle-page.component';
+import { CotizacionRepository } from '../../../domain/repositories/cotizacion.repository';
+import {
+  AlojamientoDetallePageComponent,
+  ESPERA_RECOTIZACION_MS,
+} from './alojamiento-detalle-page.component';
 
 describe('HU-025: detalle público de alojamiento', () => {
   let fixture: ComponentFixture<AlojamientoDetallePageComponent>;
@@ -37,19 +45,21 @@ describe('HU-025: detalle público de alojamiento', () => {
   };
 
   beforeEach(() => {
+    sessionStorage.removeItem(SESSION_STORAGE_KEY);
     parametros.next(convertToParamMap({ idPublicacion: '9' }));
 
     TestBed.configureTestingModule({
       imports: [AlojamientoDetallePageComponent],
       providers: [
         provideRouter([]),
-        provideHttpClient(),
+        provideHttpClient(withInterceptors([httpErrorInterceptor])),
         provideHttpClientTesting(),
         { provide: APP_CONFIG, useValue: { apiUrl: '/api-test' } },
         {
           provide: BusquedaAlojamientosRepository,
           useClass: BusquedaAlojamientosHttpRepository,
         },
+        { provide: CotizacionRepository, useClass: CotizacionHttpRepository },
         {
           provide: ActivatedRoute,
           useValue: {
@@ -92,10 +102,8 @@ describe('HU-025: detalle público de alojamiento', () => {
     expect(element.textContent).toContain('No fumar.');
     expect(element.textContent).toContain('Flexible');
     expect(element.textContent).toContain('Imagen de referencia');
-    expect(element.textContent).toContain('Fechas disponibles');
-    expect(element.textContent).toContain('Demo');
-    expect(element.textContent).toContain('No se ha consultado la disponibilidad');
-    expect(element.querySelector<HTMLButtonElement>('.cotizar')?.disabled).toBeTrue();
+    expect(element.textContent).not.toContain('Demo');
+    expect(element.textContent).not.toContain('No se ha consultado la disponibilidad');
 
     const imagen = element.querySelector<HTMLImageElement>('.galeria img');
     expect(imagen?.getAttribute('src')).toBe('/img/imgCasas.jpg');
@@ -173,7 +181,7 @@ describe('HU-025: detalle público de alojamiento', () => {
     expect(imagen.hidden).toBeTrue();
   });
 
-  it('permite editar la estancia sin consultar disponibilidad ni cotizar', () => {
+  it('permite editar la estancia sin llamar al servidor hasta que se pide cotizar', () => {
     http.expectOne('/api-test/alojamientos/9').flush(detalle);
     fixture.detectChanges();
 
@@ -194,8 +202,6 @@ describe('HU-025: detalle público de alojamiento', () => {
 
     expect(element.querySelector('.estancia-seleccionada')?.textContent).toContain('3 noches');
     expect(element.querySelector('.estancia-seleccionada')?.textContent).toContain('2');
-
-    expect(element.querySelector<HTMLButtonElement>('.cotizar')?.disabled).toBeTrue();
 
     http.expectNone((request) => request.url.startsWith('/api-test/'));
   });
@@ -238,5 +244,401 @@ describe('HU-025: detalle público de alojamiento', () => {
     expect(element.querySelector('#estancia-errores')?.textContent).toContain(
       'Indica entre 1 y 4 huéspedes',
     );
+  });
+
+  describe('HU-027: cotizar una estancia', () => {
+    const respuestaCotizacion = {
+      idPublicacion: 9,
+      fechaLlegada: '2030-06-10',
+      fechaSalida: '2030-06-13',
+      noches: 3,
+      precio: {
+        precioNoche: 250000,
+        precioBase: 750000,
+        porcentajeDescuento: 0,
+        valorDescuento: 0,
+        tarifaLimpieza: 50000,
+        serviciosAdicionales: [],
+        totalServiciosAdicionales: 0,
+        porcentajeTarifaServicio: 10,
+        tarifaServicio: 75000,
+        total: 875000,
+      },
+    };
+
+    const iniciarSesion = (roles: RolUsuario[]) => {
+      TestBed.inject(SessionService).iniciar({
+        accessToken: 'token',
+        expiraEn: Date.now() + 3_600_000,
+        usuario: {
+          idUsuario: 1,
+          primerNombre: 'Ana',
+          primerApellido: 'Pérez',
+          correo: 'ana@correo.com',
+          roles,
+        },
+      });
+      fixture.detectChanges();
+    };
+    const cargarDetalle = () => {
+      http.expectOne('/api-test/alojamientos/9').flush(detalle);
+      fixture.detectChanges();
+    };
+    const escribir = (selector: string, valor: string) => {
+      const campo = element.querySelector<HTMLInputElement>(selector)!;
+      campo.value = valor;
+      campo.dispatchEvent(new Event('input'));
+      campo.dispatchEvent(new Event('blur'));
+      fixture.detectChanges();
+    };
+    const llenarEstancia = (llegada = '2030-06-10', salida = '2030-06-13', huespedes = '2') => {
+      escribir('#estancia-llegada', llegada);
+      escribir('#estancia-salida', salida);
+      escribir('#estancia-huespedes', huespedes);
+    };
+    const botonCotizar = () => element.querySelector<HTMLButtonElement>('.cotizar');
+    const pedirCotizacion = () => {
+      botonCotizar()!.click();
+      fixture.detectChanges();
+    };
+    const filas = () =>
+      Array.from(element.querySelectorAll<HTMLElement>('.desglose .fila')).map((fila) =>
+        fila.textContent!.replace(/\s+/g, ' ').trim(),
+      );
+    const rechazar = (estado: number, cuerpo: Record<string, unknown>) => {
+      http
+        .expectOne('/api-test/cotizaciones')
+        .flush(
+          { fecha: '', estado, error: 'Error', ruta: '/api/v1/cotizaciones', ...cuerpo },
+          { status: estado, statusText: 'Error' },
+        );
+      fixture.detectChanges();
+    };
+
+    describe('quién puede cotizar', () => {
+      it('un Visitante ve el enlace para iniciar sesión y no el botón', () => {
+        cargarDetalle();
+
+        expect(botonCotizar()).toBeNull();
+        const enlace = element.querySelector<HTMLAnchorElement>('.nota--cotizacion a')!;
+        expect(enlace.textContent).toContain('Inicia sesión');
+        expect(new URL(enlace.href).pathname).toBe('/login');
+        expect(new URL(enlace.href).searchParams.has('returnUrl')).toBeTrue();
+      });
+
+      for (const rol of [RolUsuario.Anfitrion, RolUsuario.Administrador]) {
+        it(`un ${rol} ve que solo los Huéspedes cotizan y no puede pedirla`, () => {
+          cargarDetalle();
+          iniciarSesion([rol]);
+
+          expect(botonCotizar()).toBeNull();
+          expect(element.textContent).toContain('Solo los Huéspedes pueden cotizar');
+          http.expectNone('/api-test/cotizaciones');
+        });
+      }
+
+      it('un Huésped ve el botón para cotizar', () => {
+        cargarDetalle();
+        iniciarSesion([RolUsuario.Huesped]);
+
+        expect(botonCotizar()!.textContent).toContain('Cotizar estancia');
+        expect(botonCotizar()!.disabled).toBeFalse();
+        expect(element.textContent).toContain('no reserva las fechas');
+      });
+
+      it('una persona con varios roles que incluye Huésped también cotiza', () => {
+        cargarDetalle();
+        iniciarSesion([RolUsuario.Anfitrion, RolUsuario.Huesped]);
+
+        expect(botonCotizar()).not.toBeNull();
+      });
+    });
+
+    describe('cotizar', () => {
+      beforeEach(() => {
+        cargarDetalle();
+        iniciarSesion([RolUsuario.Huesped]);
+      });
+
+      it('sin fechas no llama al servidor y muestra los errores del formulario', () => {
+        pedirCotizacion();
+
+        http.expectNone('/api-test/cotizaciones');
+        expect(element.querySelector('#estancia-errores')!.textContent).toContain(
+          'Selecciona llegada y salida',
+        );
+      });
+
+      it('con fechas inválidas no llama al servidor', () => {
+        llenarEstancia('2030-06-13', '2030-06-10');
+
+        pedirCotizacion();
+
+        http.expectNone('/api-test/cotizaciones');
+        expect(element.querySelector('#estancia-errores')!.textContent).toContain(
+          'La salida debe ser posterior a la llegada',
+        );
+      });
+
+      it('envía el alojamiento, las fechas y los huéspedes', () => {
+        llenarEstancia();
+
+        pedirCotizacion();
+
+        const req = http.expectOne('/api-test/cotizaciones');
+        expect(req.request.method).toBe('POST');
+        expect(req.request.body).toEqual({
+          idPublicacion: 9,
+          fechaLlegada: '2030-06-10',
+          fechaSalida: '2030-06-13',
+          huespedes: 2,
+        });
+        req.flush(respuestaCotizacion);
+      });
+
+      it('no ofrece servicios adicionales ni los envía', () => {
+        llenarEstancia();
+
+        pedirCotizacion();
+
+        const req = http.expectOne('/api-test/cotizaciones');
+        expect('serviciosAdicionales' in (req.request.body as object)).toBeFalse();
+        req.flush(respuestaCotizacion);
+      });
+
+      it('mientras espera, deshabilita el botón y avisa que está calculando', () => {
+        llenarEstancia();
+
+        pedirCotizacion();
+
+        expect(botonCotizar()!.disabled).toBeTrue();
+        expect(botonCotizar()!.getAttribute('aria-busy')).toBe('true');
+        expect(element.querySelector('.cotizacion')!.textContent).toContain('Calculando');
+        http.expectOne('/api-test/cotizaciones').flush(respuestaCotizacion);
+      });
+
+      it('muestra el desglose y el total que devuelve el backend', () => {
+        llenarEstancia();
+
+        pedirCotizacion();
+        http.expectOne('/api-test/cotizaciones').flush(respuestaCotizacion);
+        fixture.detectChanges();
+
+        const texto = filas();
+        expect(texto[0]).toContain('3 noches × $250,000');
+        expect(texto[0]).toContain('$750,000');
+        expect(texto[texto.length - 1]).toContain('$875,000 COP');
+        expect(botonCotizar()!.disabled).toBeFalse();
+        expect(element.querySelector('.desglose__nota')!.textContent).toContain(
+          'no reserva ni bloquea las fechas',
+        );
+      });
+
+      it('409: dice que no se pudo cotizar, pide otras fechas y no muestra desglose', () => {
+        llenarEstancia();
+
+        pedirCotizacion();
+        rechazar(409, {
+          mensaje: 'No se puede generar una cotización para las fechas seleccionadas',
+        });
+
+        const alerta = element.querySelector('.cotizacion [role="alert"]')!;
+        expect(alerta.textContent).toContain('No se pudo cotizar');
+        expect(alerta.textContent).toContain(
+          'No se puede generar una cotización para las fechas seleccionadas',
+        );
+        expect(alerta.textContent).toContain('otras fechas');
+        expect(element.querySelector('.desglose')).toBeNull();
+      });
+
+      it('404: ofrece volver al listado', () => {
+        llenarEstancia();
+
+        pedirCotizacion();
+        rechazar(404, { mensaje: 'El alojamiento no está disponible' });
+
+        const alerta = element.querySelector('.cotizacion [role="alert"]')!;
+        expect(alerta.textContent).toContain('El alojamiento no está disponible');
+        const enlace = alerta.querySelector<HTMLAnchorElement>('a')!;
+        expect(enlace.textContent).toContain('Volver al listado');
+        expect(new URL(enlace.href).pathname).toBe('/alojamientos');
+      });
+
+      it('400: muestra el mensaje del servidor junto al campo que lo causó', () => {
+        llenarEstancia();
+
+        pedirCotizacion();
+        rechazar(400, {
+          mensaje: 'Los datos enviados no son válidos',
+          errores: { huespedes: 'El alojamiento admite como máximo 4 huéspedes' },
+        });
+
+        const mensaje = element.querySelector('#estancia-huespedes-error')!;
+        expect(mensaje.textContent).toContain('El alojamiento admite como máximo 4 huéspedes');
+        const campo = element.querySelector<HTMLInputElement>('#estancia-huespedes')!;
+        expect(campo.getAttribute('aria-invalid')).toBe('true');
+        expect(campo.getAttribute('aria-describedby')).toContain('estancia-huespedes-error');
+        expect(element.querySelector('.cotizacion [role="alert"]')).toBeNull();
+      });
+
+      it('400 en la salida: el mensaje del rango queda en el campo de salida', () => {
+        llenarEstancia();
+
+        pedirCotizacion();
+        rechazar(400, {
+          mensaje: 'Los datos enviados no son válidos',
+          errores: { rangoFechasValido: 'La salida debe ser posterior a la llegada' },
+        });
+
+        expect(element.querySelector('#estancia-salida-error')!.textContent).toContain(
+          'La salida debe ser posterior a la llegada',
+        );
+      });
+
+      it('403: explica el motivo en la propia pantalla', () => {
+        llenarEstancia();
+
+        pedirCotizacion();
+        rechazar(403, { mensaje: 'Acceso denegado' });
+
+        expect(element.querySelector('.cotizacion [role="alert"]')!.textContent).toContain(
+          'Solo los Huéspedes pueden cotizar',
+        );
+      });
+
+      it('un fallo del servidor muestra un aviso y permite intentarlo de nuevo', () => {
+        llenarEstancia();
+
+        pedirCotizacion();
+        rechazar(500, {});
+
+        expect(element.querySelector('.cotizacion [role="alert"]')).not.toBeNull();
+        expect(botonCotizar()!.disabled).toBeFalse();
+
+        pedirCotizacion();
+        http.expectOne('/api-test/cotizaciones').flush(respuestaCotizacion);
+        fixture.detectChanges();
+
+        expect(element.querySelector('.desglose')).not.toBeNull();
+      });
+    });
+
+    describe('volver a cotizar al cambiar la estancia', () => {
+      // La sesión se abre fuera de fakeAsync: su temporizador de vencimiento no debe simularse,
+      // porque al terminar la prueba se ejecutaría y cerraría la sesión.
+      beforeEach(() => iniciarSesion([RolUsuario.Huesped]));
+
+      // Al cargar el detalle el formulario se reinicia y arranca la espera de la recotización.
+      // Se hace dentro de fakeAsync para que ese temporizador sea simulado y no uno real, que
+      // impediría programar el de cada prueba.
+      beforeEach(fakeAsync(() => {
+        cargarDetalle();
+        tick(ESPERA_RECOTIZACION_MS);
+      }));
+
+      it('antes de pedir la primera cotización, los cambios no llaman al servidor', fakeAsync(() => {
+        llenarEstancia();
+
+        tick(ESPERA_RECOTIZACION_MS);
+
+        http.expectNone('/api-test/cotizaciones');
+        expect(element.querySelector('.cotizacion')!.textContent!.trim()).toBe('');
+      }));
+
+      it('cambiar las fechas o los huéspedes vuelve a cotizar', fakeAsync(() => {
+        llenarEstancia();
+        pedirCotizacion();
+        http.expectOne('/api-test/cotizaciones').flush(respuestaCotizacion);
+        fixture.detectChanges();
+
+        escribir('#estancia-huespedes', '3');
+        tick(ESPERA_RECOTIZACION_MS);
+
+        const req = http.expectOne('/api-test/cotizaciones');
+        expect((req.request.body as { huespedes: number }).huespedes).toBe(3);
+        req.flush({ ...respuestaCotizacion, noches: 3 });
+        fixture.detectChanges();
+
+        escribir('#estancia-salida', '2030-06-17');
+        tick(ESPERA_RECOTIZACION_MS);
+
+        const segunda = http.expectOne('/api-test/cotizaciones');
+        expect((segunda.request.body as { fechaSalida: string }).fechaSalida).toBe('2030-06-17');
+        segunda.flush({
+          ...respuestaCotizacion,
+          fechaSalida: '2030-06-17',
+          noches: 7,
+          precio: { ...respuestaCotizacion.precio, total: 2000000 },
+        });
+        fixture.detectChanges();
+
+        expect(filas()[0]).toContain('7 noches');
+        expect(filas()[filas().length - 1]).toContain('$2,000,000 COP');
+      }));
+
+      it('espera a que termine de escribir: varios cambios seguidos hacen una sola petición', fakeAsync(() => {
+        llenarEstancia();
+        pedirCotizacion();
+        http.expectOne('/api-test/cotizaciones').flush(respuestaCotizacion);
+        fixture.detectChanges();
+
+        escribir('#estancia-huespedes', '1');
+        tick(ESPERA_RECOTIZACION_MS / 2);
+        escribir('#estancia-huespedes', '3');
+        tick(ESPERA_RECOTIZACION_MS);
+
+        const req = http.expectOne('/api-test/cotizaciones');
+        expect((req.request.body as { huespedes: number }).huespedes).toBe(3);
+        req.flush(respuestaCotizacion);
+      }));
+
+      it('si los datos dejan de ser válidos, retira el desglose y no consulta', fakeAsync(() => {
+        llenarEstancia();
+        pedirCotizacion();
+        http.expectOne('/api-test/cotizaciones').flush(respuestaCotizacion);
+        fixture.detectChanges();
+        expect(element.querySelector('.desglose')).not.toBeNull();
+
+        escribir('#estancia-salida', '2030-06-09');
+        tick(ESPERA_RECOTIZACION_MS);
+        fixture.detectChanges();
+
+        http.expectNone('/api-test/cotizaciones');
+        expect(element.querySelector('.desglose')).toBeNull();
+      }));
+
+      it('después de un 409, cambiar las fechas vuelve a intentar', fakeAsync(() => {
+        llenarEstancia();
+        pedirCotizacion();
+        rechazar(409, { mensaje: 'No se puede generar una cotización' });
+
+        escribir('#estancia-llegada', '2030-07-01');
+        escribir('#estancia-salida', '2030-07-04');
+        tick(ESPERA_RECOTIZACION_MS);
+
+        http.expectOne('/api-test/cotizaciones').flush(respuestaCotizacion);
+        fixture.detectChanges();
+
+        expect(element.querySelector('.desglose')).not.toBeNull();
+        expect(element.querySelector('.cotizacion [role="alert"]')).toBeNull();
+      }));
+
+      it('al cambiar de alojamiento, descarta la cotización anterior', fakeAsync(() => {
+        llenarEstancia();
+        pedirCotizacion();
+        http.expectOne('/api-test/cotizaciones').flush(respuestaCotizacion);
+        fixture.detectChanges();
+        expect(element.querySelector('.desglose')).not.toBeNull();
+
+        parametros.next(convertToParamMap({ idPublicacion: '10' }));
+        fixture.detectChanges();
+        http.expectOne('/api-test/alojamientos/10').flush({ ...detalle, idPublicacion: 10 });
+        fixture.detectChanges();
+        tick(ESPERA_RECOTIZACION_MS);
+
+        expect(element.querySelector('.desglose')).toBeNull();
+        http.expectNone('/api-test/cotizaciones');
+      }));
+    });
   });
 });
