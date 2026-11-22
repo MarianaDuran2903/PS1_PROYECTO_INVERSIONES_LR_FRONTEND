@@ -231,6 +231,14 @@ describe('PublicacionFormComponent (modo intervenir)', () => {
       expect(element.querySelector('label[for="reglas"]')!.textContent).toContain('*');
     });
 
+    it('con reglasObligatorias la ayuda dice que son obligatorias en revisión', () => {
+      crear({ reglasObligatorias: true });
+
+      expect(element.querySelector('#reglas-ayuda')!.textContent).toContain(
+        'Obligatorias en una publicación en revisión',
+      );
+    });
+
     it('sin reglasObligatorias las reglas siguen siendo opcionales', () => {
       crear();
       escribir('motivo', 'Corrección de la publicación');
