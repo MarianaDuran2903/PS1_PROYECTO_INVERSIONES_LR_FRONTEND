@@ -240,11 +240,12 @@
     @if (esEdicion()) {
       <section class="seccion" aria-labelledby="sec-reglas">
         <h2 id="sec-reglas">Reglas de la casa</h2>
-        <p class="seccion__ayuda">
+        <p class="seccion__ayuda" id="reglas-ayuda">
           @if (reglasObligatorias()) {
             Obligatorias en una publicación en revisión. Por ejemplo horarios, mascotas o fiestas.
           } @else {
-            Opcional. Por ejemplo horarios, mascotas o fiestas.
+            Puedes guardar sin ellas, pero son necesarias para enviar la publicación a revisión y
+            para activarla. Por ejemplo horarios, mascotas o fiestas.
           }
         </p>
 
@@ -262,7 +263,9 @@
             placeholder="Ej. No se permite fumar. Silencio después de las 10 p. m."
             [attr.aria-invalid]="errorDe('reglas') !== null"
             [attr.aria-describedby]="
-              errorDe('reglas') ? 'reglas-contador reglas-error' : 'reglas-contador'
+              errorDe('reglas')
+                ? 'reglas-ayuda reglas-contador reglas-error'
+                : 'reglas-ayuda reglas-contador'
             "
           ></textarea>
           <p class="field__contador" id="reglas-contador">

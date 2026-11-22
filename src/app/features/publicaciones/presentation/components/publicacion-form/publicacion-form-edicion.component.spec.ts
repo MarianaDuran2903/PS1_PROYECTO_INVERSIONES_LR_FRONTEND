@@ -189,6 +189,24 @@ describe('PublicacionFormComponent (modo editar)', () => {
       expect(botonGuardar()!.disabled).toBeFalse();
     });
 
+    it('avisa que las reglas son necesarias para enviar a revisión, sin decir que son opcionales', () => {
+      const ayuda = element.querySelector('#reglas-ayuda')!.textContent!;
+
+      expect(ayuda).toContain('Puedes guardar sin ellas');
+      expect(ayuda).toContain('necesarias para enviar la publicación a revisión');
+      expect(ayuda).not.toContain('Opcional');
+    });
+
+    it('el campo de reglas anuncia ese aviso a los lectores de pantalla', () => {
+      expect(campo('reglas').getAttribute('aria-describedby')).toContain('reglas-ayuda');
+
+      escribir('reglas', 'a'.repeat(2001));
+
+      expect(campo('reglas').getAttribute('aria-describedby')).toBe(
+        'reglas-ayuda reglas-contador reglas-error',
+      );
+    });
+
     it('la capacidad rechaza 0 y decimales', () => {
       for (const invalida of ['0', '2.5']) {
         escribir('capacidad', invalida);

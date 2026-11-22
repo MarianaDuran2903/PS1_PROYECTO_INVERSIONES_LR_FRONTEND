@@ -189,11 +189,15 @@
                     formControlName="fechaLlegada"
                     [min]="hoy"
                     [attr.aria-invalid]="
-                      estancia.controls.fechaLlegada.touched &&
-                      estancia.controls.fechaLlegada.invalid
+                      (estancia.controls.fechaLlegada.touched &&
+                        estancia.controls.fechaLlegada.invalid) ||
+                      !!cotizacion.errores().fechaLlegada
                     "
-                    aria-describedby="estancia-errores"
+                    [attr.aria-describedby]="descritoPor('estancia-llegada-error', 'fechaLlegada')"
                   />
+                  @if (cotizacion.errores().fechaLlegada; as mensaje) {
+                    <p id="estancia-llegada-error" class="error-campo">{{ mensaje }}</p>
+                  }
                 </div>
 
                 <div class="campo-estancia">
@@ -204,10 +208,15 @@
                     formControlName="fechaSalida"
                     [min]="salidaMinima()"
                     [attr.aria-invalid]="
-                      estancia.controls.fechaSalida.touched && estancia.controls.fechaSalida.invalid
+                      (estancia.controls.fechaSalida.touched &&
+                        estancia.controls.fechaSalida.invalid) ||
+                      !!cotizacion.errores().fechaSalida
                     "
-                    aria-describedby="estancia-errores"
+                    [attr.aria-describedby]="descritoPor('estancia-salida-error', 'fechaSalida')"
                   />
+                  @if (cotizacion.errores().fechaSalida; as mensaje) {
+                    <p id="estancia-salida-error" class="error-campo">{{ mensaje }}</p>
+                  }
                 </div>
               </div>
 
@@ -222,10 +231,14 @@
                   step="1"
                   formControlName="huespedes"
                   [attr.aria-invalid]="
-                    estancia.controls.huespedes.touched && estancia.controls.huespedes.invalid
+                    (estancia.controls.huespedes.touched && estancia.controls.huespedes.invalid) ||
+                    !!cotizacion.errores().huespedes
                   "
-                  aria-describedby="estancia-errores"
+                  [attr.aria-describedby]="descritoPor('estancia-huespedes-error', 'huespedes')"
                 />
+                @if (cotizacion.errores().huespedes; as mensaje) {
+                  <p id="estancia-huespedes-error" class="error-campo">{{ mensaje }}</p>
+                }
               </div>
             </div>
 
@@ -256,14 +269,6 @@
               }
             </div>
 
-            <div class="disponibilidad-demo">
-              <div class="disponibilidad-demo__titulo">
-                <span>Fechas disponibles</span>
-                <span class="demo-etiqueta">Demo</span>
-              </div>
-              <p>Vista previa visual. No se ha consultado la disponibilidad.</p>
-            </div>
-
             @if (noches() > 0) {
               <p class="estancia-seleccionada" aria-live="polite">
                 {{ noches() }} {{ noches() === 1 ? 'noche' : 'noches' }} ·
@@ -272,13 +277,91 @@
               </p>
             }
 
-            <button type="button" class="cotizar" disabled aria-describedby="cotizacion-nota">
-              Cotizar estancia
-            </button>
+            @if (!autenticado()) {
+              <p class="nota nota--cotizacion">
+                <a routerLink="/login" [queryParams]="{ returnUrl: urlActual() }">Inicia sesión</a>
+                como Huésped para cotizar tu estancia. No se realizará ningún cobro.
+              </p>
+            } @else if (!puedeCotizar()) {
+              <p class="nota nota--cotizacion">Solo los Huéspedes pueden cotizar una estancia.</p>
+            } @else {
+              <button
+                type="button"
+                class="cotizar"
+                [disabled]="cotizacion.cotizando()"
+                [attr.aria-busy]="cotizacion.cotizando()"
+                (click)="cotizar()"
+              >
+                {{ cotizacion.cotizando() ? 'Cotizando...' : 'Cotizar estancia' }}
+              </button>
 
-            <p id="cotizacion-nota" class="nota">
-              Próximamente. La cotización aún no está habilitada. No se realizará ningún cobro.
-            </p>
+              <div class="cotizacion" aria-live="polite">
+                @switch (cotizacion.estado()) {
+                  @case ('cotizando') {
+                    <p role="status" class="nota">Calculando el valor de tu estancia...</p>
+                  }
+
+                  @case ('lista') {
+                    @if (cotizacion.cotizacion(); as resultado) {
+                      <app-desglose-cotizacion [cotizacion]="resultado" />
+                    }
+
+                    @if (solicitudReserva(); as aReservar) {
+                      <app-accion-reservar
+                        [solicitud]="aReservar"
+                        (fechasOcupadas)="alOcuparseLasFechas()"
+                      />
+                    }
+                  }
+
+                  @case ('fechas-no-disponibles') {
+                    <div class="alert alert--danger" role="alert">
+                      <p>No se pudo cotizar: {{ cotizacion.mensaje() }}</p>
+                      <p>Prueba con otras fechas.</p>
+                    </div>
+                  }
+
+                  @case ('alojamiento-no-disponible') {
+                    <div class="alert alert--danger" role="alert">
+                      <p>{{ cotizacion.mensaje() }}</p>
+                      <a routerLink="/alojamientos" [queryParams]="parametrosRegreso()">
+                        Volver al listado
+                      </a>
+                    </div>
+                  }
+
+                  @case ('sin-permiso') {
+                    <div class="alert alert--danger" role="alert">
+                      <p>{{ cotizacion.mensaje() }}</p>
+                    </div>
+                  }
+
+                  @case ('invalida') {
+                    @if (
+                      !cotizacion.errores().fechaLlegada &&
+                      !cotizacion.errores().fechaSalida &&
+                      !cotizacion.errores().huespedes
+                    ) {
+                      <div class="alert alert--danger" role="alert">
+                        <p>{{ cotizacion.mensaje() }}</p>
+                      </div>
+                    }
+                  }
+
+                  @case ('error') {
+                    <div class="alert alert--danger" role="alert">
+                      <p>{{ cotizacion.mensaje() }}</p>
+                    </div>
+                  }
+                }
+              </div>
+
+              @if (cotizacion.estado() === 'inactiva') {
+                <p class="nota nota--cotizacion">
+                  La cotización es informativa: no reserva las fechas ni realiza ningún cobro.
+                </p>
+              }
+            }
           </aside>
         </div>
       }

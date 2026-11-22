@@ -1,0 +1,66 @@
+<section class="pago card" aria-labelledby="pago-titulo">
+  <header class="pago__encabezado">
+    @if (id() !== null) {
+      <p class="pago__seccion">Reserva #{{ id() }}</p>
+    }
+    <h1 id="pago-titulo">Pagar tu reserva</h1>
+    <p>
+      El pago se hace en una página segura de Stripe, en modo de pruebas: no se realiza ningún cobro
+      real y esta aplicación nunca ve los datos de tu tarjeta.
+    </p>
+  </header>
+
+  @switch (facade.estado()) {
+    @case ('inicial') {
+      <button type="button" class="btn btn--primary btn--lg btn--block" (click)="pagar()">
+        Pagar mi reserva
+      </button>
+    }
+
+    @case ('iniciando') {
+      <p role="status" aria-live="polite">Preparando el pago…</p>
+      <button type="button" class="btn btn--primary btn--lg btn--block" disabled aria-busy="true">
+        Preparando el pago…
+      </button>
+    }
+
+    @case ('listo') {
+      @if (facade.pago(); as pago) {
+        <div class="pago__resumen" aria-live="polite">
+          <p class="pago__etiqueta">Total a pagar</p>
+          <p class="pago__monto">
+            {{ pago.monto | currency: pago.moneda : 'symbol-narrow' : '1.0-2' }}
+            {{ pago.moneda }}
+          </p>
+          @if (vence(); as limite) {
+            <p class="pago__limite">Tienes hasta el {{ limite }} para completar el pago.</p>
+          }
+        </div>
+
+        <button
+          type="button"
+          class="btn btn--primary btn--lg btn--block"
+          (click)="facade.continuar()"
+        >
+          Continuar a la página de pago
+        </button>
+      }
+    }
+
+    @case ('error') {
+      @if (facade.error(); as error) {
+        <app-error-pago [error]="error" [idReserva]="id()" (reintentar)="pagar()" />
+      }
+    }
+  }
+
+  <details class="pago__pruebas">
+    <summary>Tarjetas de prueba</summary>
+    <p>En la página de pago usa cualquier fecha futura y cualquier CVC con estos números:</p>
+    <ul>
+      <li><code>4242 4242 4242 4242</code>: pago aprobado.</li>
+      <li><code>4000 0000 0000 0002</code>: pago rechazado (tarjeta rechazada).</li>
+      <li><code>4000 0000 0000 9995</code>: pago rechazado por fondos insuficientes.</li>
+    </ul>
+  </details>
+</section>
