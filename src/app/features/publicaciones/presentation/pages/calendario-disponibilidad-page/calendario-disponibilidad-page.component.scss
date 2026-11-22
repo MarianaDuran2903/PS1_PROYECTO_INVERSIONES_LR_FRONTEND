@@ -1,0 +1,118 @@
+:host {
+  display: block;
+  padding: var(--space-8) var(--space-4) var(--space-12);
+}
+
+.pagina {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.volver {
+  width: fit-content;
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.encabezado h1 {
+  margin: 0 0 var(--space-2);
+  font-size: 2rem;
+}
+
+.encabezado p,
+.nota,
+.periodo__nota {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.estado-pagina,
+.vacio {
+  margin: 0;
+  padding: var(--space-8) var(--space-4);
+  text-align: center;
+  color: var(--color-text-muted);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.alerta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid #b91c1c;
+  border-radius: var(--radius-md);
+  color: #7f1d1d;
+  background: #fef2f2;
+
+  p {
+    margin: 0;
+  }
+}
+
+.periodos {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.periodo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.periodo__fechas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-1);
+  font-weight: 600;
+}
+
+.periodo__nota {
+  font-size: 0.875rem;
+}
+
+.etiqueta {
+  padding: var(--space-1) var(--space-3);
+  border-radius: 999px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.etiqueta--disponible {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.etiqueta--no-ofrecido {
+  color: #475569;
+  background: #e2e8f0;
+}
+
+.etiqueta--reservado {
+  color: #1d4ed8;
+  background: #dbeafe;
+}
+
+.etiqueta--bloqueado {
+  color: #92400e;
+  background: #fef3c7;
+}

@@ -72,6 +72,16 @@
                   <strong>{{ pesos(publicacion.precioNoche) }}</strong>
                   <span>por noche</span>
                 </p>
+                <a
+                  class="btn btn--outline tarjeta__calendario"
+                  [routerLink]="[
+                    '/anfitrion',
+                    'publicaciones',
+                    publicacion.idPublicacion,
+                    'disponibilidad',
+                  ]"
+                  >Calendario</a
+                >
                 <app-boton-editar-publicacion
                   texto="Editar"
                   [idPublicacion]="publicacion.idPublicacion"
