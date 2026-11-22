@@ -3,7 +3,9 @@ import { rolGuard, autenticadoGuard } from '@features/auth/application/guards/ac
 import { exploracionGuard } from '@features/auth/application/guards/exploracion.guard';
 import { RolUsuario } from '@features/auth/domain/models/rol-usuario';
 import { BusquedaAlojamientosHttpRepository } from '@features/marketplace/data/repositories/busqueda-alojamientos-http.repository';
+import { CotizacionHttpRepository } from '@features/marketplace/data/repositories/cotizacion-http.repository';
 import { BusquedaAlojamientosRepository } from '@features/marketplace/domain/repositories/busqueda-alojamientos.repository';
+import { CotizacionRepository } from '@features/marketplace/domain/repositories/cotizacion.repository';
 
 export const routes: Routes = [
   {
@@ -70,6 +72,7 @@ export const routes: Routes = [
         provide: BusquedaAlojamientosRepository,
         useClass: BusquedaAlojamientosHttpRepository,
       },
+      { provide: CotizacionRepository, useClass: CotizacionHttpRepository },
     ],
     loadComponent: () =>
       import('./features/marketplace/presentation/pages/alojamiento-detalle-page/alojamiento-detalle-page.component').then(
