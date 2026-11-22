@@ -23,6 +23,8 @@ export class CalendarioDisponibilidadFacade {
   private readonly repository = inject(CalendarioDisponibilidadRepository);
   private readonly destroyRef = inject(DestroyRef);
   private readonly state = signal<CalendarioState>(ESTADO_INICIAL);
+  readonly guardando = signal(false);
+  readonly errorApertura = signal<string | null>(null);
   private peticion: Subscription | undefined;
 
   readonly estado = computed(() => this.state().estado);
@@ -55,5 +57,27 @@ export class CalendarioDisponibilidadFacade {
     if (idPublicacion !== null) {
       this.cargar(idPublicacion);
     }
+  }
+
+  abrirPeriodo(fechaInicio: string, fechaFin: string): void {
+    const idPublicacion = this.state().idPublicacion;
+    if (idPublicacion === null || this.guardando()) return;
+    this.guardando.set(true);
+    this.errorApertura.set(null);
+    this.repository
+      .abrir(idPublicacion, fechaInicio, fechaFin)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.guardando.set(false);
+          this.cargar(idPublicacion);
+        },
+        error: () => {
+          this.guardando.set(false);
+          this.errorApertura.set(
+            'No se pudo abrir el periodo. Revisa las fechas y que no se crucen con otro periodo.',
+          );
+        },
+      });
   }
 }

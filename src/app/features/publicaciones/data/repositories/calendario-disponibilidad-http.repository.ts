@@ -21,4 +21,15 @@ export class CalendarioDisponibilidadHttpRepository extends CalendarioDisponibil
       )
       .pipe(map(CalendarioDisponibilidadMapper.toDomain));
   }
+
+  override abrir(
+    idPublicacion: number,
+    fechaInicio: string,
+    fechaFin: string,
+  ): Observable<unknown> {
+    return this.http.post(this.apiUrl + '/publicaciones/' + idPublicacion + '/disponibilidad', {
+      fechaInicio,
+      fechaFin,
+    });
+  }
 }
