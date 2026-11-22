@@ -29,6 +29,8 @@ export type EstadoCotizacion =
 interface CotizacionState {
   estado: EstadoCotizacion;
   cotizacion: Cotizacion | null;
+  /** Lo que se pidió cotizar, solo mientras la cotización está lista: es lo que se puede reservar. */
+  solicitud: SolicitudCotizacion | null;
   mensaje: string | null;
   errores: ErroresCotizacion;
 }
@@ -36,6 +38,7 @@ interface CotizacionState {
 const INICIAL: CotizacionState = {
   estado: 'inactiva',
   cotizacion: null,
+  solicitud: null,
   mensaje: null,
   errores: {},
 };
@@ -64,6 +67,8 @@ export class CotizacionFacade {
   /** Mensajes del servidor por campo (solo con el estado `invalida`). */
   readonly errores = computed(() => this.state().errores);
   readonly cotizando = computed(() => this.state().estado === 'cotizando');
+  /** Lo que muestra la cotización lista: exactamente lo que se reservaría. */
+  readonly solicitudCotizada = computed(() => this.state().solicitud);
 
   /** La persona pidió cotizar. */
   cotizar(solicitud: SolicitudCotizacion): void {
@@ -102,7 +107,8 @@ export class CotizacionFacade {
       .cotizar(solicitud)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (cotizacion) => this.state.set({ ...INICIAL, estado: 'lista', cotizacion }),
+        next: (cotizacion) =>
+          this.state.set({ ...INICIAL, estado: 'lista', cotizacion, solicitud }),
         error: (error: unknown) => this.state.set(this.estadoDeError(error)),
       });
   }

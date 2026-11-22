@@ -48,7 +48,8 @@ El proyecto avanza funcionalidad por funcionalidad, según la matriz de requerim
 | RF-ALOJ (HU-014) | Pausar una publicación activa (Anfitrión) y listado público de alojamientos disponibles | Hecho |
 | RF-ADM (HU-015) | Bloquear una publicación engañosa y reactivar una pausada o bloqueada (Administrador), con motivo; el Anfitrión ve el motivo del bloqueo | Hecho |
 | RF-COT (HU-027) | Cotizar una estancia según las fechas seleccionadas (Huésped), con el desglose del precio desde la ficha del alojamiento | Hecho |
-| RF-ALOJ (resto), RF-BUS, RF-RES, RF-PAG | Listado y edición de publicaciones, búsqueda, reservas y pago simulado | Pendiente |
+| RF-PAG (HU-029) | Pagar una reserva en la pasarela de pruebas (Huésped): iniciar el pago y ver su resultado | Hecho (el cobro en la pasarela necesita las claves de Stripe en el backend) |
+| RF-ALOJ (resto), RF-BUS, RF-RES | Listado y edición de publicaciones, búsqueda y reservas | Pendiente |
 | RF-NOT, RF-RSC, RF-ADM, RF-DASH, RF-REP | Notificaciones, reseñas, administración, indicadores y reportes | Pendiente |
 
 Las páginas `/anfitrion` (salvo las de publicaciones) y `/admin` (salvo la gestión de publicaciones) son provisionales: solo muestran un mensaje hasta que se implementen sus historias.
@@ -566,6 +567,58 @@ Todos los endpoints devuelven `{ fecha, estado, error, mensaje, ruta, errores? }
 ### Trazabilidad
 
 El registro oficial de auditoría (tabla `evento_auditoria`) lo escribe el backend en la misma transacción que la acción. El frontend solo agrega el `X-Correlation-Id` y envía eventos de negocio a `POST /events` cuando `tracking.remote` está activo.
+
+### Pagar una reserva (HU-029)
+
+El pago ocurre en una página de **Stripe Checkout en modo de pruebas** (sin cobro real). El frontend **nunca ve datos de tarjeta** y **no necesita ninguna clave de Stripe**: redirige al Huésped a la `urlPago` que entrega el backend y, cuando vuelve, consulta el resultado. **Volver a la página de éxito no significa que el pago esté aprobado**: solo lo dice el `estado` del `GET`.
+
+Feature `features/reservas`, solo para el Huésped (`rolGuard`), montada en `/reservas`:
+
+| Ruta | Qué hace |
+|---|---|
+| `/reservas/:idReserva/pago` | `POST /reservas/{id}/pago` (sin cuerpo ni monto: el backend cobra el total de la reserva). Muestra el total y hasta cuándo vale la sesión, y con «Continuar a la página de pago» redirige a `urlPago`. Incluye las tarjetas de prueba (`4242…` aprobada, `4000 0000 0000 0002` rechazada, `4000 0000 0000 9995` fondos insuficientes) |
+| `/reservas/:idReserva/pago/resultado` | Dirección a la que Stripe devuelve a la persona (con `?cancelado=true` si volvió sin pagar). **Siempre** consulta `GET /reservas/{id}/pago` al cargar; el estado no se guarda en el front |
+
+El backend debe tener `PAGO_URL_EXITO` y `PAGO_URL_CANCELACION` apuntando a la ruta de resultado (por defecto, `http://localhost:4200/reservas/{idReserva}/pago/resultado` y la misma con `?cancelado=true`).
+
+| `estado` del pago | Qué muestra el frontend |
+|---|---|
+| `PENDIENTE` | «Procesando tu pago…» y vuelve a consultar cada 2,5 s, hasta 10 veces; después, «Aún no recibimos la confirmación» con «Consultar de nuevo». Con `?cancelado=true` no espera ningún resultado: «No se completó el pago» y «Reintentar el pago» |
+| `APROBADO` | «¡Pago aprobado!», la reserva quedó confirmada y el valor pagado |
+| `RECHAZADO` | El `motivoRechazo` tal cual (nunca el `codigoRechazo`) y «Intentar con otra tarjeta», que lleva de nuevo a `urlPago` |
+| `EXPIRADO` | «El tiempo para pagar terminó» y «Intentar de nuevo», que vuelve a llamar a `POST …/pago` y redirige a la sesión nueva |
+
+| Error | Qué hace el frontend |
+|---|---|
+| `401` | El interceptor cierra la sesión y lleva a `/login?expirada=true` |
+| `403` | «Sin permisos sobre esta reserva» en la propia pantalla (la petición lleva `OMITIR_AVISO_403`) |
+| `404` («La reserva no existe») | «No encontramos la reserva» y enlace para explorar alojamientos (todavía no hay lista de reservas) |
+| `404` en el `GET` («La reserva no tiene un pago iniciado») | Ofrece «Pagar mi reserva» |
+| `409` ya pagada y confirmada | Informa que la reserva ya está confirmada |
+| `409` venció o ya no admite pago | Explica que venció y ofrece reservar de nuevo |
+| `409` se agotaron los intentos (máximo 3 sesiones) | Explica que debe crear una nueva reserva |
+| `502` pasarela | «No pudimos iniciar el pago, intenta de nuevo en unos minutos» con «Reintentar» |
+
+Los tres `409` solo se distinguen por su `mensaje`, así que el repositorio los clasifica por su texto (`pagada`, `agotaron`, y el resto como reserva vencida). La redirección sale por `RedireccionExterna` (`core/navigation`), que **solo acepta direcciones `https`**: una URL con otro esquema (`javascript:`, `data:`) nunca se abre. Capas: puerto `PagoRepository` y `PagoHttpRepository`, errores de dominio (`ReservaYaPagadaError`, `ReservaNoAdmitePagoError`, `IntentosDePagoAgotadosError`, `PasarelaDePagoNoDisponibleError`, entre otros), `IniciarPagoFacade`, `ResultadoPagoFacade` y el componente `app-error-pago`.
+
+#### De la cotización al pago: «Reservar y pagar»
+
+Debajo del desglose de una cotización lista aparece el botón **«Reservar y pagar»** (`app-accion-reservar`). Reserva **exactamente lo que se cotizó** (la facade de cotización guarda esa solicitud) con `POST /reservas` y, cuando el backend crea la reserva (`PENDIENTE_PAGO`, que aparta las fechas hasta que venza el plazo de pago), lleva a `/reservas/{idReserva}/pago`. El flujo completo es: cotizar → reservar y pagar → pagar → resultado.
+
+- **`Idempotency-Key`.** El backend la exige y es única por intento (UUID v4; si el navegador no ofrece `crypto.randomUUID`, se arma con `getRandomValues`). Tras un corte de red o un fallo del servidor (5xx) no se sabe si la reserva se creó, así que al reintentar con los mismos datos se reutiliza **la misma clave** para no crear dos reservas. Tras cualquier respuesta definitiva (por ejemplo, un 409) o con otros datos se usa una clave nueva. Un `200` (repetición con la misma clave) se trata igual que un `201`.
+- **El front no manda precios ni el Huésped:** solo `idPublicacion`, `fechaLlegada`, `fechaSalida` y `huespedes`; el backend calcula el precio y toma el Huésped del token.
+
+| Respuesta de `POST /reservas` | Qué hace el frontend |
+|---|---|
+| `201` o `200` | Lleva a la pantalla de pago de esa reserva |
+| `400` con `errores` | Muestra los mensajes del servidor bajo el botón |
+| `401` | El interceptor cierra la sesión y lleva a `/login?expirada=true` |
+| `403` | «Solo los Huéspedes pueden reservar» en la propia pantalla (`OMITIR_AVISO_403`) |
+| `404` | «El alojamiento no está disponible» y enlace «Volver al listado» |
+| `409` «Las fechas seleccionadas no están disponibles» | Avisa que alguien más pudo tomarlas y **vuelve a cotizar** para actualizar la pantalla |
+| `409` por clave ya usada con otra solicitud | Muestra el mensaje del backend |
+
+La lógica vive en `ReservarFacade` sobre el puerto `ReservaRepository` (`ReservaHttpRepository`), con errores de dominio (`ReservaInvalidaError`, `FechasNoDisponiblesParaReservarError`, `AlojamientoNoReservableError`, `SinPermisoParaReservarError`). El repositorio se provee en la ruta del detalle, junto al de la cotización. Todavía no hay lista de reservas, así que los enlaces de «volver» llevan a explorar alojamientos.
 
 ## Pruebas y calidad
 

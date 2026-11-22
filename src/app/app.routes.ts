@@ -6,6 +6,8 @@ import { BusquedaAlojamientosHttpRepository } from '@features/marketplace/data/r
 import { CotizacionHttpRepository } from '@features/marketplace/data/repositories/cotizacion-http.repository';
 import { BusquedaAlojamientosRepository } from '@features/marketplace/domain/repositories/busqueda-alojamientos.repository';
 import { CotizacionRepository } from '@features/marketplace/domain/repositories/cotizacion.repository';
+import { ReservaHttpRepository } from '@features/reservas/data/repositories/reserva-http.repository';
+import { ReservaRepository } from '@features/reservas/domain/repositories/reserva.repository';
 
 export const routes: Routes = [
   {
@@ -39,6 +41,11 @@ export const routes: Routes = [
       import('@features/marketplace/marketplace.routes').then((m) => m.MARKETPLACE_ROUTES),
   },
   {
+    path: 'reservas',
+    canActivate: [rolGuard([RolUsuario.Huesped])],
+    loadChildren: () => import('@features/reservas/reservas.routes').then((m) => m.RESERVAS_ROUTES),
+  },
+  {
     path: 'anfitrion',
     canActivate: [rolGuard([RolUsuario.Anfitrion])],
     loadChildren: () =>
@@ -68,6 +75,7 @@ export const routes: Routes = [
         useClass: BusquedaAlojamientosHttpRepository,
       },
       { provide: CotizacionRepository, useClass: CotizacionHttpRepository },
+      { provide: ReservaRepository, useClass: ReservaHttpRepository },
     ],
     loadComponent: () =>
       import('./features/marketplace/presentation/pages/alojamiento-detalle-page/alojamiento-detalle-page.component').then(

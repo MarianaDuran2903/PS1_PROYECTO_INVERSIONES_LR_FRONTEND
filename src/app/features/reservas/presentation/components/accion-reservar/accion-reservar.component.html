@@ -1,0 +1,41 @@
+<div class="reservar">
+  <button
+    type="button"
+    class="btn btn--primary btn--block"
+    [disabled]="facade.reservando()"
+    [attr.aria-busy]="facade.reservando()"
+    (click)="reservar()"
+  >
+    {{ facade.reservando() ? 'Reservando…' : 'Reservar y pagar' }}
+  </button>
+
+  @if (facade.error(); as error) {
+    <div class="alert alert--danger reservar__error" role="alert">
+      @switch (error.tipo) {
+        @case ('fechas-no-disponibles') {
+          <p>{{ error.mensaje }}.</p>
+          <p>Alguien más pudo haberlas tomado. Prueba con otras fechas.</p>
+        }
+        @case ('alojamiento-no-disponible') {
+          <p>{{ error.mensaje }}.</p>
+          <a routerLink="/alojamientos">Volver al listado</a>
+        }
+        @case ('invalida') {
+          @for (mensaje of erroresPorCampo(); track mensaje) {
+            <p>{{ mensaje }}</p>
+          } @empty {
+            <p>{{ error.mensaje }}</p>
+          }
+        }
+        @default {
+          <p>{{ error.mensaje }}</p>
+        }
+      }
+    </div>
+  } @else {
+    <p class="reservar__nota">
+      Al reservar apartamos estas fechas mientras pagas. Si no completas el pago a tiempo, se
+      liberan. El pago se hace en una página de pruebas, sin cobro real.
+    </p>
+  }
+</div>

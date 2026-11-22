@@ -1,11 +1,13 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testing';
-import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angular/router';
 import { APP_CONFIG } from '@core/config/app-config';
 import { httpErrorInterceptor } from '@core/http/interceptors/http-error.interceptor';
 import { SESSION_STORAGE_KEY, SessionService } from '@features/auth/application/session.service';
 import { RolUsuario } from '@features/auth/domain/models/rol-usuario';
+import { ReservaHttpRepository } from '@features/reservas/data/repositories/reserva-http.repository';
+import { ReservaRepository } from '@features/reservas/domain/repositories/reserva.repository';
 import { BehaviorSubject } from 'rxjs';
 import { BusquedaAlojamientosHttpRepository } from '../../../data/repositories/busqueda-alojamientos-http.repository';
 import { CotizacionHttpRepository } from '../../../data/repositories/cotizacion-http.repository';
@@ -60,6 +62,7 @@ describe('HU-025: detalle público de alojamiento', () => {
           useClass: BusquedaAlojamientosHttpRepository,
         },
         { provide: CotizacionRepository, useClass: CotizacionHttpRepository },
+        { provide: ReservaRepository, useClass: ReservaHttpRepository },
         {
           provide: ActivatedRoute,
           useValue: {
@@ -520,6 +523,137 @@ describe('HU-025: detalle público de alojamiento', () => {
         fixture.detectChanges();
 
         expect(element.querySelector('.desglose')).not.toBeNull();
+      });
+    });
+
+    describe('reservar lo cotizado y pasar al pago', () => {
+      const reservaCreada = {
+        idReserva: 2,
+        idPublicacion: 9,
+        fechaLlegada: '2030-06-10',
+        fechaSalida: '2030-06-13',
+        noches: 3,
+        huespedes: 2,
+        estado: 'PENDIENTE_PAGO',
+        fechaExpiracion: '2030-06-01T10:30:00Z',
+        precio: {
+          precioBase: 750000,
+          porcentajeDescuento: 0,
+          valorDescuento: 0,
+          tarifaLimpieza: 50000,
+          porcentajeTarifaServicio: 10,
+          tarifaServicio: 75000,
+          total: 875000,
+        },
+      };
+      const botonReservar = () =>
+        element.querySelector<HTMLButtonElement>('app-accion-reservar button');
+      const cotizarEstancia = () => {
+        llenarEstancia();
+        pedirCotizacion();
+        http.expectOne('/api-test/cotizaciones').flush(respuestaCotizacion);
+        fixture.detectChanges();
+      };
+
+      beforeEach(() => {
+        cargarDetalle();
+        iniciarSesion([RolUsuario.Huesped]);
+      });
+
+      it('antes de cotizar no hay nada que reservar', () => {
+        expect(element.querySelector('app-accion-reservar')).toBeNull();
+      });
+
+      it('con la cotización lista aparece «Reservar y pagar», debajo del desglose', () => {
+        cotizarEstancia();
+
+        expect(botonReservar()!.textContent).toContain('Reservar y pagar');
+        const orden = element
+          .querySelector('.desglose')!
+          .compareDocumentPosition(element.querySelector('app-accion-reservar')!);
+        expect(orden & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      });
+
+      it('si la cotización falla (409) no se ofrece reservar', () => {
+        llenarEstancia();
+        pedirCotizacion();
+        rechazar(409, { mensaje: 'No se puede generar una cotización' });
+
+        expect(element.querySelector('app-accion-reservar')).toBeNull();
+      });
+
+      it('al pulsar reserva exactamente lo cotizado, con Idempotency-Key', () => {
+        cotizarEstancia();
+
+        botonReservar()!.click();
+
+        const peticion = http.expectOne('/api-test/reservas');
+        expect(peticion.request.method).toBe('POST');
+        expect(peticion.request.body).toEqual({
+          idPublicacion: 9,
+          fechaLlegada: '2030-06-10',
+          fechaSalida: '2030-06-13',
+          huespedes: 2,
+        });
+        expect(peticion.request.headers.get('Idempotency-Key')).toMatch(/^[0-9a-f-]{36}$/);
+        peticion.flush(reservaCreada, { status: 201, statusText: 'Created' });
+      });
+
+      it('al crearse la reserva lleva a la pantalla de pago', () => {
+        const navegar = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+        cotizarEstancia();
+
+        botonReservar()!.click();
+        http
+          .expectOne('/api-test/reservas')
+          .flush(reservaCreada, { status: 201, statusText: 'Created' });
+
+        expect(navegar).toHaveBeenCalledOnceWith(['/reservas', 2, 'pago']);
+      });
+
+      it('409: otra persona tomó las fechas, lo avisa y vuelve a cotizar', () => {
+        cotizarEstancia();
+
+        botonReservar()!.click();
+        http.expectOne('/api-test/reservas').flush(
+          {
+            fecha: '',
+            estado: 409,
+            error: 'Conflict',
+            mensaje: 'Las fechas seleccionadas no están disponibles',
+            ruta: '/api/v1/reservas',
+          },
+          { status: 409, statusText: 'Conflict' },
+        );
+        fixture.detectChanges();
+
+        // La cotización que se mostraba quedó desactualizada: se pide de nuevo.
+        rechazar(409, { mensaje: 'No se puede generar una cotización' });
+        expect(element.querySelector('.cotizacion [role="alert"]')!.textContent).toContain(
+          'No se pudo cotizar',
+        );
+        expect(element.querySelector('app-accion-reservar')).toBeNull();
+      });
+
+      it('403: explica en la pantalla que solo los Huéspedes reservan, sin aviso global', () => {
+        cotizarEstancia();
+
+        botonReservar()!.click();
+        http.expectOne('/api-test/reservas').flush(
+          {
+            fecha: '',
+            estado: 403,
+            error: 'Forbidden',
+            mensaje: 'No tiene permisos',
+            ruta: '/api/v1/reservas',
+          },
+          { status: 403, statusText: 'Forbidden' },
+        );
+        fixture.detectChanges();
+
+        expect(element.querySelector('app-accion-reservar [role="alert"]')!.textContent).toContain(
+          'Solo los Huéspedes pueden reservar',
+        );
       });
     });
 

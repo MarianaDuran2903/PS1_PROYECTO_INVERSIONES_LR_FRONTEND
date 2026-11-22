@@ -24,6 +24,8 @@ import { AlojamientoDetalleFacade } from '../../../application/alojamiento-detal
 import { leerContextoBusqueda, parametrosBusqueda } from '../../../application/contexto-busqueda';
 import { CotizacionFacade } from '../../../application/cotizacion.facade';
 import { SolicitudCotizacion } from '../../../domain/models/cotizacion';
+import { SolicitudReserva } from '@features/reservas/domain/models/reserva';
+import { AccionReservarComponent } from '@features/reservas/presentation/components/accion-reservar/accion-reservar.component';
 import { DesgloseCotizacionComponent } from '../../components/desglose-cotizacion/desglose-cotizacion.component';
 
 /** Espera tras el último cambio de fechas o huéspedes antes de volver a cotizar. */
@@ -76,7 +78,13 @@ function validarFechas(grupo: AbstractControl): ValidationErrors | null {
 
 @Component({
   selector: 'app-alojamiento-detalle-page',
-  imports: [CurrencyPipe, RouterLink, ReactiveFormsModule, DesgloseCotizacionComponent],
+  imports: [
+    CurrencyPipe,
+    RouterLink,
+    ReactiveFormsModule,
+    DesgloseCotizacionComponent,
+    AccionReservarComponent,
+  ],
   providers: [AlojamientoDetalleFacade, CotizacionFacade],
   templateUrl: './alojamiento-detalle-page.component.html',
   styleUrl: './alojamiento-detalle-page.component.scss',
@@ -143,6 +151,29 @@ export class AlojamientoDetallePageComponent {
         huespedes: contexto.filtros.huespedes ?? 1,
       });
     });
+  }
+
+  /** Lo que muestra la cotización, para reservar exactamente eso (los huéspedes son obligatorios). */
+  protected readonly solicitudReserva = computed<SolicitudReserva | null>(() => {
+    const cotizada = this.cotizacion.solicitudCotizada();
+
+    return cotizada && cotizada.huespedes !== undefined
+      ? {
+          idPublicacion: cotizada.idPublicacion,
+          fechaLlegada: cotizada.fechaLlegada,
+          fechaSalida: cotizada.fechaSalida,
+          huespedes: cotizada.huespedes,
+        }
+      : null;
+  });
+
+  /** Otra persona tomó las fechas mientras se miraba la cotización: se vuelve a cotizar. */
+  protected alOcuparseLasFechas(): void {
+    const solicitud = this.cotizacion.solicitudCotizada();
+
+    if (solicitud) {
+      this.cotizacion.cotizar(solicitud);
+    }
   }
 
   /** El Huésped pidió cotizar. Con datos inválidos solo se muestran los errores del formulario. */

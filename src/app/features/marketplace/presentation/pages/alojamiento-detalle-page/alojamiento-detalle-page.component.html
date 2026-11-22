@@ -305,6 +305,13 @@
                     @if (cotizacion.cotizacion(); as resultado) {
                       <app-desglose-cotizacion [cotizacion]="resultado" />
                     }
+
+                    @if (solicitudReserva(); as aReservar) {
+                      <app-accion-reservar
+                        [solicitud]="aReservar"
+                        (fechasOcupadas)="alOcuparseLasFechas()"
+                      />
+                    }
                   }
 
                   @case ('fechas-no-disponibles') {

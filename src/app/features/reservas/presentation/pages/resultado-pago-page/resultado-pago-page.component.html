@@ -1,0 +1,116 @@
+<section class="resultado card" aria-labelledby="resultado-titulo">
+  <header class="resultado__encabezado">
+    @if (id() !== null) {
+      <p class="resultado__seccion">Reserva #{{ id() }}</p>
+    }
+    <h1 id="resultado-titulo">Resultado del pago</h1>
+  </header>
+
+  @switch (facade.estado()) {
+    @case ('cargando') {
+      <p role="status" aria-live="polite">Consultando el resultado de tu pago…</p>
+    }
+
+    @case ('procesando') {
+      <div class="alert alert--info" role="status" aria-live="polite">
+        <p class="resultado__titulo">Procesando tu pago…</p>
+        <p>Estamos esperando la confirmación. No cierres esta página.</p>
+      </div>
+    }
+
+    @case ('sin-confirmacion') {
+      <div class="alert alert--info" role="status">
+        <p class="resultado__titulo">Aún no recibimos la confirmación</p>
+        <p>
+          Tu pago todavía figura como pendiente. Puede tardar unos segundos más; consulta de nuevo.
+        </p>
+        <button type="button" class="btn btn--primary" (click)="facade.reintentarConsulta()">
+          Consultar de nuevo
+        </button>
+      </div>
+    }
+
+    @case ('aprobado') {
+      <div class="alert alert--success" role="status">
+        <p class="resultado__titulo">¡Pago aprobado!</p>
+        <p>Tu reserva quedó confirmada.</p>
+        @if (facade.pago(); as pago) {
+          <p class="resultado__monto">
+            Valor pagado:
+            <strong>
+              {{ pago.monto | currency: pago.moneda : 'symbol-narrow' : '1.0-2' }}
+              {{ pago.moneda }}
+            </strong>
+          </p>
+        }
+        <a class="btn btn--outline" routerLink="/alojamientos">Explorar más alojamientos</a>
+      </div>
+    }
+
+    @case ('rechazado') {
+      <div class="alert alert--danger" role="alert">
+        <p class="resultado__titulo">El pago fue rechazado</p>
+        <p>{{ motivoRechazo() }}</p>
+        <p>Tu reserva sigue pendiente de pago.</p>
+        <button
+          type="button"
+          class="btn btn--primary"
+          [disabled]="facade.reintentando()"
+          (click)="facade.irAPago()"
+        >
+          {{ facade.reintentando() ? 'Preparando el pago…' : 'Intentar con otra tarjeta' }}
+        </button>
+      </div>
+    }
+
+    @case ('expirado') {
+      <div class="alert alert--danger" role="alert">
+        <p class="resultado__titulo">El tiempo para pagar terminó</p>
+        <p>La página de pago venció sin recibir el pago.</p>
+        <button
+          type="button"
+          class="btn btn--primary"
+          [disabled]="facade.reintentando()"
+          [attr.aria-busy]="facade.reintentando()"
+          (click)="facade.reintentarPago()"
+        >
+          {{ facade.reintentando() ? 'Preparando el pago…' : 'Intentar de nuevo' }}
+        </button>
+      </div>
+    }
+
+    @case ('cancelado') {
+      <div class="alert alert--info" role="status">
+        <p class="resultado__titulo">No se completó el pago</p>
+        <p>Saliste de la página de pago antes de terminar. No se hizo ningún cobro.</p>
+        <button
+          type="button"
+          class="btn btn--primary"
+          [disabled]="facade.reintentando()"
+          (click)="facade.irAPago()"
+        >
+          {{ facade.reintentando() ? 'Preparando el pago…' : 'Reintentar el pago' }}
+        </button>
+      </div>
+    }
+
+    @case ('error') {
+      @if (facade.error(); as error) {
+        <app-error-pago
+          [error]="error"
+          [idReserva]="id()"
+          (reintentar)="facade.reintentarConsulta()"
+        />
+      }
+    }
+  }
+
+  @if (facade.errorAccion(); as error) {
+    <app-error-pago
+      [error]="error"
+      [idReserva]="id()"
+      [reintentando]="facade.reintentando()"
+      (reintentar)="facade.reintentarPago()"
+    />
+  }
+</section>
