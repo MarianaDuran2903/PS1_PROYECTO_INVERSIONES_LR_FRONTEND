@@ -184,7 +184,10 @@ describe('MisPublicacionesPageComponent', () => {
       expect(tarjeta.querySelector('app-boton-editar-publicacion a')!.getAttribute('href')).toBe(
         '/anfitrion/publicaciones/7/editar',
       );
-      expect(tarjeta.querySelectorAll('a').length).toBe(2);
+      expect(tarjeta.querySelector('.tarjeta__calendario')!.getAttribute('href')).toBe(
+        '/anfitrion/publicaciones/7/disponibilidad',
+      );
+      expect(tarjeta.querySelectorAll('a').length).toBe(3);
     });
 
     it('cada tarjeta tiene un solo enlace de detalle', () => {
