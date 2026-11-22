@@ -597,7 +597,16 @@ El backend debe tener `PAGO_URL_EXITO` y `PAGO_URL_CANCELACION` apuntando a la r
 | `409` ya pagada y confirmada | Informa que la reserva ya está confirmada |
 | `409` venció o ya no admite pago | Explica que venció y ofrece reservar de nuevo |
 | `409` se agotaron los intentos (máximo 3 sesiones) | Explica que debe crear una nueva reserva |
+| `422` monto menor al mínimo de la pasarela | «El total no alcanza el pago mínimo»: explica el mínimo de $ 10.000 y ofrece reservar de nuevo con más noches, sin «Reintentar» (el monto no cambiaría) |
 | `502` pasarela | «No pudimos iniciar el pago, intenta de nuevo en unos minutos» con «Reintentar» |
+
+#### Monto mínimo de pago (MAR-611)
+
+Stripe rechaza (`amount_too_small`) todo cobro que no equivalga al menos a 0,50 de la moneda de la cuenta (euros): unos 1.900 COP según el cambio del día. Para no depender del tipo de cambio, el sistema fija un mínimo propio de **$ 10.000 COP** (`MONTO_MINIMO_PAGO_COP`, en `shared/pagos/monto-minimo-pago.ts`):
+
+- **Anfitrión.** El precio por noche no puede ser menor a $ 10.000 al crear, editar ni intervenir una publicación (validador `valorMinimo`); la ayuda del campo lo anuncia antes del error. Si una publicación guardada antes tiene un precio menor, el aviso aparece de entrada y no se puede guardar sin subirlo.
+- **Huésped.** En la ficha, si el precio por noche es menor al mínimo, se avisa antes de cotizar que habrá que reservar varias noches. Si el total cotizado no llega a $ 10.000, no se ofrece «Reservar y pagar»: una alerta explica el mínimo y estima cuántas noches elegir (`nochesMinimasParaPagar`, a partir del desglose del backend).
+- **Backend.** Hoy responde `502` ante `amount_too_small`, que el frontend muestra como pasarela caída. El arreglo propuesto es responder `422`; el frontend ya lo entiende. También conviene que el backend valide el mismo mínimo en el precio por noche y en la reserva.
 
 Los tres `409` solo se distinguen por su `mensaje`, así que el repositorio los clasifica por su texto (`pagada`, `agotaron`, y el resto como reserva vencida). La redirección sale por `RedireccionExterna` (`core/navigation`), que **solo acepta direcciones `https`**: una URL con otro esquema (`javascript:`, `data:`) nunca se abre. Capas: puerto `PagoRepository` y `PagoHttpRepository`, errores de dominio (`ReservaYaPagadaError`, `ReservaNoAdmitePagoError`, `IntentosDePagoAgotadosError`, `PasarelaDePagoNoDisponibleError`, entre otros), `IniciarPagoFacade`, `ResultadoPagoFacade` y el componente `app-error-pago`.
 

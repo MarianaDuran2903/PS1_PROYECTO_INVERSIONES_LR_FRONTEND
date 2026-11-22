@@ -6,6 +6,7 @@ import { OMITIR_AVISO_403 } from '@core/http/http-contexts';
 import { catchError, map, Observable, throwError } from 'rxjs';
 import {
   IntentosDePagoAgotadosError,
+  MontoBajoMinimoDePagoError,
   PagoNoIniciadoError,
   PasarelaDePagoNoDisponibleError,
   ReservaNoAdmitePagoError,
@@ -99,6 +100,9 @@ export class PagoHttpRepository extends PagoRepository {
           return new IntentosDePagoAgotadosError(error.message);
         }
         return new ReservaNoAdmitePagoError(error.message);
+      case 422:
+        // La pasarela rechaza el monto por pequeño (amount_too_small): reintentar no sirve.
+        return new MontoBajoMinimoDePagoError(error.message || undefined);
       case 502:
         // En un 5xx el ApiError trae un mensaje genérico: se usa el propio de la pantalla.
         return new PasarelaDePagoNoDisponibleError();

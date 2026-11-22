@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { MONTO_MINIMO_PAGO_TEXTO } from '@shared/pagos/monto-minimo-pago';
 import { CatalogoItem, NuevaPublicacion } from '../../../domain/models/publicacion';
 import { PublicacionFormComponent } from './publicacion-form.component';
 
@@ -222,6 +223,34 @@ describe('PublicacionFormComponent (modo crear)', () => {
       }
       escribir('precioNoche', '250000.50');
       expect(textoError('precioNoche')).toBeUndefined();
+    });
+
+    it('rechaza precios por debajo del mínimo que acepta la pasarela de pagos', () => {
+      completar();
+
+      for (const bajo of ['1', '1100', '9999.99']) {
+        escribir('precioNoche', bajo);
+        expect(textoError('precioNoche')).toBe(
+          `El precio por noche debe ser de al menos ${MONTO_MINIMO_PAGO_TEXTO}, ` +
+            'el mínimo que acepta la pasarela de pagos',
+        );
+        expect(guardar().disabled).toBeTrue();
+      }
+    });
+
+    it('acepta exactamente el mínimo', () => {
+      completar();
+
+      escribir('precioNoche', '10000');
+
+      expect(textoError('precioNoche')).toBeUndefined();
+      expect(guardar().disabled).toBeFalse();
+    });
+
+    it('la ayuda del precio avisa el mínimo antes de que haya error', () => {
+      expect(element.querySelector('#precioNoche-ayuda')!.textContent).toContain(
+        `Mínimo ${MONTO_MINIMO_PAGO_TEXTO}`,
+      );
     });
 
     it('barrio o zona es opcional', () => {

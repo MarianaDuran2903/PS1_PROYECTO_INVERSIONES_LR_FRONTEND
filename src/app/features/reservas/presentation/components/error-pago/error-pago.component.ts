@@ -7,6 +7,7 @@ const TITULOS: Record<TipoErrorPago, string> = {
   'no-admite-pago': 'La reserva venció',
   'intentos-agotados': 'Se agotaron los intentos de pago',
   pasarela: 'No pudimos iniciar el pago',
+  'monto-minimo': 'El total no alcanza el pago mínimo',
   'no-encontrada': 'No encontramos la reserva',
   'sin-pago': 'Esta reserva aún no tiene un pago',
   'sin-permiso': 'Sin permisos sobre esta reserva',
@@ -40,6 +41,9 @@ export class ErrorPagoComponent {
     () => this.error().tipo === 'pasarela' || this.error().tipo === 'otro',
   );
   protected readonly debeReservarDeNuevo = computed(
-    () => this.error().tipo === 'no-admite-pago' || this.error().tipo === 'intentos-agotados',
+    () =>
+      this.error().tipo === 'no-admite-pago' ||
+      this.error().tipo === 'intentos-agotados' ||
+      this.error().tipo === 'monto-minimo',
   );
 }

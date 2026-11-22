@@ -12,6 +12,7 @@ import {
   PASSWORD_MIN_LENGTH,
   personName,
   strongPassword,
+  valorMinimo,
 } from './form.validators';
 import { firstErrorMessage } from './validation-messages';
 
@@ -262,6 +263,28 @@ describe('form.validators', () => {
 
     it('trata el vacío como válido (eso lo valida required)', () => {
       expect(validar('')).toBeNull();
+      expect(validar(null)).toBeNull();
+    });
+  });
+
+  describe('valorMinimo', () => {
+    const validar = (valor: unknown) => valorMinimo(10_000)(new FormControl(valor));
+
+    for (const valido of ['10000', '10000.00', ' 250000 ', '10000.01']) {
+      it(`acepta "${valido}"`, () => {
+        expect(validar(valido)).toBeNull();
+      });
+    }
+
+    it('rechaza lo que queda por debajo y lleva el mínimo en el error', () => {
+      expect(validar('9999.99')).toEqual({ valorMinimo: { minimo: 10_000, actual: 9999.99 } });
+      expect(validar('1100')).toEqual({ valorMinimo: { minimo: 10_000, actual: 1100 } });
+    });
+
+    it('deja pasar vacíos y textos que no son número (los explican otros validadores)', () => {
+      expect(validar('')).toBeNull();
+      expect(validar('   ')).toBeNull();
+      expect(validar('abc')).toBeNull();
       expect(validar(null)).toBeNull();
     });
   });

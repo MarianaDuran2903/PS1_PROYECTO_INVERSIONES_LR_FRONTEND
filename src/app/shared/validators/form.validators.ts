@@ -230,6 +230,24 @@ export function decimalNoNegativo(maxDecimales = 2, maxEnteros = 10): ValidatorF
   return decimalConLimites('decimalNoNegativo', true, maxDecimales, maxEnteros);
 }
 
+/**
+ * El número escrito como texto debe ser igual o mayor que `minimo`. Solo mira el valor: un texto
+ * vacío o que no es un número lo dejan pasar, porque esos casos ya los explican
+ * `Validators.required` y `decimalPositivo`. El error lleva el mínimo para armar el mensaje.
+ */
+export function valorMinimo(minimo: number): ValidatorFn {
+  return (control: AbstractControl<unknown>): ValidationErrors | null => {
+    const value = control.value;
+    if (typeof value !== 'string' || value.trim().length === 0) {
+      return null;
+    }
+    const numero = Number(value.trim());
+    return Number.isFinite(numero) && numero < minimo
+      ? { valorMinimo: { minimo, actual: numero } }
+      : null;
+  };
+}
+
 /** Validador de grupo: los dos campos deben tener el mismo valor. */
 export function matchFields(field: string, confirmationField: string): ValidatorFn {
   return (group: AbstractControl): ValidationErrors | null => {
