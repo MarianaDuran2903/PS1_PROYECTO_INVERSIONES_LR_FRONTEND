@@ -1,0 +1,71 @@
+@let c = cotizacion();
+@let p = c.precio;
+
+<section class="desglose" aria-labelledby="desglose-titulo">
+  <h3 id="desglose-titulo" class="desglose__titulo">Valor de tu estancia</h3>
+
+  <dl class="desglose__lista">
+    <div class="fila">
+      <dt>
+        {{ c.noches }} {{ c.noches === 1 ? 'noche' : 'noches' }} ×
+        {{ p.precioNoche | currency: 'COP' : 'symbol-narrow' : '1.0-2' }}
+      </dt>
+      <dd>{{ p.precioBase | currency: 'COP' : 'symbol-narrow' : '1.0-2' }}</dd>
+    </div>
+
+    @if (p.porcentajeDescuento > 0) {
+      <div class="fila fila--descuento">
+        <dt>Descuento por estadía larga ({{ p.porcentajeDescuento | number: '1.0-2' }} %)</dt>
+        <dd>−{{ p.valorDescuento | currency: 'COP' : 'symbol-narrow' : '1.0-2' }}</dd>
+      </div>
+    }
+
+    <div class="fila">
+      <dt>Tarifa de limpieza</dt>
+      <dd>{{ p.tarifaLimpieza | currency: 'COP' : 'symbol-narrow' : '1.0-2' }}</dd>
+    </div>
+
+    @if (p.serviciosAdicionales.length > 0) {
+      @for (servicio of p.serviciosAdicionales; track servicio.nombre) {
+        <div class="fila">
+          <dt>
+            {{ servicio.nombre }}
+            <span class="fila__detalle">
+              {{ servicio.precio | currency: 'COP' : 'symbol-narrow' : '1.0-2' }}
+              {{ servicio.tipoCobro === 'POR_NOCHE' ? 'por noche' : 'por estancia' }}
+            </span>
+          </dt>
+          <dd>
+            @if (servicio.valor === 0) {
+              Gratis
+            } @else {
+              {{ servicio.valor | currency: 'COP' : 'symbol-narrow' : '1.0-2' }}
+            }
+          </dd>
+        </div>
+      }
+
+      <div class="fila fila--subtotal">
+        <dt>Servicios adicionales</dt>
+        <dd>
+          {{ p.totalServiciosAdicionales | currency: 'COP' : 'symbol-narrow' : '1.0-2' }}
+        </dd>
+      </div>
+    }
+
+    <div class="fila">
+      <dt>Tarifa de servicio ({{ p.porcentajeTarifaServicio | number: '1.0-2' }} %)</dt>
+      <dd>{{ p.tarifaServicio | currency: 'COP' : 'symbol-narrow' : '1.0-2' }}</dd>
+    </div>
+
+    <div class="fila fila--total">
+      <dt>Total</dt>
+      <dd>{{ p.total | currency: 'COP' : 'symbol-narrow' : '1.0-2' }} COP</dd>
+    </div>
+  </dl>
+
+  <p class="desglose__nota">
+    Esta cotización es informativa: no reserva ni bloquea las fechas. Otro huésped podría tomarlas
+    antes de que reserves.
+  </p>
+</section>
