@@ -118,6 +118,17 @@ describe('ANFITRION_ROUTES: /anfitrion/publicaciones (Mis publicaciones)', () =>
     controller.verify();
   });
 
+  it('un Huésped no puede entrar al calendario de una publicación', async () => {
+    iniciarSesionCon('HUESPED');
+    const controller = TestBed.inject(HttpTestingController);
+    const harness = await RouterTestingHarness.create();
+
+    await harness.navigateByUrl(RUTA + '/12/disponibilidad');
+
+    expect(url()).toBe('/acceso-denegado');
+    controller.expectNone(API + '/publicaciones/12/disponibilidad');
+    controller.verify();
+  });
   it('no choca con las otras rutas de publicaciones', async () => {
     iniciarSesionCon('ANFITRION');
     const controller = TestBed.inject(HttpTestingController);

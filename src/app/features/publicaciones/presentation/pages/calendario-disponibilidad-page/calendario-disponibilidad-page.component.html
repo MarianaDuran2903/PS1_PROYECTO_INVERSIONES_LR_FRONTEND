@@ -1,0 +1,65 @@
+<section class="pagina" aria-labelledby="calendario-titulo">
+  <a class="volver" routerLink="/anfitrion/publicaciones">← Mis publicaciones</a>
+
+  @if (facade.calendario(); as calendario) {
+    <header class="encabezado">
+      <div>
+        <h1 id="calendario-titulo">Calendario de disponibilidad</h1>
+        <p>{{ calendario.titulo }}</p>
+      </div>
+    </header>
+  } @else {
+    <header class="encabezado">
+      <div>
+        <h1 id="calendario-titulo">Calendario de disponibilidad</h1>
+        <p>Consulta los periodos registrados para tu publicación.</p>
+      </div>
+    </header>
+  }
+
+  @switch (facade.estado()) {
+    @case ('cargando') {
+      <p class="estado-pagina" role="status">Cargando el calendario…</p>
+    }
+    @case ('error') {
+      <div class="alerta" role="alert">
+        <p>No fue posible cargar el calendario de esta publicación.</p>
+        <button class="btn btn--outline" type="button" (click)="facade.reintentar()">
+          Reintentar
+        </button>
+      </div>
+    }
+    @default {
+      @if (facade.sinPeriodos()) {
+        <p class="vacio" role="status">Aún no hay periodos registrados para esta publicación.</p>
+      } @else if (facade.calendario(); as calendario) {
+        <p class="nota">La fecha final de cada periodo no está incluida.</p>
+        <ol class="periodos">
+          @for (periodo of calendario.periodos; track periodo.idPeriodo) {
+            <li class="periodo">
+              <div>
+                <p class="periodo__fechas">
+                  <time [attr.datetime]="periodo.fechaInicio">{{
+                    fecha(periodo.fechaInicio)
+                  }}</time>
+                  <span aria-hidden="true">–</span>
+                  <time [attr.datetime]="periodo.fechaFin">{{ fecha(periodo.fechaFin) }}</time>
+                </p>
+                <p class="periodo__nota">Fecha final sin incluir</p>
+              </div>
+              <span
+                class="etiqueta"
+                [class.etiqueta--disponible]="periodo.tipo === 'DISPONIBLE'"
+                [class.etiqueta--no-ofrecido]="periodo.tipo === 'NO_OFRECIDO'"
+                [class.etiqueta--reservado]="periodo.tipo === 'RESERVADO'"
+                [class.etiqueta--bloqueado]="periodo.tipo === 'BLOQUEADO'"
+              >
+                {{ etiqueta(periodo.tipo) }}
+              </span>
+            </li>
+          }
+        </ol>
+      }
+    }
+  }
+</section>
