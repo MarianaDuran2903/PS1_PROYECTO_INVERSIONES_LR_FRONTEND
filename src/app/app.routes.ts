@@ -37,6 +37,11 @@ export const routes: Routes = [
       import('@features/marketplace/marketplace.routes').then((m) => m.MARKETPLACE_ROUTES),
   },
   {
+    path: 'reservas',
+    canActivate: [rolGuard([RolUsuario.Huesped])],
+    loadChildren: () => import('@features/reservas/reservas.routes').then((m) => m.RESERVAS_ROUTES),
+  },
+  {
     path: 'anfitrion',
     canActivate: [rolGuard([RolUsuario.Anfitrion])],
     loadChildren: () =>

@@ -1,0 +1,37 @@
+@let e = error();
+
+<div
+  class="error-pago alert"
+  [class.alert--danger]="!esExito()"
+  [class.alert--success]="esExito()"
+  [attr.role]="esExito() ? 'status' : 'alert'"
+>
+  <h2 class="error-pago__titulo">{{ titulo() }}</h2>
+  <p class="error-pago__mensaje">{{ e.mensaje }}</p>
+
+  <div class="error-pago__acciones">
+    @if (sePuedeReintentar()) {
+      <button
+        type="button"
+        class="btn btn--primary"
+        [disabled]="reintentando()"
+        [attr.aria-busy]="reintentando()"
+        (click)="reintentar.emit()"
+      >
+        {{ reintentando() ? 'Preparando el pago…' : 'Reintentar' }}
+      </button>
+    }
+
+    @if (e.tipo === 'sin-pago' && idReserva() !== null) {
+      <a class="btn btn--primary" [routerLink]="['/reservas', idReserva(), 'pago']">
+        Pagar mi reserva
+      </a>
+    }
+
+    @if (debeReservarDeNuevo()) {
+      <a class="btn btn--primary" routerLink="/alojamientos">Reservar de nuevo</a>
+    } @else {
+      <a class="btn btn--outline" routerLink="/alojamientos">Explorar alojamientos</a>
+    }
+  </div>
+</div>
