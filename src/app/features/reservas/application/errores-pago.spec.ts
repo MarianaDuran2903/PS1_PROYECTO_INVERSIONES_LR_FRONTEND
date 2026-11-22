@@ -1,6 +1,7 @@
 import { ApiError } from '@core/http/api-error';
 import {
   IntentosDePagoAgotadosError,
+  MontoBajoMinimoDePagoError,
   PagoNoIniciadoError,
   PasarelaDePagoNoDisponibleError,
   ReservaNoAdmitePagoError,
@@ -8,7 +9,7 @@ import {
   ReservaYaPagadaError,
   SinPermisoSobreReservaError,
 } from '../domain/errors/pago.errors';
-import { clasificarErrorPago, MENSAJE_PASARELA } from './errores-pago';
+import { clasificarErrorPago, MENSAJE_MONTO_MINIMO, MENSAJE_PASARELA } from './errores-pago';
 
 describe('clasificarErrorPago', () => {
   const casos: [string, unknown, string][] = [
@@ -16,6 +17,7 @@ describe('clasificarErrorPago', () => {
     ['sin pago posible', new ReservaNoAdmitePagoError(), 'no-admite-pago'],
     ['intentos agotados', new IntentosDePagoAgotadosError(), 'intentos-agotados'],
     ['pasarela', new PasarelaDePagoNoDisponibleError(), 'pasarela'],
+    ['monto bajo el mínimo', new MontoBajoMinimoDePagoError(), 'monto-minimo'],
     ['reserva inexistente', new ReservaNoEncontradaError(), 'no-encontrada'],
     ['pago no iniciado', new PagoNoIniciadoError(), 'sin-pago'],
     ['sin permiso', new SinPermisoSobreReservaError(), 'sin-permiso'],
@@ -37,6 +39,14 @@ describe('clasificarErrorPago', () => {
     expect(clasificarErrorPago(new PasarelaDePagoNoDisponibleError('técnico')).mensaje).toBe(
       MENSAJE_PASARELA,
     );
+  });
+
+  it('el monto bajo el mínimo dice cuál es el mínimo y qué hacer', () => {
+    const resultado = clasificarErrorPago(new MontoBajoMinimoDePagoError('técnico'));
+
+    expect(resultado.mensaje).toBe(MENSAJE_MONTO_MINIMO);
+    expect(resultado.mensaje).toContain('10.000');
+    expect(resultado.mensaje).toContain('Reserva más noches');
   });
 
   it('cualquier otro error queda como "otro" con su mensaje', () => {

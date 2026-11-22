@@ -7,6 +7,7 @@ import { OMITIR_AVISO_403 } from '@core/http/http-contexts';
 import { httpErrorInterceptor } from '@core/http/interceptors/http-error.interceptor';
 import {
   IntentosDePagoAgotadosError,
+  MontoBajoMinimoDePagoError,
   PagoNoIniciadoError,
   PasarelaDePagoNoDisponibleError,
   ReservaNoAdmitePagoError,
@@ -191,6 +192,17 @@ describe('PagoHttpRepository', () => {
       const error = fallo('iniciar', 502, 'No se pudo comunicar con la pasarela de pagos…');
 
       expect(error).toBeInstanceOf(PasarelaDePagoNoDisponibleError);
+    });
+
+    it('422 "menor al mínimo": monto bajo el mínimo de la pasarela, con el mensaje del backend', () => {
+      const error = fallo(
+        'iniciar',
+        422,
+        'El monto de la reserva es menor al mínimo que acepta la pasarela de pagos',
+      );
+
+      expect(error).toBeInstanceOf(MontoBajoMinimoDePagoError);
+      expect((error as Error).message).toContain('menor al mínimo');
     });
 
     it('un 500 se propaga como ApiError', () => {

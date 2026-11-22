@@ -16,7 +16,9 @@ import {
   decimalPositivo,
   enteroPositivo,
   notBlank,
+  valorMinimo,
 } from '@shared/validators/form.validators';
+import { MONTO_MINIMO_PAGO_COP, MONTO_MINIMO_PAGO_TEXTO } from '@shared/pagos/monto-minimo-pago';
 import { ErrorMessages, firstErrorMessage } from '@shared/validators/validation-messages';
 import { formatearPesos } from '../../../application/moneda';
 import {
@@ -54,7 +56,11 @@ function crearFormulario(fb: NonNullableFormBuilder) {
     // Texto, no number: así el validador puede explicar el error en vez de que el navegador
     // descarte el valor en silencio. Se convierte a número al enviar.
     capacidad: ['', [Validators.required, notBlank(), enteroPositivo()]],
-    precioNoche: ['', [Validators.required, notBlank(), decimalPositivo()]],
+    // Por debajo del mínimo la pasarela de pagos rechaza el cobro de una noche.
+    precioNoche: [
+      '',
+      [Validators.required, notBlank(), decimalPositivo(), valorMinimo(MONTO_MINIMO_PAGO_COP)],
+    ],
     // Solo se usan al editar; al crear se deshabilitan y no afectan la validez del formulario.
     tarifaLimpieza: ['0', [Validators.required, notBlank(), decimalNoNegativo()]],
     reglas: ['', Validators.maxLength(LIMITES.reglas)],
@@ -82,6 +88,9 @@ const MENSAJE_REGLAS_OBLIGATORIAS = 'Las reglas son obligatorias para una public
 
 const MENSAJE_CAPACIDAD = 'La capacidad debe ser un número entero mayor que 0';
 const MENSAJE_PRECIO = 'El precio por noche debe ser mayor que 0';
+const MENSAJE_PRECIO_MINIMO =
+  `El precio por noche debe ser de al menos ${MONTO_MINIMO_PAGO_TEXTO}, ` +
+  'el mínimo que acepta la pasarela de pagos';
 const MENSAJE_TARIFA = 'La tarifa de limpieza debe ser un número igual o mayor que 0';
 
 /** Mensajes de la historia, los mismos que devuelve el backend. */
@@ -113,6 +122,7 @@ const MENSAJES: Record<CampoFormulario, ErrorMessages> = {
     required: MENSAJE_PRECIO,
     blank: MENSAJE_PRECIO,
     decimalPositivo: MENSAJE_PRECIO,
+    valorMinimo: MENSAJE_PRECIO_MINIMO,
   },
   tarifaLimpieza: {
     required: 'La tarifa de limpieza es obligatoria',
@@ -173,6 +183,8 @@ export class PublicacionFormComponent {
   protected readonly form: FormularioPublicacion = crearFormulario(inject(NonNullableFormBuilder));
   protected readonly limites = LIMITES;
   protected readonly motivoMinimo = MOTIVO_MINIMO;
+  /** Precio por noche mínimo, ya formateado, para la ayuda del campo. */
+  protected readonly montoMinimo = MONTO_MINIMO_PAGO_TEXTO;
   /** Editar o intervenir: muestran la tarifa de limpieza y las reglas. */
   protected readonly esEdicion = computed(() => this.modo() !== 'crear');
   protected readonly esIntervencion = computed(() => this.modo() === 'intervenir');
@@ -254,7 +266,15 @@ export class PublicacionFormComponent {
 
   /** Vista previa del precio en pesos colombianos; null mientras el valor no sea válido. */
   protected precioFormateado(): string | null {
-    return this.pesos(this.form.controls.precioNoche);
+    const precio = this.form.controls.precioNoche;
+    // Un precio bien escrito pero bajo el mínimo también se muestra en pesos: el error ya explica
+    // el mínimo y la vista previa ayuda a comparar.
+    const soloBajoMinimo =
+      precio.errors !== null &&
+      Object.keys(precio.errors).every((clave) => clave === 'valorMinimo');
+    return soloBajoMinimo
+      ? formatearPesos(Number(precio.value.trim()))
+      : this.pesos(this.form.controls.precioNoche);
   }
 
   protected tarifaFormateada(): string | null {
@@ -346,6 +366,12 @@ export class PublicacionFormComponent {
       reglas: publicacion.reglas ?? '',
       motivo: '',
     });
+    // Una publicación guardada antes del mínimo de pago: se avisa de entrada, sin esperar a que
+    // la persona toque el precio, porque no podrá guardar ni recibir reservas sin subirlo.
+    const { precioNoche } = this.form.controls;
+    if (precioNoche.hasError('valorMinimo')) {
+      precioNoche.markAsTouched();
+    }
   }
 
   private enfocarPrimerError(): void {

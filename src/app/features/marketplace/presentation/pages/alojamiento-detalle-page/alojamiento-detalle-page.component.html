@@ -179,6 +179,13 @@
               {{ alojamiento.capacidad === 1 ? 'huésped' : 'huéspedes' }}
             </p>
 
+            @if (precioBajoMinimo(alojamiento.precioNoche)) {
+              <p class="alert alert--info" id="aviso-monto-minimo">
+                El pago mínimo de una reserva es de {{ montoMinimo }} COP. Con este precio por noche
+                tendrás que reservar varias noches para alcanzarlo.
+              </p>
+            }
+
             <div class="form-estancia" [formGroup]="estancia">
               <div class="fechas">
                 <div class="campo-estancia">
@@ -306,7 +313,23 @@
                       <app-desglose-cotizacion [cotizacion]="resultado" />
                     }
 
-                    @if (solicitudReserva(); as aReservar) {
+                    @if (estanciaBajoMinimo()) {
+                      <!-- La pasarela rechazaría el cobro: no se ofrece reservar. -->
+                      <div class="alert alert--danger monto-minimo" role="alert">
+                        <p>
+                          El total de esta estancia es menor que {{ montoMinimo }} COP, el mínimo
+                          que acepta la pasarela de pagos, así que no se puede reservar.
+                        </p>
+                        @if (nochesMinimas(); as minimas) {
+                          <p>
+                            Elige al menos <strong>{{ minimas }} noches</strong> para poder
+                            reservar.
+                          </p>
+                        } @else {
+                          <p>Elige más noches para poder reservar.</p>
+                        }
+                      </div>
+                    } @else if (solicitudReserva(); as aReservar) {
                       <app-accion-reservar
                         [solicitud]="aReservar"
                         (fechasOcupadas)="alOcuparseLasFechas()"
