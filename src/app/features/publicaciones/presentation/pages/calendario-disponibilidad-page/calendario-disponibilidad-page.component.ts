@@ -12,10 +12,11 @@ import { TipoPeriodoDisponibilidad } from '../../../domain/models/calendario-dis
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CalendarioDisponibilidadPageComponent {
+  private readonly route = inject(ActivatedRoute);
   protected readonly facade = inject(CalendarioDisponibilidadFacade);
 
-  constructor(route: ActivatedRoute) {
-    this.facade.cargar(Number(route.snapshot.paramMap.get('id')));
+  constructor() {
+    this.facade.cargar(Number(this.route.snapshot.paramMap.get('id')));
   }
 
   protected fecha(valor: string): string {
