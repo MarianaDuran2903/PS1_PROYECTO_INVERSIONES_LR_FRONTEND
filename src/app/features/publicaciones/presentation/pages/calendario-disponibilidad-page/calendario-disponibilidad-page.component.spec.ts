@@ -58,4 +58,52 @@ describe('CalendarioDisponibilidadPageComponent', () => {
     expect(contenido).toContain('Reservado');
     expect(contenido).toContain('Bloqueado');
   });
+
+  it('envía el rango válido al abrir disponibilidad', () => {
+    const inicio = fixture.nativeElement.querySelector(
+      '[formControlName="fechaInicio"]',
+    ) as HTMLInputElement;
+    const fin = fixture.nativeElement.querySelector(
+      '[formControlName="fechaFin"]',
+    ) as HTMLInputElement;
+    inicio.value = '2026-06-10';
+    inicio.dispatchEvent(new Event('input'));
+    fin.value = '2026-06-13';
+    fin.dispatchEvent(new Event('input'));
+
+    fixture.nativeElement.querySelector('form').dispatchEvent(new Event('submit'));
+
+    expect(facade.abrirPeriodo).toHaveBeenCalledOnceWith('2026-06-10', '2026-06-13');
+  });
+
+  it('rechaza fechas iguales y muestra el error del rango', () => {
+    const inicio = fixture.nativeElement.querySelector(
+      '[formControlName="fechaInicio"]',
+    ) as HTMLInputElement;
+    const fin = fixture.nativeElement.querySelector(
+      '[formControlName="fechaFin"]',
+    ) as HTMLInputElement;
+    inicio.value = '2026-06-10';
+    inicio.dispatchEvent(new Event('input'));
+    fin.value = '2026-06-10';
+    fin.dispatchEvent(new Event('input'));
+
+    fixture.nativeElement.querySelector('form').dispatchEvent(new Event('submit'));
+    fixture.detectChanges();
+
+    expect(facade.abrirPeriodo).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.textContent).toContain(
+      'La fecha de fin debe ser posterior a la fecha de inicio.',
+    );
+  });
+
+  it('marca los campos requeridos si se envía el formulario vacío', () => {
+    fixture.nativeElement.querySelector('form').dispatchEvent(new Event('submit'));
+    fixture.detectChanges();
+
+    expect(facade.abrirPeriodo).not.toHaveBeenCalled();
+    expect(
+      fixture.nativeElement.querySelector('[formControlName="fechaInicio"]').required,
+    ).toBeTrue();
+  });
 });

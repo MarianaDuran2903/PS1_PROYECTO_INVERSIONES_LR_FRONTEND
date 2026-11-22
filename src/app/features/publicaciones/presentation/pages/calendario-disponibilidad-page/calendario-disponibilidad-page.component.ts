@@ -32,6 +32,7 @@ export class CalendarioDisponibilidadPageComponent {
     }
     const { fechaInicio, fechaFin } = this.formulario.getRawValue();
     if (!fechaInicio || !fechaFin || fechaFin <= fechaInicio) {
+      this.formulario.controls.fechaFin.markAsTouched();
       this.formulario.controls.fechaFin.setErrors({ rangoInvalido: true });
       return;
     }

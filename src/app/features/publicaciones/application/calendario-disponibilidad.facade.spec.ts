@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { of, throwError } from 'rxjs';
+import { NEVER, of, throwError } from 'rxjs';
 import { CalendarioDisponibilidadFacade } from './calendario-disponibilidad.facade';
 import { CalendarioDisponibilidadRepository } from '../domain/repositories/calendario-disponibilidad.repository';
 
@@ -10,7 +10,7 @@ describe('CalendarioDisponibilidadFacade', () => {
   beforeEach(() => {
     repository = jasmine.createSpyObj<CalendarioDisponibilidadRepository>(
       'CalendarioDisponibilidadRepository',
-      ['consultar'],
+      ['consultar', 'abrir'],
     );
 
     TestBed.configureTestingModule({
@@ -58,5 +58,49 @@ describe('CalendarioDisponibilidadFacade', () => {
 
     expect(facade.estado()).toBe('listo');
     expect(facade.sinPeriodos()).toBeTrue();
+  });
+
+  it('abre un periodo y vuelve a cargar el calendario', () => {
+    const calendario = { idPublicacion: 12, titulo: 'Habitación', periodos: [] };
+    repository.consultar.and.returnValue(of(calendario));
+    repository.abrir.and.returnValue(of({}));
+
+    facade.cargar(12);
+    facade.abrirPeriodo('2026-06-10', '2026-06-13');
+
+    expect(repository.abrir).toHaveBeenCalledOnceWith(12, '2026-06-10', '2026-06-13');
+    expect(repository.consultar).toHaveBeenCalledTimes(2);
+    expect(facade.calendario()).toEqual(calendario);
+    expect(facade.guardando()).toBeFalse();
+    expect(facade.errorApertura()).toBeNull();
+  });
+
+  it('muestra un error si el servidor rechaza la apertura', () => {
+    repository.consultar.and.returnValue(
+      of({ idPublicacion: 12, titulo: 'Habitación', periodos: [] }),
+    );
+    repository.abrir.and.returnValue(throwError(() => new Error('Conflicto')));
+
+    facade.cargar(12);
+    facade.abrirPeriodo('2026-06-10', '2026-06-13');
+
+    expect(facade.guardando()).toBeFalse();
+    expect(facade.errorApertura()).toContain('No se pudo abrir el periodo');
+  });
+
+  it('ignora aperturas sin publicación o mientras ya está guardando', () => {
+    facade.abrirPeriodo('2026-06-10', '2026-06-13');
+    expect(repository.abrir).not.toHaveBeenCalled();
+
+    repository.consultar.and.returnValue(
+      of({ idPublicacion: 12, titulo: 'Habitación', periodos: [] }),
+    );
+    repository.abrir.and.returnValue(NEVER);
+    facade.cargar(12);
+    facade.abrirPeriodo('2026-06-10', '2026-06-13');
+    facade.abrirPeriodo('2026-06-11', '2026-06-14');
+
+    expect(repository.abrir).toHaveBeenCalledOnceWith(12, '2026-06-10', '2026-06-13');
+    expect(facade.guardando()).toBeTrue();
   });
 });
