@@ -457,7 +457,7 @@ Se llega desde el detalle del Administrador (`/admin/publicaciones/:id`, enlace 
 
 **Dónde está.** Botón "Enviar a revisión" en cada fila en BORRADOR de "Mis publicaciones" y en la ficha de detalle de un borrador. Las publicaciones en PENDIENTE_REVISION muestran "En revisión del Administrador". Antes de enviar se pide confirmación ("¿Enviar la publicación a revisión? El Administrador la revisará antes de activarla."), y mientras envía el botón queda deshabilitado con indicador de carga.
 
-**Información mínima.** La creación no pide las reglas, así que normalmente el Anfitrión tendrá que completarlas editando antes de enviar. El frontend no repite la regla: decide el backend y el panel muestra lo que este responde.
+**Información mínima.** La creación no pide las reglas, así que normalmente el Anfitrión tendrá que completarlas editando antes de enviar. El frontend no repite la regla: decide el backend y el panel muestra lo que este responde. Para que no se descubra recién al enviar, la edición de un borrador o una pausada ya no las presenta como «Opcional»: avisa que se puede guardar sin ellas, pero que son necesarias para enviar a revisión y para activar la publicación (el aviso está asociado al campo con `aria-describedby`).
 
 El caso de uso es `SolicitarActivacionFacade`, que cada página provee y escucha (`resultado$`). `TransicionNoPermitidaError` (409) queda disponible para las demás acciones del ciclo de vida.
 
