@@ -1,0 +1,45 @@
+# La imagen oficial de nginx reemplaza ${BACKEND_URL} al iniciar el contenedor.
+server {
+    listen 80;
+    server_name _;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    server_tokens off;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+    gzip on;
+    gzip_types text/plain text/css application/javascript application/json image/svg+xml;
+
+    # API del backend: mismo origen para el navegador, sin CORS.
+    location /api/ {
+        proxy_pass ${BACKEND_URL};
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Archivos con hash en el nombre (main-ABC12345.js): caché larga, nunca cambian.
+    # Los builds de desarrollo no llevan hash, por eso no entran en esta regla.
+    location ~* "-[A-Za-z0-9]{8}\.(?:js|css)$" {
+        try_files $uri =404;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # Resto de archivos estáticos: el navegador revalida con ETag.
+    location ~* \.(?:js|css|woff2?|png|jpe?g|gif|svg|ico|webp)$ {
+        try_files $uri =404;
+        add_header Cache-Control "no-cache";
+    }
+
+    # Rutas de Angular: siempre devolver index.html.
+    location / {
+        try_files $uri $uri/ /index.html;
+        add_header Cache-Control "no-cache";
+    }
+}

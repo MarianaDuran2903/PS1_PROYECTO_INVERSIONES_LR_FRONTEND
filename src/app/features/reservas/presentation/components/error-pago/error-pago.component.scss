@@ -1,0 +1,19 @@
+.error-pago {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.error-pago__titulo {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.error-pago__mensaje {
+  margin: 0;
+}
+
+.error-pago__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}

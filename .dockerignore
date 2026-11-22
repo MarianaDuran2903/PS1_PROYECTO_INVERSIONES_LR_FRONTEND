@@ -1,0 +1,12 @@
+node_modules
+dist
+coverage
+out-tsc
+.angular
+.git
+.vscode
+.idea
+.env
+Dockerfile
+docker-compose.yml
+*.md

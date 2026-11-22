@@ -1,0 +1,353 @@
+import { HttpClient, HttpContext, provideHttpClient, withInterceptors } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { TestBed } from '@angular/core/testing';
+import { provideRouter, Router } from '@angular/router';
+import { APP_CONFIG } from '@core/config/app-config';
+import { OMITIR_AVISO_403 } from '@core/http/http-contexts';
+import { httpErrorInterceptor } from '@core/http/interceptors/http-error.interceptor';
+import { ToastService } from '@core/notifications/toast.service';
+import { environment } from '@env/environment';
+import { SESSION_STORAGE_KEY, SessionService } from '../session.service';
+import { authTokenInterceptor } from './auth-token.interceptor';
+
+describe('authTokenInterceptor', () => {
+  let http: HttpClient;
+  let controller: HttpTestingController;
+  let session: SessionService;
+  let router: Router;
+  let toast: ToastService;
+
+  const errorDelBackend = (estado: number, error: string, mensaje: string) => ({
+    body: { fecha: '2026-01-01T00:00:00Z', estado, error, mensaje, ruta: '/api-test/x' },
+    opts: { status: estado, statusText: error },
+  });
+
+  beforeEach(() => {
+    sessionStorage.removeItem(SESSION_STORAGE_KEY);
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        provideHttpClient(withInterceptors([authTokenInterceptor, httpErrorInterceptor])),
+        provideHttpClientTesting(),
+        {
+          provide: APP_CONFIG,
+          useValue: { ...environment, apiUrl: '/api-test', logLevel: 'error' },
+        },
+      ],
+    });
+    http = TestBed.inject(HttpClient);
+    controller = TestBed.inject(HttpTestingController);
+    session = TestBed.inject(SessionService);
+    router = TestBed.inject(Router);
+    toast = TestBed.inject(ToastService);
+    spyOn(router, 'navigate').and.resolveTo(true);
+    session.iniciar({
+      accessToken: 'abc',
+      expiraEn: Date.now() + 3_600_000,
+      usuario: {
+        idUsuario: 1,
+        primerNombre: 'Ana',
+        primerApellido: 'Ruiz',
+        correo: 'a@b.co',
+        roles: ['HUESPED'],
+      },
+    });
+  });
+
+  afterEach(() => {
+    controller.verify();
+    session.cerrar();
+    sessionStorage.removeItem(SESSION_STORAGE_KEY);
+  });
+
+  it('agrega el token a las peticiones a nuestro API', () => {
+    http.get('/api-test/reservas').subscribe();
+
+    const req = controller.expectOne('/api-test/reservas');
+    expect(req.request.headers.get('Authorization')).toBe('Bearer abc');
+    req.flush([]);
+  });
+
+  it('no envía el token a otros hosts', () => {
+    http.get('https://otro-sitio.com/datos').subscribe();
+
+    const req = controller.expectOne('https://otro-sitio.com/datos');
+    expect(req.request.headers.has('Authorization')).toBeFalse();
+    req.flush({});
+  });
+
+  for (const ruta of [
+    '/api-test/auth/login',
+    '/api-test/auth/registro/huesped',
+    '/api-test/auth/recuperacion/solicitud',
+    '/api-test/auth/recuperacion/restablecer',
+  ]) {
+    it(`no envía el token a ${ruta}`, () => {
+      http.post(ruta, {}).subscribe();
+
+      const req = controller.expectOne(ruta);
+      expect(req.request.headers.has('Authorization')).toBeFalse();
+      req.flush({});
+    });
+  }
+
+  it('un 401 en una ruta protegida cierra la sesión y lleva a /login?expirada=true', () => {
+    http.get('/api-test/reservas').subscribe({ error: () => undefined });
+    const { body, opts } = errorDelBackend(401, 'Unauthorized', 'Token inválido');
+
+    controller.expectOne('/api-test/reservas').flush(body, opts);
+
+    expect(session.autenticado()).toBeFalse();
+    expect(router.navigate).toHaveBeenCalledWith(['/login'], {
+      queryParams: { expirada: 'true' },
+    });
+  });
+
+  it('el 401 del propio login (credenciales malas) no toca la sesión', () => {
+    http.post('/api-test/auth/login', {}).subscribe({ error: () => undefined });
+    const { body, opts } = errorDelBackend(401, 'Unauthorized', 'Correo o contraseña incorrectos');
+
+    controller.expectOne('/api-test/auth/login').flush(body, opts);
+
+    expect(session.autenticado()).toBeTrue();
+    expect(router.navigate).not.toHaveBeenCalled();
+  });
+
+  it('un 403 avisa que no tiene permisos y NO cierra la sesión', () => {
+    http.get('/api-test/admin/usuarios').subscribe({ error: () => undefined });
+    const { body, opts } = errorDelBackend(
+      403,
+      'Forbidden',
+      'No tiene permisos para esta operación',
+    );
+
+    controller.expectOne('/api-test/admin/usuarios').flush(body, opts);
+
+    expect(session.autenticado()).toBeTrue();
+    expect(router.navigate).not.toHaveBeenCalled();
+    expect(
+      toast
+        .toasts()
+        .some(
+          (t) =>
+            t.title === 'Sin permisos' && t.message === 'No tiene permisos para esta operación',
+        ),
+    ).toBeTrue();
+  });
+
+  it('un 403 de una petición con OMITIR_AVISO_403 no muestra el aviso global ni cierra la sesión', () => {
+    let fallo: unknown;
+    http
+      .get('/api-test/publicaciones/9', { context: new HttpContext().set(OMITIR_AVISO_403, true) })
+      .subscribe({ error: (e: unknown) => (fallo = e) });
+    const { body, opts } = errorDelBackend(
+      403,
+      'Forbidden',
+      'No tiene permisos para esta operación',
+    );
+
+    controller.expectOne('/api-test/publicaciones/9').flush(body, opts);
+
+    expect((fallo as { status: number }).status).toBe(403);
+    expect(toast.toasts().length).toBe(0);
+    expect(session.autenticado()).toBeTrue();
+  });
+
+  it('deja pasar el error a quien hizo la petición', () => {
+    let recibido: unknown;
+    http.get('/api-test/reservas').subscribe({ error: (e: unknown) => (recibido = e) });
+    const { body, opts } = errorDelBackend(
+      500,
+      'Internal Server Error',
+      'NullPointerException en X',
+    );
+
+    controller.expectOne('/api-test/reservas').flush(body, opts);
+
+    expect(recibido).toEqual(jasmine.objectContaining({ status: 500 }));
+  });
+
+  it('no envía el token al listado público aunque exista una sesión', () => {
+    http
+      .get('/api-test/alojamientos', {
+        params: { pagina: 0, tamano: 12 },
+      })
+      .subscribe();
+
+    const req = controller.expectOne(
+      (request) =>
+        request.url === '/api-test/alojamientos' &&
+        request.params.get('pagina') === '0' &&
+        request.params.get('tamano') === '12',
+    );
+
+    expect(req.request.method).toBe('GET');
+    expect(req.request.headers.has('Authorization')).toBeFalse();
+    req.flush({});
+    expect(session.autenticado()).toBeTrue();
+  });
+
+  it('permite consultar alojamientos sin sesión ni token', () => {
+    session.cerrar();
+
+    http.get('/api-test/alojamientos').subscribe();
+
+    const req = controller.expectOne('/api-test/alojamientos');
+
+    expect(req.request.headers.has('Authorization')).toBeFalse();
+    req.flush({});
+    expect(router.navigate).not.toHaveBeenCalled();
+  });
+
+  for (const estado of [401, 403]) {
+    it(`un ${estado} del listado público propaga el error sin cerrar la sesión`, () => {
+      let recibido: unknown;
+      const aviso = spyOn(toast, 'error');
+
+      http
+        .get('/api-test/alojamientos?pagina=0&tamano=12')
+        .subscribe({ error: (error: unknown) => (recibido = error) });
+
+      const { body, opts } = errorDelBackend(
+        estado,
+        estado === 401 ? 'Unauthorized' : 'Forbidden',
+        'Error de consulta pública',
+      );
+
+      const req = controller.expectOne('/api-test/alojamientos?pagina=0&tamano=12');
+      expect(req.request.headers.has('Authorization')).toBeFalse();
+      req.flush(body, opts);
+
+      expect(recibido).toEqual(jasmine.objectContaining({ status: estado }));
+      expect(session.autenticado()).toBeTrue();
+      expect(router.navigate).not.toHaveBeenCalled();
+      expect(aviso).not.toHaveBeenCalled();
+    });
+  }
+
+  it('no considera pública una escritura en /alojamientos', () => {
+    http.post('/api-test/alojamientos', {}).subscribe();
+
+    const req = controller.expectOne('/api-test/alojamientos');
+
+    expect(req.request.headers.get('Authorization')).toBe('Bearer abc');
+    req.flush({});
+  });
+
+  it('no extiende la excepción pública a rutas con un prefijo parecido', () => {
+    http.get('/api-test/alojamientos-privados').subscribe();
+
+    const req = controller.expectOne('/api-test/alojamientos-privados');
+
+    expect(req.request.headers.get('Authorization')).toBe('Bearer abc');
+    req.flush({});
+  });
+
+  for (const ruta of [
+    '/api-test/alojamientos/ciudades',
+    '/api-test/catalogos/tipos-alojamiento',
+    '/api-test/catalogos/servicios',
+  ]) {
+    it(`no envía token al catálogo público ${ruta}`, () => {
+      http.get(ruta).subscribe();
+
+      const req = controller.expectOne(ruta);
+
+      expect(req.request.headers.has('Authorization')).toBeFalse();
+      req.flush([]);
+      expect(session.autenticado()).toBeTrue();
+    });
+
+    it(`un 401 de ${ruta} no cierra la sesión`, () => {
+      const aviso = spyOn(toast, 'error');
+      http.get(ruta).subscribe({ error: () => undefined });
+
+      const { body, opts } = errorDelBackend(401, 'Unauthorized', 'Error del catálogo');
+
+      controller.expectOne(ruta).flush(body, opts);
+
+      expect(session.autenticado()).toBeTrue();
+      expect(router.navigate).not.toHaveBeenCalled();
+      expect(aviso).not.toHaveBeenCalled();
+    });
+  }
+
+  it('mantiene autenticado el catálogo privado de tipos', () => {
+    http.get('/api-test/tipos-alojamiento').subscribe();
+
+    const req = controller.expectOne('/api-test/tipos-alojamiento');
+
+    expect(req.request.headers.get('Authorization')).toBe('Bearer abc');
+    req.flush([]);
+  });
+
+  it('no envía token al detalle público aunque exista una sesión', () => {
+    http.get('/api-test/alojamientos/9').subscribe();
+
+    const req = controller.expectOne('/api-test/alojamientos/9');
+
+    expect(req.request.headers.has('Authorization')).toBeFalse();
+
+    req.flush({});
+    expect(session.autenticado()).toBeTrue();
+  });
+
+  it('permite consultar el detalle sin sesión', () => {
+    session.cerrar();
+
+    http.get('/api-test/alojamientos/9').subscribe();
+
+    const req = controller.expectOne('/api-test/alojamientos/9');
+
+    expect(req.request.headers.has('Authorization')).toBeFalse();
+
+    req.flush({});
+    expect(router.navigate).not.toHaveBeenCalled();
+  });
+
+  for (const estado of [401, 403]) {
+    it(`un ${estado} del detalle público no cierra la sesión ni muestra aviso global`, () => {
+      const aviso = spyOn(toast, 'error');
+      const recibido = jasmine.createSpy('recibido');
+
+      http.get('/api-test/alojamientos/9?origen=busqueda').subscribe({ error: recibido });
+
+      const { body, opts } = errorDelBackend(
+        estado,
+        estado === 401 ? 'Unauthorized' : 'Forbidden',
+        'Error de consulta pública',
+      );
+
+      const req = controller.expectOne('/api-test/alojamientos/9?origen=busqueda');
+
+      expect(req.request.headers.has('Authorization')).toBeFalse();
+
+      req.flush(body, opts);
+
+      expect(recibido).toHaveBeenCalledWith(jasmine.objectContaining({ status: estado }));
+      expect(session.autenticado()).toBeTrue();
+      expect(router.navigate).not.toHaveBeenCalled();
+      expect(aviso).not.toHaveBeenCalled();
+    });
+  }
+
+  it('no considera pública una escritura sobre el detalle', () => {
+    http.post('/api-test/alojamientos/9', {}).subscribe();
+
+    const req = controller.expectOne('/api-test/alojamientos/9');
+
+    expect(req.request.headers.get('Authorization')).toBe('Bearer abc');
+
+    req.flush({});
+  });
+
+  it('no extiende el detalle público a subrutas privadas', () => {
+    http.get('/api-test/alojamientos/9/editar').subscribe();
+
+    const req = controller.expectOne('/api-test/alojamientos/9/editar');
+
+    expect(req.request.headers.get('Authorization')).toBe('Bearer abc');
+
+    req.flush({});
+  });
+});

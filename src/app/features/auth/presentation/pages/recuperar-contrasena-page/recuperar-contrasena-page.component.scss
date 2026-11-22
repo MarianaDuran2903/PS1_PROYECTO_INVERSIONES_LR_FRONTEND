@@ -1,0 +1,43 @@
+:host {
+  display: block;
+  padding: var(--space-8) var(--space-4) var(--space-12);
+}
+
+.recuperar {
+  max-width: 440px;
+  margin: 0 auto;
+
+  h1 {
+    margin: 0 0 var(--space-2);
+    font-size: 2rem;
+  }
+}
+
+.recuperar__encabezado {
+  margin-bottom: var(--space-6);
+
+  p {
+    margin: 0;
+    color: var(--color-text-muted);
+  }
+}
+
+.recuperar__alerta {
+  margin-bottom: var(--space-4);
+}
+
+.recuperar__nota {
+  margin: 0 0 var(--space-4);
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+
+.recuperar__enlace {
+  margin: 0;
+}
+
+.recuperar__pie {
+  margin: var(--space-6) 0 0;
+  text-align: center;
+  color: var(--color-text-muted);
+}

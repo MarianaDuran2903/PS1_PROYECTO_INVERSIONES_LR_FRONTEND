@@ -1,0 +1,53 @@
+<section class="restablecer card" aria-labelledby="restablecer-titulo">
+  @switch (facade.estado()) {
+    @case ('exitoso') {
+      <header class="restablecer__encabezado">
+        <h1 id="restablecer-titulo">Contraseña actualizada</h1>
+      </header>
+      <div class="alert alert--success restablecer__alerta" role="status">
+        {{ facade.confirmacion() }}
+      </div>
+      <a class="btn btn--primary btn--block" routerLink="/login">Ir a iniciar sesión</a>
+    }
+    @case ('enlaceInvalido') {
+      <header class="restablecer__encabezado">
+        <h1 id="restablecer-titulo">Enlace no válido</h1>
+      </header>
+      <div class="alert alert--danger restablecer__alerta" role="alert">
+        {{ facade.mensajeEnlace() }}
+      </div>
+      <a class="btn btn--primary btn--block" routerLink="/recuperar-contrasena">
+        Solicitar un nuevo enlace
+      </a>
+    }
+    @default {
+      <header class="restablecer__encabezado">
+        <h1 id="restablecer-titulo">Crea una nueva contraseña</h1>
+        <p>Elige una contraseña segura para volver a entrar a tu cuenta.</p>
+      </header>
+
+      @if (facade.mensajeError(); as mensaje) {
+        <div class="alert alert--danger restablecer__alerta" role="alert">{{ mensaje }}</div>
+      }
+      @if (!pedirToken() && facade.erroresCampo().token; as mensaje) {
+        <div class="alert alert--danger restablecer__alerta" role="alert">{{ mensaje }}</div>
+      }
+
+      @if (esDesarrollo) {
+        <p class="restablecer__nota">
+          Modo simulado: el correo no se envía; el token aparece en el log del servidor como
+          CORREO_SIMULADO_RECUPERACION.
+        </p>
+      }
+
+      <app-restablecer-contrasena-form
+        [enviando]="facade.enviando()"
+        [pedirToken]="pedirToken()"
+        [erroresServidor]="facade.erroresCampo()"
+        (restablecer)="restablecer($event)"
+      />
+
+      <p class="restablecer__pie"><a routerLink="/login">Volver a iniciar sesión</a></p>
+    }
+  }
+</section>

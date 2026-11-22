@@ -1,0 +1,77 @@
+<section class="hero" aria-labelledby="hero-titulo">
+  <div class="hero__contenido">
+    <p class="hero__etiqueta">Alojamientos con identidad</p>
+    <h1 class="hero__titulo" id="hero-titulo">Un lugar para bajar el ritmo</h1>
+    <p class="hero__texto">
+      Encuentra estancias únicas en los destinos más especiales de Colombia.
+    </p>
+    <div class="hero__acciones">
+      <a class="btn btn--primary btn--lg" routerLink="/alojamientos"> Buscar alojamiento </a>
+      <a class="btn btn--outline btn--lg" routerLink="/registro" [queryParams]="paramsAnfitrion">
+        Publicar alojamiento
+      </a>
+    </div>
+  </div>
+</section>
+
+<div class="busqueda-inicio">
+  <app-barra-busqueda-alojamientos
+    [ciudades]="facade.ciudades()"
+    [cargandoCiudades]="facade.estadoCiudades() === 'cargando'"
+    (buscar)="buscar($event)"
+  />
+
+  @if (facade.estadoCiudades() === 'error') {
+    <div class="alert alert--danger" role="alert">
+      <p>No fue posible cargar los destinos.</p>
+      <button type="button" class="btn btn--outline" (click)="facade.reintentarCiudades()">
+        Reintentar destinos
+      </button>
+    </div>
+  }
+</div>
+
+<section class="seleccion" aria-labelledby="seleccion-titulo">
+  <header class="seleccion__encabezado">
+    <div>
+      <p class="seleccion__etiqueta">Selección LR</p>
+      <h2 id="seleccion-titulo">Estancias para recordar</h2>
+    </div>
+    <p>Descubre diferentes maneras de alojarte en Colombia.</p>
+  </header>
+
+  @if (facade.estadoCaracteristicas() === 'cargando') {
+    <p role="status">Cargando categorías...</p>
+  }
+
+  @if (facade.estadoCaracteristicas() === 'error') {
+    <div class="alert alert--danger" role="alert">
+      <p>No fue posible habilitar la búsqueda por categorías.</p>
+      <button type="button" class="btn btn--outline" (click)="facade.reintentarCaracteristicas()">
+        Reintentar categorías
+      </button>
+    </div>
+  }
+
+  <div class="categorias">
+    @for (categoria of categorias(); track categoria.nombre) {
+      <article class="categoria">
+        <img [src]="categoria.imagen" alt="" loading="lazy" />
+
+        <div class="categoria__texto">
+          <h3>{{ categoria.titulo }}</h3>
+          <p>{{ categoria.descripcion }}</p>
+        </div>
+
+        @if (categoria.idTipo !== undefined) {
+          <a
+            class="categoria__enlace"
+            routerLink="/alojamientos"
+            [queryParams]="{ idTipo: categoria.idTipo }"
+            [attr.aria-label]="'Buscar alojamientos de tipo ' + categoria.nombre"
+          ></a>
+        }
+      </article>
+    }
+  </div>
+</section>

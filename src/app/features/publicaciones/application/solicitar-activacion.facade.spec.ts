@@ -1,0 +1,196 @@
+import { TestBed } from '@angular/core/testing';
+import { ApiError } from '@core/http/api-error';
+import { ConfirmacionService } from '@core/notifications/confirmacion.service';
+import { ToastService } from '@core/notifications/toast.service';
+import { Subject } from 'rxjs';
+import {
+  InformacionMinimaIncompletaError,
+  PublicacionAjenaError,
+  PublicacionNoEncontradaError,
+  TransicionNoPermitidaError,
+} from '../domain/errors/publicacion.errors';
+import { Publicacion } from '../domain/models/publicacion';
+import { PublicacionRepository } from '../domain/repositories/publicacion.repository';
+import { ResultadoSolicitud, SolicitarActivacionFacade } from './solicitar-activacion.facade';
+
+/** HU-012: caso de uso "Solicitar la activación de una publicación". */
+describe('SolicitarActivacionFacade', () => {
+  const enviada = { idPublicacion: 9, estado: 'PENDIENTE_REVISION' } as Publicacion;
+
+  let respuesta: Subject<Publicacion>;
+  let repository: jasmine.SpyObj<PublicacionRepository>;
+  let confirmacion: jasmine.SpyObj<ConfirmacionService>;
+  let toast: jasmine.SpyObj<ToastService>;
+  let facade: SolicitarActivacionFacade;
+  let resultados: ResultadoSolicitud[];
+
+  beforeEach(() => {
+    respuesta = new Subject<Publicacion>();
+    repository = jasmine.createSpyObj<PublicacionRepository>('PublicacionRepository', [
+      'solicitarActivacion',
+    ]);
+    repository.solicitarActivacion.and.returnValue(respuesta);
+    confirmacion = jasmine.createSpyObj<ConfirmacionService>('ConfirmacionService', ['confirmar']);
+    confirmacion.confirmar.and.returnValue(true);
+    toast = jasmine.createSpyObj<ToastService>('ToastService', ['success', 'error']);
+    TestBed.configureTestingModule({
+      providers: [
+        SolicitarActivacionFacade,
+        { provide: PublicacionRepository, useValue: repository },
+        { provide: ConfirmacionService, useValue: confirmacion },
+        { provide: ToastService, useValue: toast },
+      ],
+    });
+    facade = TestBed.inject(SolicitarActivacionFacade);
+    resultados = [];
+    facade.resultado$.subscribe((r) => resultados.push(r));
+  });
+
+  it('pide confirmación con el texto de la historia antes de enviar', () => {
+    facade.solicitar(9);
+
+    expect(confirmacion.confirmar).toHaveBeenCalledOnceWith(
+      '¿Enviar la publicación a revisión? El Administrador la revisará antes de activarla.',
+    );
+  });
+
+  it('si la persona cancela, no llama al servidor ni cambia nada', () => {
+    confirmacion.confirmar.and.returnValue(false);
+
+    facade.solicitar(9);
+
+    expect(repository.solicitarActivacion).not.toHaveBeenCalled();
+    expect(facade.enviando()).toBeFalse();
+    expect(resultados).toEqual([]);
+    expect(toast.success).not.toHaveBeenCalled();
+  });
+
+  it('mientras envía expone enviando y la publicación en curso', () => {
+    facade.solicitar(9);
+
+    expect(facade.enviando()).toBeTrue();
+    expect(facade.idEnviando()).toBe(9);
+  });
+
+  it('ignora otro envío mientras hay uno en curso', () => {
+    facade.solicitar(9);
+    facade.solicitar(10);
+
+    expect(repository.solicitarActivacion).toHaveBeenCalledOnceWith(9);
+  });
+
+  it('con éxito avisa "Publicación enviada a revisión" y emite "enviada"', () => {
+    facade.solicitar(9);
+
+    respuesta.next(enviada);
+
+    expect(toast.success).toHaveBeenCalledOnceWith('Publicación enviada a revisión');
+    expect(facade.enviando()).toBeFalse();
+    expect(resultados).toEqual(['enviada']);
+    expect(facade.pendientes()).toEqual([]);
+  });
+
+  it('un 400 guarda los pendientes con sus mensajes y emite "incompleta", sin avisos de error', () => {
+    facade.solicitar(9);
+
+    respuesta.error(
+      new InformacionMinimaIncompletaError({
+        descripcion: 'La descripción es obligatoria para solicitar la activación',
+        reglas: 'Las reglas son obligatorias para solicitar la activación',
+      }),
+    );
+
+    expect(facade.pendientes()).toEqual([
+      {
+        campo: 'descripcion',
+        mensaje: 'La descripción es obligatoria para solicitar la activación',
+      },
+      { campo: 'reglas', mensaje: 'Las reglas son obligatorias para solicitar la activación' },
+    ]);
+    expect(facade.idPendientes()).toBe(9);
+    expect(facade.enviando()).toBeFalse();
+    expect(resultados).toEqual(['incompleta']);
+    expect(toast.error).not.toHaveBeenCalled();
+    expect(toast.success).not.toHaveBeenCalled();
+  });
+
+  it('un nuevo intento limpia los pendientes anteriores', () => {
+    facade.solicitar(9);
+    respuesta.error(new InformacionMinimaIncompletaError({ reglas: 'Faltan las reglas' }));
+    expect(facade.pendientes().length).toBe(1);
+
+    respuesta = new Subject<Publicacion>();
+    repository.solicitarActivacion.and.returnValue(respuesta);
+    facade.solicitar(9);
+
+    expect(facade.pendientes()).toEqual([]);
+    expect(facade.idPendientes()).toBeNull();
+  });
+
+  it('limpiarPendientes quita el panel', () => {
+    facade.solicitar(9);
+    respuesta.error(new InformacionMinimaIncompletaError({ reglas: 'Faltan las reglas' }));
+
+    facade.limpiarPendientes();
+
+    expect(facade.pendientes()).toEqual([]);
+  });
+
+  it('un 409 avisa con el mensaje del backend y emite "rechazada" para refrescar el estado', () => {
+    facade.solicitar(9);
+
+    respuesta.error(new TransicionNoPermitidaError('La publicación ya está en revisión'));
+
+    expect(toast.error).toHaveBeenCalledOnceWith(
+      'No se pudo enviar a revisión',
+      'La publicación ya está en revisión',
+    );
+    expect(resultados).toEqual(['rechazada']);
+    expect(facade.enviando()).toBeFalse();
+  });
+
+  it('un 403 avisa y emite "rechazada"', () => {
+    facade.solicitar(9);
+
+    respuesta.error(new PublicacionAjenaError('No puedes enviar a revisión esta publicación'));
+
+    expect(toast.error).toHaveBeenCalledOnceWith(
+      'No se pudo enviar a revisión',
+      'No puedes enviar a revisión esta publicación',
+    );
+    expect(resultados).toEqual(['rechazada']);
+  });
+
+  it('un 404 avisa y emite "rechazada"', () => {
+    facade.solicitar(9);
+
+    respuesta.error(new PublicacionNoEncontradaError());
+
+    expect(toast.error).toHaveBeenCalledOnceWith(
+      'No se pudo enviar a revisión',
+      'La publicación no existe',
+    );
+    expect(resultados).toEqual(['rechazada']);
+  });
+
+  it('un error de red o 5xx avisa con su mensaje y emite "fallida"', () => {
+    facade.solicitar(9);
+
+    respuesta.error(new ApiError(0, 'NETWORK_ERROR', 'Sin conexión'));
+
+    expect(toast.error).toHaveBeenCalledOnceWith('No se pudo enviar a revisión', 'Sin conexión');
+    expect(resultados).toEqual(['fallida']);
+    expect(facade.enviando()).toBeFalse();
+  });
+
+  it('un error desconocido avisa con un mensaje genérico', () => {
+    facade.solicitar(9);
+
+    respuesta.error(new Error('raro'));
+
+    expect(toast.error).toHaveBeenCalledOnceWith(
+      'No se pudo enviar a revisión',
+      'No fue posible enviar la publicación a revisión. Inténtalo de nuevo.',
+    );
+  });
+});

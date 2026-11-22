@@ -1,0 +1,394 @@
+<section class="detalle" aria-labelledby="detalle-titulo">
+  <a class="volver" routerLink="/alojamientos" [queryParams]="parametrosRegreso()">
+    ← Volver a resultados
+  </a>
+
+  @switch (facade.estado()) {
+    @case ('cargando') {
+      <h1 id="detalle-titulo">Detalle del alojamiento</h1>
+      <p role="status">Cargando alojamiento...</p>
+    }
+
+    @case ('no-disponible') {
+      <h1 id="detalle-titulo">Alojamiento no disponible</h1>
+      <p role="status">
+        El alojamiento no está disponible. Puedes volver a los resultados para consultar otras
+        opciones.
+      </p>
+    }
+
+    @case ('error') {
+      <h1 id="detalle-titulo">Detalle del alojamiento</h1>
+      <div class="alert alert--danger" role="alert">
+        <p>No fue posible cargar el alojamiento. Inténtalo de nuevo.</p>
+        <button type="button" class="btn btn--outline" (click)="facade.reintentar()">
+          Reintentar
+        </button>
+      </div>
+    }
+
+    @case ('listo') {
+      @if (facade.alojamiento(); as alojamiento) {
+        <header class="encabezado">
+          <p class="ubicacion">
+            {{ alojamiento.ciudad.nombre }}
+            @if (alojamiento.barrioZona) {
+              · {{ alojamiento.barrioZona }}
+            }
+          </p>
+
+          <h1 id="detalle-titulo">{{ alojamiento.titulo }}</h1>
+
+          <div class="encabezado__meta">
+            <p>
+              {{ alojamiento.tipo.nombre }} ·
+              {{ alojamiento.capacidad }}
+              {{ alojamiento.capacidad === 1 ? 'huésped' : 'huéspedes' }}
+            </p>
+            <span class="insignia">Publicación activa</span>
+          </div>
+        </header>
+
+        <div class="galeria" aria-label="Imágenes o referencias del alojamiento">
+          @for (imagen of alojamiento.imagenes; track imagen.orden) {
+            <figure class="galeria__item">
+              <img
+                [src]="imagen.ruta"
+                [alt]="'Imagen o referencia de ' + alojamiento.titulo"
+                loading="lazy"
+                decoding="async"
+                (error)="ocultarImagen($event)"
+              />
+              <figcaption>Imagen o referencia configurada</figcaption>
+            </figure>
+          } @empty {
+            <figure class="galeria__item galeria__item--referencia">
+              <img
+                [src]="imagenReferencia(alojamiento.tipo.nombre)"
+                alt=""
+                decoding="async"
+                (error)="ocultarImagen($event)"
+              />
+              <figcaption>
+                Imagen de referencia del tipo de alojamiento. No es una fotografía de esta
+                publicación.
+              </figcaption>
+            </figure>
+          }
+        </div>
+
+        <div class="distribucion">
+          <div class="informacion">
+            <section class="bloque" aria-labelledby="descripcion-titulo">
+              <p class="seccion-etiqueta">Conoce el espacio</p>
+              <h2 id="descripcion-titulo">Sobre este alojamiento</h2>
+
+              @if (alojamiento.descripcion) {
+                <p class="texto">{{ alojamiento.descripcion }}</p>
+              } @else {
+                <p class="sin-informacion">El anfitrión aún no ha añadido una descripción.</p>
+              }
+            </section>
+
+            <section class="bloque" aria-labelledby="servicios-titulo">
+              <p class="seccion-etiqueta">Comodidades incluidas</p>
+              <h2 id="servicios-titulo">Lo que ofrece este lugar</h2>
+
+              @if (alojamiento.servicios.length > 0) {
+                <ul class="servicios-detalle">
+                  @for (servicio of alojamiento.servicios; track servicio.id) {
+                    <li>
+                      <span class="servicio-marca" aria-hidden="true">✓</span>
+                      <span>{{ servicio.nombre }}</span>
+                    </li>
+                  }
+                </ul>
+              } @else {
+                <div class="estado-vacio">
+                  <p>No hay servicios especificados.</p>
+                  <span>
+                    Esto no significa que el alojamiento no los tenga; todavía no se han registrado
+                    en la publicación.
+                  </span>
+                </div>
+              }
+            </section>
+
+            <section class="bloque" aria-labelledby="reglas-titulo">
+              <p class="seccion-etiqueta">Para una buena estancia</p>
+              <h2 id="reglas-titulo">Reglas del alojamiento</h2>
+
+              <div class="panel-suave">
+                @if (alojamiento.reglas) {
+                  <p class="texto">{{ alojamiento.reglas }}</p>
+                } @else {
+                  <p class="sin-informacion">No se han registrado reglas adicionales.</p>
+                }
+              </div>
+            </section>
+
+            <section class="bloque" aria-labelledby="politica-titulo">
+              <p class="seccion-etiqueta">Antes de decidir</p>
+              <h2 id="politica-titulo">Política de cancelación</h2>
+
+              <div class="politica">
+                <span class="politica__nombre">
+                  {{ alojamiento.politica.nombre }}
+                </span>
+                <p>
+                  Devolución del
+                  <strong> {{ alojamiento.politica.porcentajeDevolucion }} % </strong>
+                  con al menos
+                  {{ alojamiento.politica.horasAnticipacionMin }}
+                  horas de anticipación.
+                </p>
+              </div>
+            </section>
+
+            <section class="bloque" aria-labelledby="ubicacion-titulo">
+              <p class="seccion-etiqueta">Tu próximo destino</p>
+              <h2 id="ubicacion-titulo">Ubicación</h2>
+
+              <div class="ubicacion-panel">
+                <p class="ubicacion-panel__ciudad">
+                  {{ alojamiento.barrioZona }}, {{ alojamiento.ciudad.nombre }}
+                </p>
+
+                <!-- @if (alojamiento.barrioZona) {
+                  <p>{{ alojamiento.barrioZona }}</p>
+                } -->
+
+                <span>
+                  Ubicación general · La dirección exacta no se muestra en esta consulta pública.
+                </span>
+              </div>
+            </section>
+          </div>
+
+          <aside class="resumen" aria-labelledby="precio-titulo">
+            <p class="seccion-etiqueta">Planea tu estancia</p>
+
+            <h2 id="precio-titulo" class="resumen__precio">
+              {{ alojamiento.precioNoche | currency: 'COP' : 'symbol-narrow' : '1.0-2' }}
+              COP
+              <span>/ noche</span>
+            </h2>
+
+            <p class="resumen__capacidad">
+              Hasta {{ alojamiento.capacidad }}
+              {{ alojamiento.capacidad === 1 ? 'huésped' : 'huéspedes' }}
+            </p>
+
+            @if (precioBajoMinimo(alojamiento.precioNoche)) {
+              <p class="alert alert--info" id="aviso-monto-minimo">
+                El pago mínimo de una reserva es de {{ montoMinimo }} COP. Con este precio por noche
+                tendrás que reservar varias noches para alcanzarlo.
+              </p>
+            }
+
+            <div class="form-estancia" [formGroup]="estancia">
+              <div class="fechas">
+                <div class="campo-estancia">
+                  <label for="estancia-llegada">Llegada</label>
+                  <input
+                    id="estancia-llegada"
+                    type="date"
+                    formControlName="fechaLlegada"
+                    [min]="hoy"
+                    [attr.aria-invalid]="
+                      (estancia.controls.fechaLlegada.touched &&
+                        estancia.controls.fechaLlegada.invalid) ||
+                      !!cotizacion.errores().fechaLlegada
+                    "
+                    [attr.aria-describedby]="descritoPor('estancia-llegada-error', 'fechaLlegada')"
+                  />
+                  @if (cotizacion.errores().fechaLlegada; as mensaje) {
+                    <p id="estancia-llegada-error" class="error-campo">{{ mensaje }}</p>
+                  }
+                </div>
+
+                <div class="campo-estancia">
+                  <label for="estancia-salida">Salida</label>
+                  <input
+                    id="estancia-salida"
+                    type="date"
+                    formControlName="fechaSalida"
+                    [min]="salidaMinima()"
+                    [attr.aria-invalid]="
+                      (estancia.controls.fechaSalida.touched &&
+                        estancia.controls.fechaSalida.invalid) ||
+                      !!cotizacion.errores().fechaSalida
+                    "
+                    [attr.aria-describedby]="descritoPor('estancia-salida-error', 'fechaSalida')"
+                  />
+                  @if (cotizacion.errores().fechaSalida; as mensaje) {
+                    <p id="estancia-salida-error" class="error-campo">{{ mensaje }}</p>
+                  }
+                </div>
+              </div>
+
+              <div class="campo-estancia campo-estancia--huespedes">
+                <label for="estancia-huespedes">Huéspedes</label>
+                <input
+                  id="estancia-huespedes"
+                  type="number"
+                  inputmode="numeric"
+                  min="1"
+                  [max]="alojamiento.capacidad"
+                  step="1"
+                  formControlName="huespedes"
+                  [attr.aria-invalid]="
+                    (estancia.controls.huespedes.touched && estancia.controls.huespedes.invalid) ||
+                    !!cotizacion.errores().huespedes
+                  "
+                  [attr.aria-describedby]="descritoPor('estancia-huespedes-error', 'huespedes')"
+                />
+                @if (cotizacion.errores().huespedes; as mensaje) {
+                  <p id="estancia-huespedes-error" class="error-campo">{{ mensaje }}</p>
+                }
+              </div>
+            </div>
+
+            <div id="estancia-errores" class="errores-estancia" aria-live="polite">
+              @if (estancia.touched) {
+                @if (
+                  estancia.controls.fechaLlegada.hasError('required') ||
+                  estancia.controls.fechaSalida.hasError('required')
+                ) {
+                  <p>Selecciona llegada y salida.</p>
+                }
+
+                @if (estancia.hasError('rangoFechas')) {
+                  <p>La salida debe ser posterior a la llegada.</p>
+                }
+
+                @if (estancia.hasError('llegadaPasada')) {
+                  <p>La llegada no puede ser anterior a hoy.</p>
+                }
+
+                @if (estancia.hasError('fechasInvalidas')) {
+                  <p>Introduce fechas válidas.</p>
+                }
+
+                @if (estancia.controls.huespedes.invalid) {
+                  <p>Indica entre 1 y {{ alojamiento.capacidad }} huéspedes, sin decimales.</p>
+                }
+              }
+            </div>
+
+            @if (noches() > 0) {
+              <p class="estancia-seleccionada" aria-live="polite">
+                {{ noches() }} {{ noches() === 1 ? 'noche' : 'noches' }} ·
+                {{ estancia.controls.huespedes.value }}
+                {{ estancia.controls.huespedes.value === 1 ? 'huésped' : 'huéspedes' }}
+              </p>
+            }
+
+            @if (!autenticado()) {
+              <p class="nota nota--cotizacion">
+                <a routerLink="/login" [queryParams]="{ returnUrl: urlActual() }">Inicia sesión</a>
+                como Huésped para cotizar tu estancia. No se realizará ningún cobro.
+              </p>
+            } @else if (!puedeCotizar()) {
+              <p class="nota nota--cotizacion">Solo los Huéspedes pueden cotizar una estancia.</p>
+            } @else {
+              <button
+                type="button"
+                class="cotizar"
+                [disabled]="cotizacion.cotizando()"
+                [attr.aria-busy]="cotizacion.cotizando()"
+                (click)="cotizar()"
+              >
+                {{ cotizacion.cotizando() ? 'Cotizando...' : 'Cotizar estancia' }}
+              </button>
+
+              <div class="cotizacion" aria-live="polite">
+                @switch (cotizacion.estado()) {
+                  @case ('cotizando') {
+                    <p role="status" class="nota">Calculando el valor de tu estancia...</p>
+                  }
+
+                  @case ('lista') {
+                    @if (cotizacion.cotizacion(); as resultado) {
+                      <app-desglose-cotizacion [cotizacion]="resultado" />
+                    }
+
+                    @if (estanciaBajoMinimo()) {
+                      <!-- La pasarela rechazaría el cobro: no se ofrece reservar. -->
+                      <div class="alert alert--danger monto-minimo" role="alert">
+                        <p>
+                          El total de esta estancia es menor que {{ montoMinimo }} COP, el mínimo
+                          que acepta la pasarela de pagos, así que no se puede reservar.
+                        </p>
+                        @if (nochesMinimas(); as minimas) {
+                          <p>
+                            Prueba con unas <strong>{{ minimas }} noches</strong> o más. Es un
+                            cálculo aproximado: los descuentos por estadía larga pueden cambiar el
+                            total, y este aviso se actualiza si todavía no alcanza.
+                          </p>
+                        } @else {
+                          <p>Elige más noches para poder reservar.</p>
+                        }
+                      </div>
+                    } @else if (solicitudReserva(); as aReservar) {
+                      <app-accion-reservar
+                        [solicitud]="aReservar"
+                        (fechasOcupadas)="alOcuparseLasFechas()"
+                      />
+                    }
+                  }
+
+                  @case ('fechas-no-disponibles') {
+                    <div class="alert alert--danger" role="alert">
+                      <p>No se pudo cotizar: {{ cotizacion.mensaje() }}</p>
+                      <p>Prueba con otras fechas.</p>
+                    </div>
+                  }
+
+                  @case ('alojamiento-no-disponible') {
+                    <div class="alert alert--danger" role="alert">
+                      <p>{{ cotizacion.mensaje() }}</p>
+                      <a routerLink="/alojamientos" [queryParams]="parametrosRegreso()">
+                        Volver al listado
+                      </a>
+                    </div>
+                  }
+
+                  @case ('sin-permiso') {
+                    <div class="alert alert--danger" role="alert">
+                      <p>{{ cotizacion.mensaje() }}</p>
+                    </div>
+                  }
+
+                  @case ('invalida') {
+                    @if (
+                      !cotizacion.errores().fechaLlegada &&
+                      !cotizacion.errores().fechaSalida &&
+                      !cotizacion.errores().huespedes
+                    ) {
+                      <div class="alert alert--danger" role="alert">
+                        <p>{{ cotizacion.mensaje() }}</p>
+                      </div>
+                    }
+                  }
+
+                  @case ('error') {
+                    <div class="alert alert--danger" role="alert">
+                      <p>{{ cotizacion.mensaje() }}</p>
+                    </div>
+                  }
+                }
+              </div>
+
+              @if (cotizacion.estado() === 'inactiva') {
+                <p class="nota nota--cotizacion">
+                  La cotización es informativa: no reserva las fechas ni realiza ningún cobro.
+                </p>
+              }
+            }
+          </aside>
+        </div>
+      }
+    }
+  }
+</section>

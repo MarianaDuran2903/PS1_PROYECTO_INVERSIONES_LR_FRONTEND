@@ -1,0 +1,13 @@
+<ul class="requisitos" aria-label="Requisitos de la contraseña">
+  @for (requisito of requisitos(); track requisito.clave) {
+    <li
+      class="requisitos__item"
+      [class.requisitos__item--cumple]="requisito.cumple"
+      [attr.data-requisito]="requisito.clave"
+    >
+      <span class="requisitos__marca" aria-hidden="true">{{ requisito.cumple ? '✓' : '○' }}</span>
+      <span>{{ requisito.texto }}</span>
+      <span class="visually-hidden">{{ requisito.cumple ? '(cumple)' : '(pendiente)' }}</span>
+    </li>
+  }
+</ul>

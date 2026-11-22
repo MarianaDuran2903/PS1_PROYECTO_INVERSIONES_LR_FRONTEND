@@ -1,0 +1,174 @@
+<header class="app-header">
+  <a class="brand" [routerLink]="rutaInicio()" aria-label="{{ appName }}, ir al inicio">
+    <span class="brand__logo" aria-hidden="true">LR</span>
+    <span class="brand__name">{{ appName }}</span>
+  </a>
+
+  <nav class="nav" aria-label="Principal">
+    @if (puedeExplorar()) {
+      <a
+        class="nav__link"
+        routerLink="/"
+        routerLinkActive="nav__link--active"
+        [routerLinkActiveOptions]="soloRuta"
+        >Explorar</a
+      >
+    }
+
+    @if (esAnfitrion()) {
+      <a
+        class="nav__link"
+        routerLink="/anfitrion"
+        routerLinkActive="nav__link--active"
+        [routerLinkActiveOptions]="soloRuta"
+        >Mi panel</a
+      >
+      <a
+        class="nav__link"
+        routerLink="/anfitrion/publicaciones"
+        routerLinkActive="nav__link--active"
+        [routerLinkActiveOptions]="soloRuta"
+        >Mis publicaciones</a
+      >
+    } @else if (!usuario()) {
+      <a
+        class="nav__link"
+        routerLink="/registro"
+        [queryParams]="paramsAnfitrion"
+        routerLinkActive="nav__link--active"
+        [routerLinkActiveOptions]="rutaYParametros"
+        >Modo anfitrión</a
+      >
+    }
+
+    @if (esAdministrador()) {
+      <a class="nav__link" routerLink="/admin" routerLinkActive="nav__link--active"
+        >Administración</a
+      >
+    }
+
+    @if (usuario(); as u) {
+      <div class="cuenta">
+        <button
+          type="button"
+          class="cuenta__avatar"
+          (click)="alternarMenuCuenta()"
+          [attr.aria-expanded]="menuCuentaAbierto()"
+          aria-controls="opciones-cuenta"
+          aria-label="Menú de mi cuenta"
+        >
+          {{ u.primerNombre.charAt(0) | uppercase }}
+        </button>
+
+        @if (menuCuentaAbierto()) {
+          <div class="cuenta__menu" id="opciones-cuenta">
+            <a class="cuenta__opcion" routerLink="/perfil" (click)="cerrarMenuCuenta()">
+              Mi perfil
+            </a>
+
+            <button
+              type="button"
+              class="cuenta__opcion cuenta__opcion--salir"
+              (click)="cerrarSesion()"
+            >
+              Cerrar sesión
+            </button>
+          </div>
+        }
+      </div>
+    } @else {
+      <a
+        class="nav__link nav__link--cuenta"
+        routerLink="/login"
+        routerLinkActive="nav__link--active"
+      >
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
+          <circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="1.6" />
+          <path
+            d="M4.5 20c.9-3.6 3.9-5.5 7.5-5.5s6.6 1.9 7.5 5.5"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.6"
+            stroke-linecap="round"
+          />
+        </svg>
+        Iniciar sesión
+      </a>
+      <a
+        class="nav__link"
+        routerLink="/registro"
+        routerLinkActive="nav__link--active"
+        [routerLinkActiveOptions]="rutaYParametros"
+        >Crear cuenta</a
+      >
+    }
+  </nav>
+</header>
+
+<main class="app-main" [class.app-main--con-barra]="esAnfitrion()">
+  <router-outlet />
+</main>
+
+@if (esAnfitrion()) {
+  <!-- Barra inferior del Anfitrión: botones circulares, con "Nueva publicación" (+) al centro. -->
+  <nav class="barra-inferior" aria-label="Acciones del anfitrión">
+    <a
+      class="barra-inferior__boton"
+      routerLink="/anfitrion/publicaciones"
+      routerLinkActive="barra-inferior__boton--activo"
+      [routerLinkActiveOptions]="soloRuta"
+      aria-label="Mis publicaciones"
+      title="Mis publicaciones"
+    >
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false">
+        <path
+          d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+        />
+      </svg>
+    </a>
+
+    <a
+      class="barra-inferior__boton barra-inferior__boton--principal"
+      routerLink="/anfitrion/publicaciones/nueva"
+      routerLinkActive="barra-inferior__boton--activo"
+      aria-label="Nueva publicación"
+      title="Nueva publicación"
+    >
+      <svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true" focusable="false">
+        <path
+          d="M12 5v14M5 12h14"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.4"
+          stroke-linecap="round"
+        />
+      </svg>
+    </a>
+
+    <a
+      class="barra-inferior__boton"
+      routerLink="/anfitrion"
+      routerLinkActive="barra-inferior__boton--activo"
+      [routerLinkActiveOptions]="soloRuta"
+      aria-label="Mi panel"
+      title="Mi panel"
+    >
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false">
+        <path
+          d="M3 11.5 12 4l9 7.5M5.5 10v10.5h13V10M10 20.5v-5.5h4v5.5"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </svg>
+    </a>
+  </nav>
+}
+
+<app-toast-container />

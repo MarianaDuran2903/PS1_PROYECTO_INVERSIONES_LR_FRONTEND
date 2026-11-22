@@ -1,0 +1,26 @@
+<form [formGroup]="form" (ngSubmit)="enviar()" novalidate>
+  <fieldset class="form" [disabled]="enviando()">
+    <legend class="visually-hidden">Recuperar contraseña</legend>
+    <div class="field">
+      <label for="correo">Correo electrónico <span aria-hidden="true">*</span></label>
+      <input
+        id="correo"
+        type="email"
+        formControlName="correo"
+        autocomplete="email"
+        inputmode="email"
+        [attr.maxlength]="correoMaxLength"
+        [attr.aria-invalid]="errorCorreo() !== null"
+        [attr.aria-describedby]="errorCorreo() ? 'correo-error' : null"
+        required
+      />
+      @if (errorCorreo(); as error) {
+        <p class="field__error" id="correo-error" aria-live="polite">{{ error }}</p>
+      }
+    </div>
+
+    <button type="submit" class="btn btn--primary btn--block" [attr.aria-busy]="enviando()">
+      {{ enviando() ? 'Enviando…' : 'Enviar instrucciones' }}
+    </button>
+  </fieldset>
+</form>

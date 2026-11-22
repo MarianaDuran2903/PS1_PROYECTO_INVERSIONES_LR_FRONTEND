@@ -1,0 +1,90 @@
+# Recorrido del código:  historia → feature → develop → main
+#   - Cada salto se hace con un Pull Request (historia → feature, feature → develop,
+#     develop → main) y el CI debe estar en verde antes de fusionar.
+#   - Pull Request: corre sin importar la rama destino, así que valida los tres saltos.
+#   - Push: corre al fusionar en develop y en main, para analizar esas ramas con Sonar.
+#
+# Qué hace en cada ejecución:
+#   1. Instala dependencias, revisa el estilo (ESLint y Prettier) y compila en modo producción.
+#   2. Ejecuta las pruebas de Jasmine/Karma con cobertura (Chrome sin interfaz).
+#   3. Envía el análisis a SonarQube Cloud y falla si el Quality Gate no pasa.
+#
+# Requiere el secret SONAR_TOKEN (Settings > Secrets and variables > Actions) y los valores
+# reales de sonar.organization y sonar.projectKey en sonar-project.properties.
+# Importante: en SonarQube Cloud hay que desactivar "Automatic Analysis" para este proyecto,
+# porque el análisis lo hace este workflow, y marcar develop como rama de larga duración
+# (Administration > Branches and Pull Requests) para que se analice igual que main.
+
+name: CI Frontend
+
+on:
+  pull_request:
+  push:
+    branches: [develop, main]
+
+permissions:
+  contents: read
+
+# Si llega un commit nuevo a la misma rama, cancela la ejecución anterior.
+concurrency:
+  group: ci-frontend-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: Frontend - estilo, build, pruebas y Sonar
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+    steps:
+      - name: Checkout con historial completo
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0 # Sonar necesita el historial completo para detectar código nuevo
+
+      # Misma versión que .nvmrc y que la imagen de Docker.
+      - name: Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: Formato (Prettier)
+        run: npm run format:check
+
+      - name: Build de producción
+        run: npx ng build --configuration production
+
+      # Genera coverage/lcov.info, que lee Sonar (ver reporters en karma.conf.js).
+      - name: Pruebas unitarias con cobertura
+        run: npx ng test --watch=false --browsers=ChromeHeadlessCI --code-coverage
+
+      - name: Cache de paquetes de Sonar
+        uses: actions/cache@v5
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+
+      # Se omite si no hay token (por ejemplo, en PRs desde forks): el build y las pruebas siguen corriendo.
+      # Acción de un tercero fijada por commit (v8.3.0), tal como la genera SonarQube Cloud.
+      - name: Análisis de Sonar y Quality Gate
+        if: ${{ env.SONAR_TOKEN != '' }}
+        uses: SonarSource/sonarqube-scan-action@d209202bc7d53ff1cc128f7f907dac145c9d6ae9 # v8.3.0
+
+      - name: Guardar cobertura
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: frontend-cobertura
+          path: coverage
+          retention-days: 14

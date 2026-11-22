@@ -1,0 +1,52 @@
+<section class="pagina" aria-labelledby="editar-titulo">
+  <nav class="pagina__ruta" aria-label="Ruta">
+    <a routerLink="/anfitrion/publicaciones">Mis publicaciones</a>
+    <span aria-hidden="true">›</span>
+    <span aria-current="page">Editar publicación</span>
+  </nav>
+
+  <header class="pagina__encabezado">
+    <div class="pagina__titulo">
+      <h1 id="editar-titulo">Editar publicación</h1>
+      @if (facade.publicacion(); as publicacion) {
+        <app-estado-publicacion [estado]="publicacion.estado" />
+      }
+    </div>
+    <p>Actualiza la información de tu alojamiento. Se guardan todos los campos juntos.</p>
+  </header>
+
+  @switch (facade.carga()) {
+    @case ('cargando') {
+      <p class="pagina__estado" role="status">
+        <span class="pagina__spinner" aria-hidden="true"></span>
+        Cargando la publicación…
+      </p>
+    }
+    @case ('error') {
+      <div class="alert alert--danger pagina__error" role="alert">
+        <span>No fue posible cargar la publicación.</span>
+        <button type="button" class="btn btn--outline" (click)="reintentar()">Reintentar</button>
+      </div>
+    }
+    @default {
+      @if (facade.avisoNoEditable(); as aviso) {
+        <div class="alert alert--info pagina__alerta" role="status">{{ aviso }}</div>
+      }
+      @if (facade.mensajeError(); as mensaje) {
+        <div class="alert alert--danger pagina__alerta" role="alert">{{ mensaje }}</div>
+      }
+
+      <app-publicacion-form
+        modo="editar"
+        [ciudades]="facade.ciudades()"
+        [tipos]="facade.tipos()"
+        [valoresIniciales]="facade.publicacion()"
+        [soloLectura]="!facade.editable()"
+        [enviando]="facade.enviando()"
+        [erroresServidor]="facade.erroresCampo()"
+        (guardarCambios)="facade.guardar($event)"
+        (cancelar)="cancelar()"
+      />
+    }
+  }
+</section>

@@ -1,0 +1,54 @@
+<section class="pagina" aria-label="Detalle de la publicación">
+  <p class="pagina__ruta"><a routerLink="/admin/publicaciones">← Gestión de publicaciones</a></p>
+
+  @switch (facade.estado()) {
+    @case ('cargando') {
+      <p class="pagina__estado" role="status">
+        <span class="pagina__spinner" aria-hidden="true"></span>
+        Cargando la publicación…
+      </p>
+    }
+    @case ('error') {
+      <div class="alert alert--danger pagina__error" role="alert">
+        <span>No fue posible cargar la publicación.</span>
+        <button type="button" class="btn btn--outline" (click)="reintentar()">Reintentar</button>
+      </div>
+    }
+    @default {
+      @if (facade.publicacion(); as publicacion) {
+        <app-tarjeta-publicacion-admin
+          [publicacion]="publicacion"
+          [completa]="true"
+          [conEnlace]="false"
+          [aviso]="decisiones.avisoDe(publicacion.idPublicacion)"
+          [accionEnCurso]="accionEnCurso(publicacion.idPublicacion)"
+          [ocupado]="decisiones.ocupado()"
+          (accionar)="accionar(publicacion.idPublicacion, publicacion.titulo, $event)"
+        />
+
+        @if (publicacion.estado !== 'ACTIVA') {
+          <p class="pagina__intervenir">
+            <a
+              class="btn btn--outline"
+              [routerLink]="['/admin', 'publicaciones', publicacion.idPublicacion, 'editar']"
+              >Intervenir (editar)</a
+            >
+          </p>
+        }
+      }
+    }
+  }
+
+  @let textos = modal();
+  <app-modal-motivo
+    [abierto]="textos !== null"
+    [titulo]="textos?.titulo ?? ''"
+    [ayuda]="textos?.ayuda ?? ''"
+    [etiqueta]="textos?.etiqueta ?? 'Motivo'"
+    [textoConfirmar]="textos?.textoConfirmar ?? 'Confirmar'"
+    [enviando]="decisiones.ocupado()"
+    [error]="decisiones.errorMotivo()"
+    (confirmar)="decisiones.confirmarMotivo($event)"
+    (cancelar)="decisiones.cancelarMotivo()"
+  />
+</section>
