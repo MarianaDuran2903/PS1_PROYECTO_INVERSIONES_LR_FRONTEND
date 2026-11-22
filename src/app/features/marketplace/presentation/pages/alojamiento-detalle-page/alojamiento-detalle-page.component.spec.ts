@@ -707,7 +707,10 @@ describe('HU-025: detalle público de alojamiento', () => {
           `menor que ${MONTO_MINIMO_PAGO_TEXTO} COP, el mínimo que acepta la pasarela de pagos`,
         );
         // 9 noches × $ 1.100 × 1,1 = $ 10.890; con 8 serían $ 9.680.
-        expect(alertaMinimo()!.textContent).toContain('9 noches');
+        expect(alertaMinimo()!.textContent).toContain('unas 9 noches');
+        // Es una estimación: el descuento por estadía larga puede cambiar el total.
+        expect(alertaMinimo()!.textContent).toContain('cálculo aproximado');
+        expect(alertaMinimo()!.textContent).not.toContain('Elige al menos');
         // El desglose se sigue mostrando: la persona ve por qué no alcanza.
         expect(element.querySelector('.desglose')).not.toBeNull();
       });
