@@ -25,6 +25,7 @@ export class CalendarioDisponibilidadFacade {
   private readonly state = signal<CalendarioState>(ESTADO_INICIAL);
   readonly guardando = signal(false);
   readonly errorApertura = signal<string | null>(null);
+  readonly errorCierre = signal<string | null>(null);
   private peticion: Subscription | undefined;
 
   readonly estado = computed(() => this.state().estado);
@@ -57,6 +58,28 @@ export class CalendarioDisponibilidadFacade {
     if (idPublicacion !== null) {
       this.cargar(idPublicacion);
     }
+  }
+
+  cerrarPeriodo(idPeriodo: number): void {
+    const idPublicacion = this.state().idPublicacion;
+    if (idPublicacion === null || this.guardando()) return;
+    this.guardando.set(true);
+    this.errorCierre.set(null);
+    this.repository
+      .cerrar(idPublicacion, idPeriodo)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.guardando.set(false);
+          this.cargar(idPublicacion);
+        },
+        error: () => {
+          this.guardando.set(false);
+          this.errorCierre.set(
+            'No se pudo cerrar el periodo. Puede tener una reserva o la publicación estar bloqueada.',
+          );
+        },
+      });
   }
 
   abrirPeriodo(fechaInicio: string, fechaFin: string): void {

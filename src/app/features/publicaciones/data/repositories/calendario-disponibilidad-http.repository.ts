@@ -32,4 +32,16 @@ export class CalendarioDisponibilidadHttpRepository extends CalendarioDisponibil
       fechaFin,
     });
   }
+
+  override cerrar(idPublicacion: number, idPeriodo: number): Observable<unknown> {
+    return this.http.patch(
+      this.apiUrl +
+        '/publicaciones/' +
+        idPublicacion +
+        '/disponibilidad/' +
+        idPeriodo +
+        '/no-ofrecido',
+      null,
+    );
+  }
 }

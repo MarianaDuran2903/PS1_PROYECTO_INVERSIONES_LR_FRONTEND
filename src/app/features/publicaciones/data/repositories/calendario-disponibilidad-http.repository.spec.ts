@@ -24,6 +24,15 @@ describe('CalendarioDisponibilidadHttpRepository: abrir', () => {
 
   afterEach(() => http.verify());
 
+  it('envía PATCH para cerrar el periodo de la publicación solicitada', () => {
+    repository.cerrar(12, 3).subscribe();
+
+    const request = http.expectOne(`${apiUrl}/publicaciones/12/disponibilidad/3/no-ofrecido`);
+    expect(request.request.method).toBe('PATCH');
+    expect(request.request.body).toBeNull();
+    request.flush({ idPeriodo: 3, tipo: 'NO_OFRECIDO' });
+  });
+
   it('envía POST con las fechas para la publicación solicitada', () => {
     repository.abrir(12, '2026-06-10', '2026-06-13').subscribe();
 
