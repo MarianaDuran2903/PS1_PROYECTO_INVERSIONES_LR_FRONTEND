@@ -25,6 +25,10 @@ export class CalendarioDisponibilidadPageComponent {
     this.facade.cargar(Number(this.route.snapshot.paramMap.get('id')));
   }
 
+  protected cerrarPeriodo(idPeriodo: number): void {
+    this.facade.cerrarPeriodo(idPeriodo);
+  }
+
   protected abrirPeriodo(): void {
     if (this.formulario.invalid) {
       this.formulario.markAllAsTouched();

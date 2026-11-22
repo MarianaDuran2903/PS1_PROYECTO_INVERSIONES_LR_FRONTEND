@@ -10,7 +10,7 @@ describe('CalendarioDisponibilidadFacade', () => {
   beforeEach(() => {
     repository = jasmine.createSpyObj<CalendarioDisponibilidadRepository>(
       'CalendarioDisponibilidadRepository',
-      ['consultar', 'abrir'],
+      ['consultar', 'abrir', 'cerrar'],
     );
 
     TestBed.configureTestingModule({
@@ -73,6 +73,34 @@ describe('CalendarioDisponibilidadFacade', () => {
     expect(facade.calendario()).toEqual(calendario);
     expect(facade.guardando()).toBeFalse();
     expect(facade.errorApertura()).toBeNull();
+  });
+
+  it('cierra un periodo y vuelve a cargar el calendario', () => {
+    const calendario = { idPublicacion: 12, titulo: 'Habitación', periodos: [] };
+    repository.consultar.and.returnValue(of(calendario));
+    repository.cerrar.and.returnValue(of({}));
+
+    facade.cargar(12);
+    facade.cerrarPeriodo(3);
+
+    expect(repository.cerrar).toHaveBeenCalledOnceWith(12, 3);
+    expect(repository.consultar).toHaveBeenCalledTimes(2);
+    expect(facade.calendario()).toEqual(calendario);
+    expect(facade.guardando()).toBeFalse();
+    expect(facade.errorCierre()).toBeNull();
+  });
+
+  it('muestra error si no puede cerrar el periodo', () => {
+    repository.consultar.and.returnValue(
+      of({ idPublicacion: 12, titulo: 'Habitación', periodos: [] }),
+    );
+    repository.cerrar.and.returnValue(throwError(() => new Error('Conflicto')));
+
+    facade.cargar(12);
+    facade.cerrarPeriodo(3);
+
+    expect(facade.guardando()).toBeFalse();
+    expect(facade.errorCierre()).toContain('No se pudo cerrar el periodo');
   });
 
   it('muestra un error si el servidor rechaza la apertura', () => {

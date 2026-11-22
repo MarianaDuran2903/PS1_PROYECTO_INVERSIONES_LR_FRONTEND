@@ -23,14 +23,15 @@ describe('CalendarioDisponibilidadPageComponent', () => {
 
     facade = jasmine.createSpyObj<CalendarioDisponibilidadFacade>(
       'CalendarioDisponibilidadFacade',
-      ['cargar', 'reintentar', 'abrirPeriodo'],
-      ['estado', 'calendario', 'sinPeriodos', 'guardando', 'errorApertura'],
+      ['cargar', 'reintentar', 'abrirPeriodo', 'cerrarPeriodo'],
+      ['estado', 'calendario', 'sinPeriodos', 'guardando', 'errorApertura', 'errorCierre'],
     );
     Object.defineProperty(facade, 'estado', { value: signal('listo') });
     Object.defineProperty(facade, 'calendario', { value: calendario });
     Object.defineProperty(facade, 'sinPeriodos', { value: signal(false) });
     Object.defineProperty(facade, 'guardando', { value: signal(false) });
     Object.defineProperty(facade, 'errorApertura', { value: signal(null) });
+    Object.defineProperty(facade, 'errorCierre', { value: signal(null) });
 
     TestBed.configureTestingModule({
       imports: [CalendarioDisponibilidadPageComponent],
@@ -57,6 +58,16 @@ describe('CalendarioDisponibilidadPageComponent', () => {
     expect(contenido).toContain('No ofrecido');
     expect(contenido).toContain('Reservado');
     expect(contenido).toContain('Bloqueado');
+  });
+
+  it('solo permite cerrar periodos disponibles', () => {
+    const botones = fixture.nativeElement.querySelectorAll('.periodo button');
+
+    expect(botones.length).toBe(1);
+    expect((botones[0] as HTMLButtonElement).textContent).toContain('Cerrar periodo');
+    (botones[0] as HTMLButtonElement).click();
+
+    expect(facade.cerrarPeriodo).toHaveBeenCalledOnceWith(1);
   });
 
   it('envía el rango válido al abrir disponibilidad', () => {

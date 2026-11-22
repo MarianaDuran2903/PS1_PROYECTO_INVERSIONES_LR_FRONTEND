@@ -67,6 +67,9 @@
         <p class="vacio" role="status">Aún no hay periodos registrados para esta publicación.</p>
       } @else if (facade.calendario(); as calendario) {
         <p class="nota">La fecha final de cada periodo no está incluida.</p>
+        @if (facade.errorCierre(); as error) {
+          <p class="mensaje-error" role="alert">{{ error }}</p>
+        }
         <ol class="periodos">
           @for (periodo of calendario.periodos; track periodo.idPeriodo) {
             <li class="periodo">
@@ -89,6 +92,22 @@
               >
                 {{ etiqueta(periodo.tipo) }}
               </span>
+              @if (periodo.tipo === 'DISPONIBLE') {
+                <button
+                  class="btn btn--outline"
+                  type="button"
+                  [disabled]="facade.guardando()"
+                  [attr.aria-label]="
+                    'Cerrar periodo del ' +
+                    fecha(periodo.fechaInicio) +
+                    ' al ' +
+                    fecha(periodo.fechaFin)
+                  "
+                  (click)="cerrarPeriodo(periodo.idPeriodo)"
+                >
+                  Cerrar periodo
+                </button>
+              }
             </li>
           }
         </ol>
