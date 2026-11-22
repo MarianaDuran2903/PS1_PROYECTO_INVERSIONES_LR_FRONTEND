@@ -23,12 +23,14 @@ describe('CalendarioDisponibilidadPageComponent', () => {
 
     facade = jasmine.createSpyObj<CalendarioDisponibilidadFacade>(
       'CalendarioDisponibilidadFacade',
-      ['cargar', 'reintentar'],
-      ['estado', 'calendario', 'sinPeriodos'],
+      ['cargar', 'reintentar', 'abrirPeriodo'],
+      ['estado', 'calendario', 'sinPeriodos', 'guardando', 'errorApertura'],
     );
     Object.defineProperty(facade, 'estado', { value: signal('listo') });
     Object.defineProperty(facade, 'calendario', { value: calendario });
     Object.defineProperty(facade, 'sinPeriodos', { value: signal(false) });
+    Object.defineProperty(facade, 'guardando', { value: signal(false) });
+    Object.defineProperty(facade, 'errorApertura', { value: signal(null) });
 
     TestBed.configureTestingModule({
       imports: [CalendarioDisponibilidadPageComponent],
