@@ -47,7 +47,8 @@ El proyecto avanza funcionalidad por funcionalidad, según la matriz de requerim
 | RF-ALOJ (HU-013) | Revisar una publicación pendiente (Administrador): bandeja, aprobar o rechazar con motivo | Hecho |
 | RF-ALOJ (HU-014) | Pausar una publicación activa (Anfitrión) y listado público de alojamientos disponibles | Hecho |
 | RF-ADM (HU-015) | Bloquear una publicación engañosa y reactivar una pausada o bloqueada (Administrador), con motivo; el Anfitrión ve el motivo del bloqueo | Hecho |
-| RF-ALOJ (resto), RF-BUS, RF-COT, RF-RES, RF-PAG | Listado y edición de publicaciones, búsqueda, cotización, reservas y pago simulado | Pendiente |
+| RF-COT (HU-027) | Cotizar una estancia según las fechas seleccionadas (Huésped), con el desglose del precio desde la ficha del alojamiento | Hecho |
+| RF-ALOJ (resto), RF-BUS, RF-RES, RF-PAG | Listado y edición de publicaciones, búsqueda, reservas y pago simulado | Pendiente |
 | RF-NOT, RF-RSC, RF-ADM, RF-DASH, RF-REP | Notificaciones, reseñas, administración, indicadores y reportes | Pendiente |
 
 Las páginas `/anfitrion` (salvo las de publicaciones) y `/admin` (salvo la gestión de publicaciones) son provisionales: solo muestran un mensaje hasta que se implementen sus historias.
@@ -536,6 +537,28 @@ Rol ADMINISTRADOR, bajo `/admin/publicaciones`:
 
 La decisión sobre una publicación (aprobar, rechazar, bloquear, reactivar) la concentra `DecisionesPublicacionFacade`, que comparten la gestión y el detalle. El cuadro del motivo es el componente reutilizable `app-modal-motivo`.
 
+### Cotizar una estancia (HU-027)
+
+Desde la ficha de un alojamiento (`/alojamientos/:idPublicacion`), el Huésped elige llegada, salida y huéspedes y ve el valor total con su desglose antes de decidir si reserva. **Cotizar no reserva ni bloquea las fechas**: otro Huésped puede tomarlas después y el backend lo avisará con un `409` en `POST /reservas`.
+
+`POST /cotizaciones` (solo rol HUESPED). Cuerpo: `idPublicacion`, `fechaLlegada` y `fechaSalida` (`AAAA-MM-DD`; la noche de la salida no se cobra), `huespedes` (opcional, no cambia el precio) y `serviciosAdicionales` (opcional). Responde `200` con `noches` y `precio`: `precioNoche`, `precioBase`, `porcentajeDescuento`, `valorDescuento`, `tarifaLimpieza`, `serviciosAdicionales[]` (`nombre`, `tipoCobro` `POR_NOCHE` o `POR_ESTANCIA`, `precio`, `valor`), `totalServiciosAdicionales`, `porcentajeTarifaServicio`, `tarifaServicio` y `total`.
+
+- **Quién puede cotizar.** Un Visitante ve el enlace «Inicia sesión» (con `returnUrl` para volver a la ficha); un Anfitrión o Administrador ve que solo los Huéspedes cotizan y no se hace ninguna petición; el Huésped ve el botón «Cotizar estancia».
+- **Cuándo se cotiza.** La primera cotización la pide la persona con el botón. Desde ahí, cada cambio de fechas o huéspedes vuelve a cotizar tras 400 ms sin escribir; una respuesta atrasada nunca pisa a una más reciente y, mientras llega la nueva, no se muestra el desglose anterior. Si los datos dejan de ser válidos, el desglose se retira y no se consulta. Al cambiar de alojamiento se descarta la cotización.
+- **Desglose** (`app-desglose-cotizacion`), en este orden: noches × precio por noche = precio base; descuento (solo si `porcentajeDescuento` > 0); limpieza; servicios adicionales con su tipo de cobro y subtotal (solo si hay; un servicio de valor 0 dice «Gratis»); tarifa de servicio con su porcentaje; total. **El frontend no recalcula nada**: muestra los valores tal como llegan.
+- **Servicios adicionales.** Todavía no existe un endpoint que los liste, así que la pantalla no ofrece selector ni envía `serviciosAdicionales` (la facade y el repositorio ya lo admiten cuando haya datos reales). La reserva tampoco los cobra todavía.
+
+| Respuesta | Qué hace el frontend |
+|---|---|
+| `200` | Muestra el desglose y aclara que la cotización es informativa |
+| `400` con `errores` | El mensaje queda junto al campo (`fechaLlegada`, `fechaSalida`, `huespedes`); `rangoFechasValido` va en el campo de salida |
+| `401` | El interceptor cierra la sesión y lleva a `/login?expirada=true` |
+| `403` | Mensaje de permisos en la propia pantalla (la petición lleva `OMITIR_AVISO_403`, sin aviso global) |
+| `404` («El alojamiento no está disponible») | Mensaje y enlace «Volver al listado» |
+| `409` («No se puede generar una cotización para las fechas seleccionadas») | «No se pudo cotizar», con el mensaje del backend, y pide otras fechas; no hay desglose |
+
+La lógica vive en `CotizacionFacade` (estados `inactiva`, `cotizando`, `lista`, `fechas-no-disponibles`, `alojamiento-no-disponible`, `sin-permiso`, `invalida` y `error`) sobre el puerto `CotizacionRepository`, con su implementación `CotizacionHttpRepository` en `features/marketplace`. Los fallos llegan como errores de dominio (`CotizacionInvalidaError`, `AlojamientoNoCotizableError`, `FechasNoDisponiblesError` y `SinPermisoParaCotizarError`). Esta historia reemplaza el bloque «Demo» de disponibilidad y el botón deshabilitado «Próximamente» de la ficha.
+
 ### Errores y sesión
 
 Todos los endpoints devuelven `{ fecha, estado, error, mensaje, ruta, errores? }`. `401` en una ruta protegida: cierra la sesión y lleva a `/login?expirada=true`. `403`: aviso "Sin permisos" con el `mensaje`, sin cerrar la sesión. Un temporizador cierra la sesión sola al vencer el token (60 minutos, sin renovación).
@@ -546,9 +569,7 @@ El registro oficial de auditoría (tabla `evento_auditoria`) lo escribe el backe
 
 ## Pruebas y calidad
 
-- **Pruebas unitarias** con Karma y Jasmine: 1084 pruebas en 84 archivos. Cada capa se prueba aislada: validadores y mappers (funciones puras), repositorio HTTP con `HttpTestingController`, facades con repositorios falsos, guards, interceptores y componentes sobre su DOM.
-- **Pruebas unitarias** con Karma y Jasmine: 194 pruebas en 23 archivos. Cada capa se prueba aislada: validadores y mappers (funciones puras), repositorio HTTP con `HttpTestingController`, facades con repositorios falsos, guards, interceptores y componentes sobre su DOM.
-- **Pruebas unitarias** con Karma y Jasmine: 599 pruebas en 51 archivos. Cada capa se prueba aislada: validadores y mappers (funciones puras), repositorio HTTP con `HttpTestingController`, facades con repositorios falsos, guards, interceptores y componentes sobre su DOM.
+- **Pruebas unitarias** con Karma y Jasmine: 1333 pruebas en 105 archivos. Cada capa se prueba aislada: validadores y mappers (funciones puras), repositorio HTTP con `HttpTestingController`, facades con repositorios falsos, guards, interceptores y componentes sobre su DOM.
 - **Cobertura**: `npm run test:ci` genera `coverage/` con reporte HTML y `lcov.info` (que lee Sonar).
 - **Lint y formato**: `npm run lint` y `npm run format:check` deben quedar limpios antes de abrir un Pull Request.
 

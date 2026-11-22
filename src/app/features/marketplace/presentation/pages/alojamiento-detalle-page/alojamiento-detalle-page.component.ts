@@ -1,5 +1,13 @@
 import { CurrencyPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, DestroyRef, effect, inject } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  DestroyRef,
+  effect,
+  inject,
+  untracked,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   AbstractControl,
@@ -8,9 +16,18 @@ import {
   ValidationErrors,
   Validators,
 } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { SessionService } from '@features/auth/application/session.service';
+import { RolUsuario } from '@features/auth/domain/models/rol-usuario';
+import { debounceTime } from 'rxjs';
 import { AlojamientoDetalleFacade } from '../../../application/alojamiento-detalle.facade';
 import { leerContextoBusqueda, parametrosBusqueda } from '../../../application/contexto-busqueda';
+import { CotizacionFacade } from '../../../application/cotizacion.facade';
+import { SolicitudCotizacion } from '../../../domain/models/cotizacion';
+import { DesgloseCotizacionComponent } from '../../components/desglose-cotizacion/desglose-cotizacion.component';
+
+/** Espera tras el último cambio de fechas o huéspedes antes de volver a cotizar. */
+export const ESPERA_RECOTIZACION_MS = 400;
 
 function fechaLocalActual(): string {
   const fecha = new Date();
@@ -59,19 +76,27 @@ function validarFechas(grupo: AbstractControl): ValidationErrors | null {
 
 @Component({
   selector: 'app-alojamiento-detalle-page',
-  imports: [CurrencyPipe, RouterLink, ReactiveFormsModule],
-  providers: [AlojamientoDetalleFacade],
+  imports: [CurrencyPipe, RouterLink, ReactiveFormsModule, DesgloseCotizacionComponent],
+  providers: [AlojamientoDetalleFacade, CotizacionFacade],
   templateUrl: './alojamiento-detalle-page.component.html',
   styleUrl: './alojamiento-detalle-page.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AlojamientoDetallePageComponent {
   protected readonly facade = inject(AlojamientoDetalleFacade);
+  protected readonly cotizacion = inject(CotizacionFacade);
 
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly session = inject(SessionService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly fb = inject(NonNullableFormBuilder);
 
+  protected readonly autenticado = this.session.autenticado;
+  /** Solo el Huésped puede cotizar; un Visitante debe iniciar sesión primero. */
+  protected readonly puedeCotizar = computed(() =>
+    this.session.tieneAlgunRol([RolUsuario.Huesped]),
+  );
   protected readonly hoy = fechaLocalActual();
 
   protected readonly estancia = this.fb.group(
@@ -88,8 +113,16 @@ export class AlojamientoDetallePageComponent {
       this.facade.cargar(params.get('idPublicacion'));
     });
 
+    // Una vez pedida la primera cotización, cualquier cambio de la estancia la actualiza.
+    this.estancia.valueChanges
+      .pipe(debounceTime(ESPERA_RECOTIZACION_MS), takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.cotizacion.alCambiar(this.solicitudActual()));
+
     effect(() => {
       const alojamiento = this.facade.alojamiento();
+
+      // Otro alojamiento: lo cotizado antes ya no corresponde.
+      untracked(() => this.cotizacion.reiniciar());
 
       if (!alojamiento) {
         return;
@@ -110,6 +143,47 @@ export class AlojamientoDetallePageComponent {
         huespedes: contexto.filtros.huespedes ?? 1,
       });
     });
+  }
+
+  /** El Huésped pidió cotizar. Con datos inválidos solo se muestran los errores del formulario. */
+  protected cotizar(): void {
+    this.estancia.markAllAsTouched();
+
+    const solicitud = this.solicitudActual();
+    if (solicitud !== null) {
+      this.cotizacion.cotizar(solicitud);
+    }
+  }
+
+  /** Datos de la estancia listos para cotizar, o `null` si el formulario no es válido. */
+  private solicitudActual(): SolicitudCotizacion | null {
+    const alojamiento = this.facade.alojamiento();
+
+    if (!alojamiento || this.estancia.invalid) {
+      return null;
+    }
+
+    const { fechaLlegada, fechaSalida, huespedes } = this.estancia.getRawValue();
+
+    return {
+      idPublicacion: alojamiento.idPublicacion,
+      fechaLlegada,
+      fechaSalida,
+      huespedes,
+    };
+  }
+
+  /** Dirección actual, para volver aquí después de iniciar sesión. */
+  protected urlActual(): string {
+    return this.router.url;
+  }
+
+  /** Enlaza el mensaje del servidor de un campo con su `input`, además de los errores locales. */
+  protected descritoPor(
+    idError: string,
+    campo: 'fechaLlegada' | 'fechaSalida' | 'huespedes',
+  ): string {
+    return this.cotizacion.errores()[campo] ? `${idError} estancia-errores` : 'estancia-errores';
   }
 
   protected parametrosRegreso() {
